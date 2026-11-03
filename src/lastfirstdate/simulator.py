@@ -84,6 +84,7 @@ class Behavior:
         s = sim.personality_signal
         fit = s * _standardize(trait_fit(pop, arr)) + np.sqrt(1.0 - s * s) * chem
         lw = pop.truth.looks_weight[:, None]
+        self.looks = looks  # true looks appeal, standardized per viewer
         self.utility = lw * looks + (1.0 - lw) * fit
         np.fill_diagonal(self.utility, -np.inf)
         self.pickiness = pop.truth.pickiness
@@ -114,6 +115,11 @@ class Behavior:
         liked = rng.random(shown.size) < p
         picks = shown[liked][np.argsort(-u[liked], kind="stable")]
         return [int(j) for j in picks[: self.cfg.picks_per_day]]
+
+    def swipe(self, i: int, j: int, rng: np.random.Generator) -> bool:
+        """Calibration swipe: does i like j's photos? Decided on true looks appeal only."""
+        p = self._p(self.looks[i, j], self.cfg.swipe_threshold, self.pickiness[i])
+        return bool(rng.random() < p)
 
     def accepts(self, j: int, i: int, rng: np.random.Generator) -> bool:
         """Does j accept being picked by i?"""

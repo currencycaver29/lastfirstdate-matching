@@ -43,6 +43,8 @@ class CalibrationConfig:
     n_variety: int
     pca_dim: int
     l2_penalty: float
+    w0_l2_penalty: float
+    group_share_tolerance: float
 
 
 @dataclass(frozen=True)
@@ -78,6 +80,8 @@ class SimulationConfig:
     show_up_rate: float
     meeting_noise: float
     repeat_pick_factor: float
+    swipe_threshold: float
+    training_swipes: int
 
 
 @dataclass(frozen=True)
@@ -160,8 +164,9 @@ def validate(cfg: Config) -> None:
     if not 0 <= c.n_variety <= c.n_profiles:
         raise ConfigError("calibration.n_variety must be between 0 and n_profiles")
     _check_positive("calibration.pca_dim", c.pca_dim)
-    if c.l2_penalty < 0:
-        raise ConfigError("calibration.l2_penalty must not be negative")
+    _check_positive("calibration.l2_penalty", c.l2_penalty)
+    _check_positive("calibration.w0_l2_penalty", c.w0_l2_penalty)
+    _check_share("calibration.group_share_tolerance", c.group_share_tolerance)
 
     lists = cfg.lists
     _check_positive("lists.daily_size", lists.daily_size)
@@ -192,6 +197,7 @@ def validate(cfg: Config) -> None:
     ):
         _check_share(f"simulation.{name}", getattr(sim, name))
     _check_positive("simulation.picks_per_day", sim.picks_per_day)
+    _check_positive("simulation.training_swipes", sim.training_swipes)
     _check_positive("simulation.choice_temperature", sim.choice_temperature)
     if sim.meeting_noise < 0:
         raise ConfigError("simulation.meeting_noise must not be negative")

@@ -55,3 +55,16 @@ def test_picks_respect_the_daily_cap(cfg, small_pop):
         assert len(beh.choose(k, np.arange(100, 130), np.random.default_rng(k))) <= (
             cfg.simulation.picks_per_day
         )
+
+
+def test_calibration_swipes_follow_true_looks(cfg, small_pop):
+    """FR-LM-11: photo swipes depend on true looks appeal: better-looking-to-her gets more likes."""
+    beh = _behavior(cfg, small_pop)
+    rng = np.random.default_rng(5)
+    top = bottom = 0
+    for i in range(100):
+        order = np.argsort(beh.looks[i])
+        order = order[order != i]
+        top += sum(beh.swipe(i, int(j), rng) for j in order[-10:])
+        bottom += sum(beh.swipe(i, int(j), rng) for j in order[:10])
+    assert top > 3 * max(bottom, 1)

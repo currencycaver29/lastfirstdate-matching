@@ -14,8 +14,8 @@ belong in this repo.
 |---|---|---|
 | 0 | Foundation: settings, member schema, fake NYC member generator, gates | Done |
 | 1 | Working matcher on personality only: filter, personality score, daily list, weekly scheduler, simulated month | Done (about 80% of paying members reach 3 dates) |
-| 2 | Looks model: the 50 calibration profiles and personal photo taste | Next |
-| 3 | 50/50 mutual score | Planned |
+| 2 | Looks model: the 50 calibration profiles and personal photo taste | Done (AUC 0.844 against a ceiling of 0.875) |
+| 3 | 50/50 mutual score | Next |
 | 4 | Fair daily lists | Planned |
 | 5 | Learning from dates | Planned |
 
@@ -32,6 +32,7 @@ python -m venv .venv
 .venv/bin/pip install -e ".[dev]"      # on Windows: .venv\Scripts\pip install -e ".[dev]"
 .venv/bin/python -m lastfirstdate.synthetic
 .venv/bin/python -m lastfirstdate.simulate   # one simulated month and its report
+.venv/bin/python -m lastfirstdate.looks_report   # how well the looks model learns taste
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
@@ -50,6 +51,8 @@ src/lastfirstdate/
   scheduler.py              Stage 7: weekly date booking (min-cost flow or integer program)
   simulator.py              fake people's decisions, from hidden truth only
   simulate.py               a simulated month and its report
+  looks.py                  Stages 2 and 3: calibration profiles and personal photo taste
+  looks_report.py           how well the looks model learns taste, with a group audit
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test

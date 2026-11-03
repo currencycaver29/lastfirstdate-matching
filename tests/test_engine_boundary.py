@@ -6,8 +6,13 @@ from pathlib import Path
 import lastfirstdate
 
 PKG = Path(lastfirstdate.__file__).parent
-ENGINE = ["arrays", "config", "filter", "lists", "models", "personality", "scheduler"]
-SIM_ONLY = {"lastfirstdate.synthetic", "lastfirstdate.simulator", "lastfirstdate.simulate"}
+ENGINE = ["arrays", "config", "filter", "lists", "looks", "models", "personality", "scheduler"]
+SIM_ONLY = {
+    "lastfirstdate.synthetic",
+    "lastfirstdate.simulator",
+    "lastfirstdate.simulate",
+    "lastfirstdate.looks_report",
+}
 
 
 def _imports(path: Path) -> set[str]:

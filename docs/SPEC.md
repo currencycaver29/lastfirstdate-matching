@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 1
+Current sprint: 2
 
 ## Goal
 
@@ -53,7 +53,8 @@ dates, and dates are scheduled into time both people have free.
 | D8 | Guarantee target | 95% of paying members with at least 10 possible matches reach 3 dates in the simulated month. Checked from Sprint 4 (FR-LM-21). | Measurable version of the promise |
 | D9 | Distance | Straight-line km within both people's max distance. Replaced by the original SQL query's route rule once that query is added to `db/`. | The SQL query is not in this repo yet |
 | D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
-| D11 | Test population | 1,000 synthetic NYC members, seed 7 | Fast and big enough to see effects |
+| D11 | Test population | 1,000 synthetic NYC members, seed 7. Settings are tuned on a different fake city (seed 101) so tuning cannot flatter the results. | Fast and big enough to see effects |
+| D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
 ## Requirements by sprint
 
@@ -176,11 +177,14 @@ Test: recovers a synthetic member's hidden taste better than w_0 alone.
 
 #### FR-LM-16 · Calibration profiles (Stage 2)
 Sprint: 2
-Profiles 1 to 20: the most varied set by farthest-point selection (a simple stand-in for a
-determinantal point process, paper 2). Profiles 21 to 50: each next one is the profile the
-model is least sure about (papers 1 and 3).
+Profiles 1 to 20: the most varied set by greedy selection for a determinantal point process
+(paper 2): each next profile is the one least explained by those already chosen. Profiles
+21 to 50: each next one is the profile with the most expected information,
+log(1 + p(1 - p) s^2), where p is the predicted like chance and s^2 the model's
+uncertainty (papers 1 and 3). The pool follows D12.
 Test (acceptance): on synthetic members, taste learned from these 50 predicts held-out
-likes better than taste learned from 50 random profiles.
+likes better than taste learned from 50 random profiles (paired, by more than two standard
+errors); the first 20 cover more look types than 20 random profiles.
 
 #### FR-LM-17 · Looks report
 Sprint: 2
@@ -271,3 +275,11 @@ Test (acceptance): learning raises the second-date rate; every requirement has a
   paying members who get too few mutual yeses, which is what Sprint 4's fair lists address.
   The 95% acceptance check moved from FR-LM-12 to FR-LM-21 and is tracked as an expected
   failure until then. Details: `docs/sprints/sprint-1.md`.
+- **Sprint 2.** The looks model follows the plan. Two refinements: Stage 2's first 20
+  profiles use greedy DPP selection itself rather than the farthest-point stand-in, and
+  profiles 21 to 50 use expected information (which accounts for the model's uncertainty)
+  rather than "closest to 50%". Both choices were compared on the tuning city (seed 101);
+  the differences between reasonable methods were small. Finding: choosing the 50 well
+  beats choosing them at random by only about 0.004 to 0.009 AUC; most of the gain comes
+  from having a personal model at all (about +0.09 AUC over w_0). Details:
+  `docs/sprints/sprint-2.md`.

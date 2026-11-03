@@ -20,6 +20,9 @@ n_profiles = 50
 n_variety = 20                # profiles 1-20 picked for variety, the rest for uncertainty
 pca_dim = 64                  # photo embeddings are shrunk to this many numbers
 l2_penalty = 1.0              # keeps the personal correction small until enough swipes
+w0_l2_penalty = 10.0          # the same, for fitting the starting taste w_0 on pooled swipes
+                              # (both penalties chosen on a separate fake city, seed 101)
+group_share_tolerance = 0.05  # looks audit flags a group whose top-30 share is off by more
 
 [lists]                       # Stage 6: the daily list
 daily_size = 30
@@ -52,6 +55,8 @@ choice_temperature = 0.5      # lower = more decisive choices
 show_up_rate = 0.92           # chance each person shows up to a booked date
 meeting_noise = 0.5           # how much meeting in person changes appeal (standard deviations)
 repeat_pick_factor = 0.5      # each earlier pass halves the chance of picking that person later
+swipe_threshold = 0.5         # true looks appeal where a calibration swipe is 50/50
+training_swipes = 50          # random swipes per member used to fit the starting taste w_0
 
 [population]                  # Synthetic member generator (FR-LM-03)
 n_members = 1000
