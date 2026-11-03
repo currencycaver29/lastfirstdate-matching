@@ -30,4 +30,5 @@ sprint are in `docs/sprints/`.
 uv venv .venv && uv pip install --python .venv/bin/python -e ".[dev]"
 ./scripts/check.sh
 .venv/bin/python -m lastfirstdate.synthetic
+.venv/bin/python -m lastfirstdate.simulate
 ```

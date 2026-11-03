@@ -48,6 +48,7 @@ class CalibrationConfig:
 @dataclass(frozen=True)
 class ListsConfig:
     daily_size: int
+    reshow_after_days: int
     max_appearances_per_day: int
     exploration_share: float
 
@@ -57,6 +58,8 @@ class DatesConfig:
     guaranteed_per_month_paying: int
     cap_per_month: int
     weeks_per_month: int
+    max_per_week: int
+    date_value: float
     late_month_bonus: float
 
 
@@ -64,6 +67,17 @@ class DatesConfig:
 class SimulationConfig:
     seed: int
     guarantee_target: float
+    min_pool_for_guarantee: int
+    open_app_rate: float
+    picks_per_day: int
+    personality_signal: float
+    like_threshold: float
+    accept_threshold: float
+    again_threshold: float
+    choice_temperature: float
+    show_up_rate: float
+    meeting_noise: float
+    repeat_pick_factor: float
 
 
 @dataclass(frozen=True)
@@ -151,6 +165,7 @@ def validate(cfg: Config) -> None:
 
     lists = cfg.lists
     _check_positive("lists.daily_size", lists.daily_size)
+    _check_positive("lists.reshow_after_days", lists.reshow_after_days)
     if lists.max_appearances_per_day < 0:
         raise ConfigError("lists.max_appearances_per_day must be 0 (auto) or positive")
     _check_share("lists.exploration_share", lists.exploration_share)
@@ -162,8 +177,26 @@ def validate(cfg: Config) -> None:
         raise ConfigError("dates.guaranteed_per_month_paying must be between 0 and cap_per_month")
     if d.late_month_bonus < 0:
         raise ConfigError("dates.late_month_bonus must not be negative")
+    if d.date_value < 0:
+        raise ConfigError("dates.date_value must not be negative")
+    if d.max_per_week != 1:
+        raise ConfigError("dates.max_per_week: only 1 date per person per week is supported")
 
-    _check_share("simulation.guarantee_target", cfg.simulation.guarantee_target)
+    sim = cfg.simulation
+    for name in (
+        "guarantee_target",
+        "open_app_rate",
+        "personality_signal",
+        "show_up_rate",
+        "repeat_pick_factor",
+    ):
+        _check_share(f"simulation.{name}", getattr(sim, name))
+    _check_positive("simulation.picks_per_day", sim.picks_per_day)
+    _check_positive("simulation.choice_temperature", sim.choice_temperature)
+    if sim.meeting_noise < 0:
+        raise ConfigError("simulation.meeting_noise must not be negative")
+    if sim.min_pool_for_guarantee < 0:
+        raise ConfigError("simulation.min_pool_for_guarantee must not be negative")
 
     f = cfg.filter
     if f.active_within_days < 0 or f.min_shared_slots < 0:

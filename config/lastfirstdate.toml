@@ -23,6 +23,7 @@ l2_penalty = 1.0              # keeps the personal correction small until enough
 
 [lists]                       # Stage 6: the daily list
 daily_size = 30
+reshow_after_days = 7         # someone passed over can reappear after this many days
 max_appearances_per_day = 0   # 0 = automatic: twice a fair share of list slots
 exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
 
@@ -30,11 +31,27 @@ exploration_share = 0.10      # share of slots spent on profiles the model is un
 guaranteed_per_month_paying = 3
 cap_per_month = 4             # nobody gets more dates than this in a month
 weeks_per_month = 4
-late_month_bonus = 0.2        # extra edge weight for members still below their guarantee
+max_per_week = 1              # one date per person per week (only 1 is supported for now)
+date_value = 1.0              # value of arranging any date, added to every pair's score,
+                              # so the scheduler never skips a date it could book
+late_month_bonus = 0.2        # urgency: extra edge weight per missing guaranteed date,
+                              # divided by the weeks left in the month
 
 [simulation]                  # Acceptance checks run on fake members only
 seed = 7
 guarantee_target = 0.95       # share of paying members who must reach their guarantee
+min_pool_for_guarantee = 10   # paying members with fewer possible matches are reported apart
+open_app_rate = 0.6           # chance a member opens the app on a given day
+picks_per_day = 3             # most profiles a chooser picks in one day
+personality_signal = 0.5      # how closely true fit follows the measured personality score
+                              # (paper 9: traits measured before meeting predict it weakly)
+like_threshold = 1.0          # true appeal, in standard deviations, where a chooser is 50/50
+accept_threshold = 0.0        # the same, for accepting a pick
+again_threshold = 0.5         # the same, for wanting a second date after meeting
+choice_temperature = 0.5      # lower = more decisive choices
+show_up_rate = 0.92           # chance each person shows up to a booked date
+meeting_noise = 0.5           # how much meeting in person changes appeal (standard deviations)
+repeat_pick_factor = 0.5      # each earlier pass halves the chance of picking that person later
 
 [population]                  # Synthetic member generator (FR-LM-03)
 n_members = 1000

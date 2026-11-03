@@ -9,7 +9,7 @@ description = "Matching engine for lastfirstdate: mutual 50/50 looks and persona
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "numpy>=1.26",
+    "numpy>=2.0",
     "scipy>=1.11",
     "ortools>=9.10",
 ]
