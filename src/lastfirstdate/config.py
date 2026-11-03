@@ -35,6 +35,7 @@ class PersonalityConfig:
 @dataclass(frozen=True)
 class MixConfig:
     looks_weight: float
+    chooser_weight: float
 
 
 @dataclass(frozen=True)
@@ -158,6 +159,8 @@ def validate(cfg: Config) -> None:
         raise ConfigError("personality weights must add up to 1")
 
     _check_share("mix.looks_weight", cfg.mix.looks_weight)
+    if not 0.0 < cfg.mix.chooser_weight < 1.0:
+        raise ConfigError("mix.chooser_weight must be strictly between 0 and 1")
 
     c = cfg.calibration
     _check_positive("calibration.n_profiles", c.n_profiles)

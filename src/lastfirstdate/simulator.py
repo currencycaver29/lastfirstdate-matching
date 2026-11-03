@@ -22,6 +22,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import numpy as np
+from scipy.spatial.distance import cdist
 
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import Config
@@ -66,8 +67,7 @@ def trait_fit(pop: Population, arr: MemberArrays) -> np.ndarray:
         ok = ((arr.accepts[:, q][:, None] >> arr.answer[:, q][None, :]) & 1).astype(bool)
         agree += ok & ok.T
     agree /= arr.answer.shape[1]
-    d = np.sqrt(((arr.big5[:, None, :] - arr.big5[None, :, :]) ** 2).sum(axis=2))
-    big5 = 1.0 - d / np.sqrt(5.0)
+    big5 = 1.0 - cdist(arr.big5, arr.big5) / np.sqrt(5.0)
     return (_standardize(jaccard) + _standardize(agree) + _standardize(big5)) / 3.0
 
 
@@ -115,6 +115,17 @@ class Behavior:
         liked = rng.random(shown.size) < p
         picks = shown[liked][np.argsort(-u[liked], kind="stable")]
         return [int(j) for j in picks[: self.cfg.picks_per_day]]
+
+    def swipe_outcomes(self, i: int, seed: int) -> np.ndarray:
+        """(n,) every calibration swipe outcome for member i, fixed in advance.
+
+        Drawn from a generator seeded by (seed, i), so the same member gives the same
+        answer to the same profile however many times or in whatever order it is shown
+        (common random numbers).
+        """
+        n = self.looks.shape[0]
+        u = np.random.default_rng([seed, int(i)]).random(n)
+        return u < self._p(self.looks[i], self.cfg.swipe_threshold, self.pickiness[i])
 
     def swipe(self, i: int, j: int, rng: np.random.Generator) -> bool:
         """Calibration swipe: does i like j's photos? Decided on true looks appeal only."""

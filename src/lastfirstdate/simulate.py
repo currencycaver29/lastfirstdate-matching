@@ -58,6 +58,8 @@ class MonthReport:
     methods: list[str]
     guarantee: int
     min_pool: int
+    pair_appeal: float  # average true appeal within booked pairs, both directions (simulation)
+    both_keen: float  # share of booked pairs where each truly likes the other above average
     misses: list[Miss] = field(default_factory=list)
 
     @property
@@ -93,6 +95,8 @@ class MonthReport:
             f"  picks {self.picks}, accepted {self.accepts} ({accept_rate:.0%})",
             f"  dates booked {self.booked}, held {self.held}, "
             f"both wanted a second date {self.second_dates} ({second_rate:.0%})",
+            f"  booked pairs: average true appeal {self.pair_appeal:+.2f} SD, "
+            f"both above average {self.both_keen:.0%}",
             f"  scheduler method by week: {', '.join(self.methods)}",
             "",
             f"Guarantee: {self.guarantee} dates for paying members",
@@ -110,6 +114,18 @@ class MonthReport:
             for r, c in sorted(reasons.items(), key=lambda kv: -kv[1]):
                 lines.append(f"    {c:4d}  {r}")
         return "\n".join(lines)
+
+
+def month_people(
+    pop: Population, arr: MemberArrays, cfg: Config, seed: int
+) -> tuple[Behavior, np.random.Generator]:
+    """The simulated people for a month with this seed, and the generator their choices use.
+
+    Anything that must be judged by the same people as run_month (for example the ranking
+    quality in mutual_report) should get them from here.
+    """
+    rng = np.random.default_rng(seed + 1_000_003)
+    return Behavior(pop, arr, cfg, rng), rng
 
 
 def _miss_reason(pool: int, yeses: int, min_pool: int, guarantee: int) -> str:
@@ -130,16 +146,15 @@ def run_month(
     cfg = cfg or load()
     seed = cfg.simulation.seed if seed is None else seed
     pop = pop or generate(cfg, seed=seed)
-    rng = np.random.default_rng(seed + 1_000_003)
     members = pop.members
     n = len(members)
     arr = MemberArrays.from_members(members, cfg.values)
+    behavior, rng = month_people(pop, arr, cfg, seed)
 
     eligible = eligibility_matrix(arr, cfg)
     if scores is None:
         scores = personality_matrix(members, arr, cfg)
     rights = pick_rights(arr)
-    behavior = Behavior(pop, arr, cfg, rng)
     matchable = member_ok(arr, cfg)
     pool = eligible.sum(axis=1)
 
@@ -158,6 +173,7 @@ def run_month(
     picks = accepts = held = second = 0
     methods: list[str] = []
     booked_total = 0
+    booked_pairs: list[tuple[int, int]] = []
 
     for week in range(d.weeks_per_month):
         for _ in range(DAYS_PER_WEEK):
@@ -206,11 +222,14 @@ def run_month(
         capacity = {
             v: min(d.max_per_week, d.cap_per_month - int(dates[v])) for p in pairs for v in p
         }
-        weights = [d.date_value + scores[a, b] + urg[a] + urg[b] for a, b in pairs]
+        weights = [
+            d.date_value + (scores[a, b] + scores[b, a]) / 2 + urg[a] + urg[b] for a, b in pairs
+        ]
         masks = [int(arr.slots[a] & arr.slots[b]) for a, b in pairs]
         result = schedule_week(pairs, weights, masks, capacity, rng)
         methods.append(result.method)
         for bk in result.bookings:
+            booked_pairs.append((bk.a, bk.b))
             dates[[bk.a, bk.b]] += 1
             pending.discard((bk.a, bk.b))
             booked_total += 1
@@ -223,6 +242,9 @@ def run_month(
         }
 
     paying = arr.paying & matchable
+    u = behavior.utility
+    appeal = [(u[a, b] + u[b, a]) / 2 for a, b in booked_pairs]
+    keen = [min(u[a, b], u[b, a]) > 0 for a, b in booked_pairs]
     report = MonthReport(
         seed=seed,
         n_members=n,
@@ -241,6 +263,8 @@ def run_month(
         methods=methods,
         guarantee=d.guaranteed_per_month_paying,
         min_pool=sim.min_pool_for_guarantee,
+        pair_appeal=float(np.mean(appeal)) if appeal else float("nan"),
+        both_keen=float(np.mean(keen)) if keen else float("nan"),
     )
     for v in np.flatnonzero(paying & (dates < d.guaranteed_per_month_paying)):
         report.misses.append(

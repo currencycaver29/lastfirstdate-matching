@@ -15,8 +15,8 @@ belong in this repo.
 | 0 | Foundation: settings, member schema, fake NYC member generator, gates | Done |
 | 1 | Working matcher on personality only: filter, personality score, daily list, weekly scheduler, simulated month | Done (about 80% of paying members reach 3 dates) |
 | 2 | Looks model: the 50 calibration profiles and personal photo taste | Done (AUC 0.844 against a ceiling of 0.875) |
-| 3 | 50/50 mutual score | Next |
-| 4 | Fair daily lists | Planned |
+| 3 | 50/50 mutual score | Done (raises the chance the other person accepts; see notes) |
+| 4 | Fair daily lists | Next |
 | 5 | Learning from dates | Planned |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
@@ -33,6 +33,7 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.synthetic
 .venv/bin/python -m lastfirstdate.simulate   # one simulated month and its report
 .venv/bin/python -m lastfirstdate.looks_report   # how well the looks model learns taste
+.venv/bin/python -m lastfirstdate.mutual_report  # compare list rankings in a simulated month
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
@@ -53,6 +54,8 @@ src/lastfirstdate/
   simulate.py               a simulated month and its report
   looks.py                  Stages 2 and 3: calibration profiles and personal photo taste
   looks_report.py           how well the looks model learns taste, with a group audit
+  mutual.py                 Stage 5: percentiles, the 50/50 mix and the mutual score
+  mutual_report.py          compares list rankings in a simulated month
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test

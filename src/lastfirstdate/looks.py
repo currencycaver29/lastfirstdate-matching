@@ -217,6 +217,7 @@ class PersonalTaste:
     liked: list[bool] = field(default_factory=list)
     delta: np.ndarray | None = None
     cov: np.ndarray | None = None
+    complete: bool = False  # set when calibration has finished
 
     def __post_init__(self) -> None:
         d = next(iter(self.start.by_group.values()), self.start.pooled).shape[0]
@@ -229,12 +230,15 @@ class PersonalTaste:
     def n_swipes(self) -> int:
         return len(self.liked)
 
-    def add_swipe(self, features: np.ndarray, candidate_gender: int, liked: bool) -> None:
-        """Record one swipe and refit the personal correction."""
+    def add_swipe(
+        self, features: np.ndarray, candidate_gender: int, liked: bool, refit: bool = True
+    ) -> None:
+        """Record one swipe and (by default) refit the personal correction."""
         self.features.append(np.asarray(features, dtype=float))
         self.candidate_genders.append(int(candidate_gender))
         self.liked.append(bool(liked))
-        self.refit()
+        if refit:
+            self.refit()
 
     def refit(self) -> None:
         x = np.array(self.features)
@@ -264,8 +268,12 @@ class PersonalTaste:
         return np.log1p(p * (1 - p) * self.uncertainty(features))
 
     def list_scores(self, features: np.ndarray, candidate_genders: np.ndarray) -> np.ndarray:
-        """V_i(j) for ranking a daily list. Refuses until calibration is complete (R2)."""
-        if self.n_swipes < self.min_swipes_for_lists:
+        """V_i(j) for ranking a daily list. Refuses until calibration is complete (R2).
+
+        Complete means `min_swipes_for_lists` swipes, or calibration finished early because
+        the member's pool ran out of profiles.
+        """
+        if not self.complete and self.n_swipes < self.min_swipes_for_lists:
             raise CalibrationIncomplete(
                 f"{self.n_swipes} swipes so far; lists need {self.min_swipes_for_lists}"
             )
@@ -346,14 +354,18 @@ def calibrate(
         for j in order:
             taste.add_swipe(features[j], genders[j], swipe(int(j)))
             shown.append(int(j))
+        taste.complete = True
         return shown
     if strategy != "calibrated":
         raise ValueError(f"unknown strategy {strategy!r}")
     pool_x = features[pool_ids][:, :-1]  # without the intercept column
     for row in select_varied(pool_x, min(cfg.calibration.n_variety, k)):
         j = int(pool_ids[row])
-        taste.add_swipe(features[j], genders[j], swipe(j))
+        # variety picks don't depend on the model, so fit once after all of them
+        taste.add_swipe(features[j], genders[j], swipe(j), refit=False)
         shown.append(j)
+    if shown:
+        taste.refit()
     remaining = np.setdiff1d(pool_ids, shown)
     while len(shown) < k and remaining.size:
         info = taste.information(features[remaining], genders[remaining])
@@ -361,4 +373,5 @@ def calibrate(
         taste.add_swipe(features[j], genders[j], swipe(j))
         shown.append(j)
         remaining = remaining[remaining != j]
+    taste.complete = True
     return shown

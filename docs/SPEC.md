@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 2
+Current sprint: 3
 
 ## Goal
 
@@ -54,6 +54,7 @@ dates, and dates are scheduled into time both people have free.
 | D9 | Distance | Straight-line km within both people's max distance. Replaced by the original SQL query's route rule once that query is added to `db/`. | The SQL query is not in this repo yet |
 | D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
 | D11 | Test population | 1,000 synthetic NYC members, seed 7. Settings are tuned on a different fake city (seed 101) so tuning cannot flatter the results. | Fast and big enough to see effects |
+| D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's simulation found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
 ## Requirements by sprint
@@ -208,9 +209,13 @@ Test: weight applied from config.
 #### FR-LM-20 · Mutual score M (Stage 5)
 Sprint: 3
 M(i, j) = harmonic mean of S(i to j) and S(j to i): high only when both are high. Papers 6
-and 10.
-Test: symmetric; zero if either side is zero; in simulation, ranking by M gives more mutual
-likes than ranking by one side only.
+and 10. `mix.chooser_weight` generalizes it to a weighted harmonic mean (D13); at 0.5 it is
+the plain harmonic mean and M is symmetric.
+Test: symmetric at 0.5; zero if either side is zero; between the two sides. Acceptance, judged
+by the simulator's hidden truth on the top 10 of each chooser's list: candidates ranked by
+M are likelier to accept the chooser than candidates ranked by the chooser's one-sided S;
+M gets more mutual yeses than looks alone or personality alone, and is within 1.5 points of
+one-sided S.
 
 ### Sprint 4: fair daily lists
 
@@ -283,3 +288,12 @@ Test (acceptance): learning raises the second-date rate; every requirement has a
   beats choosing them at random by only about 0.004 to 0.009 AUC; most of the gain comes
   from having a personal model at all (about +0.09 AUC over w_0). Details:
   `docs/sprints/sprint-2.md`.
+- **Sprint 3.** The mutual score behaves as designed (people at the top of a list are
+  likelier to accept), but the original acceptance test, "more mutual likes than one side
+  only", did not hold: in the simulation choosers are pickier than the people they pick, so
+  weighing both sides equally costs about as many of her picks as it gains in his
+  acceptances (24.2% versus 25.7% mutual yeses in the top 10). The test now checks what M
+  reliably does, and a chooser weight (D13) was added, kept at 0.5. A second finding: in a
+  1,000-member city, members see almost everyone in their pool each month, so the ranking
+  method barely changes monthly outcomes; it matters with shorter lists or bigger pools.
+  Details: `docs/sprints/sprint-3.md`.

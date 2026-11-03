@@ -212,13 +212,7 @@ def run_looks_report(
     train, evaluate = viewers[: len(viewers) // 2], viewers[len(viewers) // 2 :]
 
     def outcomes(v: int) -> np.ndarray:
-        """Every swipe outcome for member v, fixed in advance (common random numbers)."""
-        u = np.random.default_rng([seed, int(v)]).random(n)
-        p = sigmoid(
-            (behavior.looks[v] - cfg.simulation.swipe_threshold - behavior.pickiness[v])
-            / cfg.simulation.choice_temperature
-        )
-        return u < p
+        return behavior.swipe_outcomes(v, seed)
 
     swipes: list[Swipe] = []
     for v in train:

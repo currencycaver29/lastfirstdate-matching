@@ -14,6 +14,7 @@ w_big5 = 0.3
 
 [mix]                         # Stage 5: S = looks_weight * V + (1 - looks_weight) * P
 looks_weight = 0.5
+chooser_weight = 0.5           # M's weight on the chooser's side; 0.5 = plain harmonic mean
 
 [calibration]                 # Stages 2 and 3: the first 50 profiles and the taste model
 n_profiles = 50
