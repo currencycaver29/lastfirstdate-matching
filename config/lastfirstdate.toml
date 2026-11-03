@@ -1,0 +1,84 @@
+# lastfirstdate matching engine settings.
+# Every weight, cap and threshold lives here so it can change without touching code.
+# Section names match the stages in docs/SPEC.md.
+
+[filter]                      # Stage 1: hard filter
+require_verified = true
+active_within_days = 14       # profile must have been active in the last N days
+min_shared_slots = 1          # free weekly time slots both people share
+
+[personality]                 # Stage 4: P = w_text * t + w_values * A + w_big5 * p
+w_text = 0.4
+w_values = 0.3
+w_big5 = 0.3
+
+[mix]                         # Stage 5: S = looks_weight * V + (1 - looks_weight) * P
+looks_weight = 0.5
+
+[calibration]                 # Stages 2 and 3: the first 50 profiles and the taste model
+n_profiles = 50
+n_variety = 20                # profiles 1-20 picked for variety, the rest for uncertainty
+pca_dim = 64                  # photo embeddings are shrunk to this many numbers
+l2_penalty = 1.0              # keeps the personal correction small until enough swipes
+
+[lists]                       # Stage 6: the daily list
+daily_size = 30
+max_appearances_per_day = 0   # 0 = automatic: twice a fair share of list slots
+exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
+
+[dates]                       # Stage 7: scheduling
+guaranteed_per_month_paying = 3
+cap_per_month = 4             # nobody gets more dates than this in a month
+weeks_per_month = 4
+late_month_bonus = 0.2        # extra edge weight for members still below their guarantee
+
+[simulation]                  # Acceptance checks run on fake members only
+seed = 7
+guarantee_target = 0.95       # share of paying members who must reach their guarantee
+
+[population]                  # Synthetic member generator (FR-LM-03)
+n_members = 1000
+share_men = 0.55
+orientation = { straight = 0.90, gay = 0.07, bi = 0.03 }
+paying_share = { man = 0.50, woman = 0.30 }
+verified_share = 0.92
+active_share = 0.85
+age_min = 21
+age_max = 45
+max_km_min = 5.0
+max_km_max = 25.0
+embedding_dim = 128           # stand-in for a real image model's output size
+n_look_types = 8              # clusters in the fake photo embeddings
+n_audit_groups = 5            # fake demographic labels, used only for fairness audits
+interests_min = 5
+interests_max = 10
+slots_min = 4
+slots_max = 10
+dealbreaker_rate = 0.12       # chance a member marks a values question as a dealbreaker
+
+# Values and intent questions (Stage 4 A score and Stage 1 dealbreakers).
+# Each member gives an answer and the set of answers they accept from a partner.
+# List options in order: neighbors count as close answers.
+[[values]]
+key = "kids"
+options = ["want", "open", "dont_want", "have"]
+
+[[values]]
+key = "relationship_goal"
+options = ["marriage", "long_term", "figuring_out"]
+
+[[values]]
+key = "smoking"
+options = ["never", "sometimes", "regularly"]
+
+[[values]]
+key = "drinking"
+options = ["never", "socially", "often"]
+
+[[values]]
+key = "religion_importance"
+options = ["high", "medium", "low"]
+
+[[values]]
+key = "timeline"
+options = ["within_2_years", "within_5_years", "no_rush"]

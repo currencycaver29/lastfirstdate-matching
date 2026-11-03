@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+reports/
+# Never commit real member data, photos or embeddings.
+data/real/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.npy
+*.parquet
