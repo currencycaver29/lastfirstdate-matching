@@ -16,18 +16,10 @@
 
 ## About
 
-lastfirstdate is a verified dating service for New York: women choose who they meet, and men
-subscribe for three guaranteed dates a month. This repository is the algorithm behind it,
-the part that decides who sees whom, when they meet and where. The app itself is built
-separately.
-
-After a short photo exercise, the engine learns what each member finds attractive. It then
-ranks every possible match **50% on looks, as that member sees them, and 50% on personality
-and interests**, and only puts forward matches that work for both people. Daily lists are
-shared out fairly, so a few popular profiles don't take all the attention. Each profile comes
-with a date window both people can make. Behind it all, the engine protects the guarantee: it
-forecasts whether each man will get his dates, and pauses men's sign-ups when the market
-can't serve more of them.
+lastfirstdate is a verified dating service for New York. This repository is its matching
+engine: it decides who sees whom, and when and where they meet. Matches are ranked half on
+looks, as each member sees them, and half on personality, and only pairs who suit each other
+are suggested. The app itself is built separately.
 
 ## How it works
 
