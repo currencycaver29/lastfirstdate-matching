@@ -1,99 +1,211 @@
-# lastfirstdate-matching
+<h1 align="center">lastfirstdate-matching</h1>
 
-Matching engine for lastfirstdate. After a member swipes on about 50 profiles, it learns
-their taste and ranks matches 50% on looks (to that member) and 50% on personality and
-interests. Scores are mutual, daily lists are spread fairly, and dates are scheduled into
-time both people have free.
+<p align="center">
+  The matching engine behind <a href="https://lastfirstdate.vercel.app/">lastfirstdate</a>:
+  mutual, fair, and built around real dates.
+</p>
 
-Everything here runs on **synthetic members only**. No real profiles, photos or embeddings
-belong in this repo.
+<p align="center">
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB">
+  <img alt="Rust" src="https://img.shields.io/badge/rust-core-B7410E">
+  <img alt="synthetic data only" src="https://img.shields.io/badge/data-synthetic%20only-555555">
+</p>
 
-## Status
+---
 
-| Sprint | What | Status |
-|---|---|---|
-| 0 | Foundation: settings, member schema, fake NYC member generator, gates | Done |
-| 1 | Working matcher on personality only: filter, personality score, daily list, weekly scheduler, simulated month | Done (about 80% of paying members reach 3 dates) |
-| 2 | Looks model: the 50 calibration profiles and personal photo taste | Done (AUC 0.844 against a ceiling of 0.875) |
-| 3 | 50/50 mutual score | Done (raises the chance the other person accepts; see notes) |
-| 4 | Fair daily lists | Done (guarantee about 82%; 95% needs a business decision, see notes) |
-| 5 | Learning from dates | Done (personal looks weights learned; no measurable gain in second dates yet) |
-| 6 | lastfirstdate's real rules, guarantee forecast and ratio gate | Done (gate keeps admitted men at 92% to 96% where admitting everyone gives 12.5%) |
-| 6 + | Rust core for the hot loops | Done (looks taste 3.6x faster, daily lists 10x, gate 28x to 81x; identical results) |
-| 7 | Booking, billing, trust and geography; the app's database design | Done (real flow: about 68% of men get 3 delivered dates a cycle; see notes) |
+## About
 
-Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
-[`docs/research.md`](docs/research.md). Study notes per sprint:
-[`docs/sprints/`](docs/sprints/).
+lastfirstdate is a verified dating service for New York: women choose who they meet, and men
+subscribe for three guaranteed dates a month. This repository is the algorithm behind it,
+the part that decides who sees whom, when they meet and where. The app itself is built
+separately.
 
-## Run it
+After a short photo exercise, the engine learns what each member finds attractive. It then
+ranks every possible match **50% on looks, as that member sees them, and 50% on personality
+and interests**, and only puts forward matches that work for both people. Daily lists are
+shared out fairly, so a few popular profiles don't take all the attention. Each profile comes
+with a date window both people can make. Behind it all, the engine protects the guarantee: it
+forecasts whether each man will get his dates, and pauses men's sign-ups when the market
+can't serve more of them.
 
-Needs Python 3.11 or newer and Rust (install it from https://rustup.rs). Installing the
-package compiles the Rust core in `rust/` into `lastfirstdate._core`; the engine then uses it
-automatically. Set `LASTFIRSTDATE_BACKEND=python` to run everything in plain Python instead
-(same answers, slower).
+Everything here runs on **synthetic members**. No real profile, photo or embedding is ever
+stored in this repository.
+
+## How it works
+
+Matching runs in eight stages:
+
+| # | Stage | What it does |
+|:-:|---|---|
+| 1 | **Filter** | Keeps only pairs who could actually meet: orientation both ways, age, distance, dealbreakers, verification |
+| 2 | **Calibration** | Picks about 30 photos, singles and "who are you more drawn to?" pairs, that teach the model the most about a new member |
+| 3 | **Looks taste** | Learns each member's personal photo taste as a small Bayesian model on top of a shared starting point |
+| 4 | **Personality** | Scores free-text prompts, intent answers (timeline, exclusivity, kids) and interests |
+| 5 | **Mutual score** | Mixes looks and personality 50/50 in each direction, then combines both directions so both people must want it |
+| 6 | **Fair lists** | Builds each woman's daily list under an exposure cap, with a boost for men still owed dates |
+| 7 | **Booking** | Proposes the earliest window both are free, holds it for 15 minutes while both $10 payments arrive, picks a venue fair to both |
+| 8 | **Learning** | Learns from picks, dates and private ratings, and keeps exploring a little |
+
+Around the stages sit the business rules from lastfirstdate's website:
+
+- the **ratio gate**, which admits men from the waitlist only while the forecast says they'll
+  get their dates;
+- **billing cycles** that count only delivered dates and refill cancelled ones;
+- a private **trust score** built from behaviour only, never looks.
+
+## Results in simulation
+
+All numbers come from synthetic members. They compare designs; they are not predictions.
+
+| Question | Answer |
+|---|---|
+| How well does the looks model learn a member's taste? | AUC 0.844, against a ceiling of 0.875 |
+| Do fair lists spread attention? | Exposure Gini falls from 0.39 to 0.31 |
+| Does the ratio gate protect the guarantee? | Admitted men reach 3 dates 92% to 96% of the time; admitting everyone gives 12.5% |
+| How many men get 3 *delivered* dates in the real booking flow? | About 68%; 90% with no cancellations, no-shows or missed payments |
+| How much faster is the Rust core? | Looks taste 3.6×, daily lists 10×, the gate 28× to 81×, with identical results |
+
+Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain these results and their limits.
+
+## Getting started
+
+### Requirements
+
+- Python 3.11 or newer
+- Rust, from [rustup.rs](https://rustup.rs). Installing the package compiles the Rust core.
+
+### Install
 
 ```bash
+git clone https://github.com/currencycaver29/lastfirstdate-matching.git
+cd lastfirstdate-matching
 python -m venv .venv
-.venv/bin/pip install -e ".[dev]"      # on Windows: .venv\Scripts\pip install -e ".[dev]"
-.venv/bin/python -m lastfirstdate.synthetic
-.venv/bin/python -m lastfirstdate.simulate   # one simulated month and its report
-.venv/bin/python -m lastfirstdate.looks_report   # how well the looks model learns taste
-.venv/bin/python -m lastfirstdate.mutual_report  # compare list rankings in a simulated month
-.venv/bin/python -m lastfirstdate.fairness_report  # exposure, fairness audit, hold-back test
-.venv/bin/python -m lastfirstdate.learning_report  # three months with and without learning
-.venv/bin/python -m lastfirstdate.phase1_report    # Phase 1 rules: pair questions, ratio gate
-.venv/bin/python -m lastfirstdate.forecast_fit     # refit the guarantee forecast (~10 minutes)
-.venv/bin/python -m lastfirstdate.cycle_sim        # the real booking flow over 3 billing cycles
-./scripts/check.sh                     # Rust and Python lint, format, tests, traceability
-.venv/bin/maturin develop --release --skip-install   # rebuild the Rust core after editing rust/
+.venv/bin/pip install -e ".[dev]"
 ```
 
-The same checks run automatically on GitHub for every push and pull request
-(`.github/workflows/checks.yml`). Fit with the real app: [`docs/fit-report.md`](docs/fit-report.md).
-Risks and the lawyer briefing: [`docs/risk-plan.md`](docs/risk-plan.md).
+On Windows, use `.venv\Scripts\pip` instead of `.venv/bin/pip`.
 
-## Layout
+### Try it
+
+```python
+from lastfirstdate.config import load
+from lastfirstdate.synthetic import generate
+from lastfirstdate.simulate import run_month
+
+cfg = load()                   # research defaults; load("config/phase1.toml") for Phase 1 rules
+pop = generate(cfg, seed=7)    # 1,000 fake New Yorkers
+report = run_month(pop, cfg)
+print(report.text())
+```
+
+### Reports
+
+Each report runs a simulation and prints what it found:
+
+```bash
+.venv/bin/python -m lastfirstdate.simulate          # one simulated month
+.venv/bin/python -m lastfirstdate.looks_report      # how well the looks model learns taste
+.venv/bin/python -m lastfirstdate.mutual_report     # list rankings compared
+.venv/bin/python -m lastfirstdate.fairness_report   # exposure, fairness audit, hold-back test
+.venv/bin/python -m lastfirstdate.learning_report   # three months with and without learning
+.venv/bin/python -m lastfirstdate.phase1_report     # Phase 1 rules: pair questions, the ratio gate
+.venv/bin/python -m lastfirstdate.cycle_sim         # the real booking flow over three billing cycles
+.venv/bin/python -m lastfirstdate.forecast_fit      # refit the guarantee forecast (about 10 minutes)
+```
+
+### Checks
+
+```bash
+./scripts/check.sh
+```
+
+This runs Rust formatting, Clippy and tests, rebuilds the Rust module, then runs ruff, the
+Python tests and a check that every requirement has a test. The same checks run on GitHub for
+every push.
+
+## Configuration
+
+Every weight, cap and threshold lives in a settings file, never in code:
+
+| File | Use |
+|---|---|
+| [`config/lastfirstdate.toml`](config/lastfirstdate.toml) | Research defaults: a 1,000-member city, every orientation |
+| [`config/phase1.toml`](config/phase1.toml) | lastfirstdate's Phase 1: one NYC zone, 100 paying men and 300 women, a three-date cap, 30 calibration photos |
+
+`LASTFIRSTDATE_BACKEND=python` runs everything in plain Python instead of Rust. The answers
+are the same, only slower.
+
+## Project structure
 
 ```
-config/lastfirstdate.toml   every weight, cap and threshold (research defaults)
-config/phase1.toml          lastfirstdate's real Phase 1 rules from its website
-config/forecast_model.toml  guarantee forecast coefficients (written by forecast_fit.py)
-rust/
-  lastfirstdate-core/       the hot loops in pure Rust, with their own tests
-  lastfirstdate-py/         PyO3 bindings: lastfirstdate._core
-src/lastfirstdate/
-  config.py                 loads and validates the settings
-  models.py                 the member profile
-  synthetic.py              fake NYC members plus hidden ground truth for testing
-  arrays.py                 profiles as numpy arrays for fast pairwise work
-  filter.py                 Stage 1: hard filter
-  personality.py            Stage 4: interests, values and Big Five score
-  lists.py                  Stage 6: who chooses and the daily list
-  scheduler.py              Stage 7: weekly date booking (min-cost flow or integer program)
-  simulator.py              fake people's decisions, from hidden truth only
-  simulate.py               a simulated month and its report
-  looks.py                  Stages 2 and 3: calibration profiles and personal photo taste
-  looks_report.py           how well the looks model learns taste, with a group audit
-  mutual.py                 Stage 5: percentiles, the 50/50 mix and the mutual score
-  mutual_report.py          compares list rankings in a simulated month
-  fairness.py               Stage 6 fair version: caps, guarantee priority, Nash welfare
-  fairness_report.py        exposure spread, group audit and the hold-back experiment
-  learning.py               Stage 8: learning from dates and list choices, exploration
-  learning_report.py        three simulated months with and without learning
-  forecast.py               guarantee forecast, at-risk alerts and the ratio gate
-  forecast_fit.py           fits the forecast on simulated markets and tests it on others
-  phase1_report.py          Phase 1 rules: pair questions versus singles, the gate in action
-  native.py                 when the engine calls the Rust core (and how to turn it off)
-  booking.py                proposed date windows and the life of a booking
-  billing.py                billing cycles, delivered dates, refills, credits, date fees
-  trust.py                  private ratings and the behaviour-only trust score
-  geo.py                    neighbourhoods and the fair venue midpoint
-  cycle_sim.py              the real booking flow, day by day, over billing cycles
-tests/                      one or more tests per requirement id
-scripts/check.sh            the gates
-scripts/trace.py            fails if a requirement has no test
-docs/                       spec, research map, sprint study notes
-db/schema.sql               the database the app should keep (tables, checks)
-db/                         SQL queries (the original pre-filter goes here)
+lastfirstdate-matching/
+├── config/              settings files and the fitted forecast
+├── db/schema.sql        the database the app should keep
+├── docs/
+│   ├── SPEC.md          requirements, rules and decisions, sprint by sprint
+│   ├── research.md      the 17 papers behind the design
+│   ├── sprints/         study notes for every sprint
+│   ├── fit-report.md    how the engine fits lastfirstdate's real rules
+│   └── risk-plan.md     launch risks and questions for a lawyer
+├── rust/
+│   ├── lastfirstdate-core/   the hot loops in pure Rust
+│   └── lastfirstdate-py/     Python bindings (lastfirstdate._core)
+├── src/lastfirstdate/   the engine (Python) and the simulator
+├── tests/               one or more tests per requirement
+├── workspace/           a map of every algorithm stage, for working with an AI assistant
+└── scripts/check.sh     all the checks
 ```
+
+## Principles
+
+These rules are never broken, and tests enforce them:
+
+1. **Mutual orientation lock.** Someone is shown to you only if each of you is a gender the
+   other is looking for.
+2. **No global attractiveness score.** Looks are only ever scored from one member's own point
+   of view. Nothing ranks people by overall attractiveness.
+3. **Synthetic data only** in this repository. In production, photo embeddings are treated as
+   biometric data: encrypted, kept apart, deleted when a member leaves.
+4. **Tests run offline,** with no model downloads.
+5. **Every tunable number lives in the settings files.**
+6. **Dealbreakers are hard filters,** never soft penalties.
+7. **Same seed, same result.** All randomness is seeded.
+
+## Documentation
+
+| Document | What's in it |
+|---|---|
+| [Specification](docs/SPEC.md) | Every requirement, rule and decision, and how the plan changed |
+| [Research map](docs/research.md) | The 17 papers and where each one is used |
+| [Sprint notes](docs/sprints/) | In-depth study notes for every sprint, with results and limits |
+| [Fit report](docs/fit-report.md) | The engine checked against lastfirstdate's website |
+| [Risk plan](docs/risk-plan.md) | What to do before launch, including a ready-to-send lawyer briefing |
+| [Workspace](workspace/CONTEXT.md) | A map of the whole algorithm, stage by stage, and how each sprint is run |
+
+## Working with an AI assistant
+
+The [`workspace/`](workspace/CONTEXT.md) folder follows Interpretable Context Methodology
+(ICM). Every stage of the algorithm has a short `CONTEXT.md`: what it does, what it takes in
+and passes on, its code, settings, tests and known findings. An assistant working on, say,
+the daily lists reads only that folder instead of the whole repository. A `process/` folder
+describes how each sprint runs: spec, build, simulate, notes, handoff.
+
+## Roadmap
+
+| Sprint | Focus | Status |
+|:-:|---|---|
+| 0 | Foundation: settings, member model, synthetic city, checks | Done |
+| 1 | A working matcher on personality alone | Done |
+| 2 | The looks model and the photo exercise | Done |
+| 3 | The 50/50 mutual score | Done |
+| 4 | Fair daily lists | Done |
+| 5 | Learning from dates | Done |
+| 6 | lastfirstdate's real rules, the guarantee forecast and the ratio gate | Done |
+| – | The Rust core for the hot loops | Done |
+| 7 | Booking, billing, trust, geography and the app's database | Done |
+| 8 | The forecast and the gate on delivered dates | Next |
+
+## License
+
+No open-source license has been chosen yet. All rights are reserved by the owner.

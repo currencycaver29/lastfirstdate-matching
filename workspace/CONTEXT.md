@@ -1,0 +1,101 @@
+# Workspace: the lastfirstdate matching algorithm
+
+This folder organises the AI-assisted work on the algorithm with Interpretable Context
+Methodology (ICM). Each part of the algorithm has a folder whose `CONTEXT.md` says what that
+part does, what it takes in and passes on, where its code, settings and tests are, and what we
+already know about it. The code lives in `src/` and `rust/` as usual; these files are a map,
+so a session can load just the part it needs.
+
+## Start here (new session)
+
+1. Read this file.
+2. Working on part of the algorithm? Read that stage's `CONTEXT.md` (below), then only the
+   files it names.
+3. Running a sprint? Read `process/` in order: spec, build, simulate, notes, handoff.
+4. `CLAUDE.md` holds the rules and is loaded automatically. Don't read the whole repo, old
+   sprint notes or long reports unless a context file asks for them: that is where tokens go.
+
+## The algorithm, stage by stage
+
+Each stage's output feeds the next.
+
+```
+profiles ─▶ 01 filter ─▶ 02 calibration ─▶ 03 looks taste ─┐
+                                        04 personality ────┴▶ 05 mutual score ─▶ 06 daily lists
+                                                                                       │
+      10 trust ◀── ratings ◀── 07 booking ◀── her pick and his yes ◀───────────────────┘
+          │                      │
+          └──▶ lists (stage 6)   └──▶ 08 learning ──▶ back to stages 3 and 5
+                                 └──▶ 09 guarantee: delivered dates, credits, the ratio gate
+```
+
+| Stage | In one line |
+|---|---|
+| [01 filter](algorithm/01-filter/CONTEXT.md) | Only pairs who could really meet: orientation, age, distance, dealbreakers |
+| [02 calibration](algorithm/02-calibration/CONTEXT.md) | The ~30 photos (singles and pairs) that teach the looks model the most |
+| [03 looks taste](algorithm/03-looks-taste/CONTEXT.md) | Each member's own photo taste: a starting taste plus a personal correction |
+| [04 personality](algorithm/04-personality/CONTEXT.md) | Prompts, intent answers, interests |
+| [05 mutual score](algorithm/05-mutual-score/CONTEXT.md) | 50% looks, 50% personality, both directions combined |
+| [06 daily lists](algorithm/06-daily-lists/CONTEXT.md) | Up to 30 a day, shared fairly, with a boost for men owed dates |
+| [07 booking](algorithm/07-booking/CONTEXT.md) | Date window, 15-minute payment hold, fair venue |
+| [08 learning](algorithm/08-learning/CONTEXT.md) | Learning from picks, dates and ratings; a little exploration |
+| [09 guarantee](algorithm/09-guarantee/CONTEXT.md) | Forecast, mid-cycle alerts, the ratio gate, billing cycles, credits |
+| [10 trust](algorithm/10-trust/CONTEXT.md) | Behaviour-only trust: lowers ranking, flags for review |
+
+Used by every stage:
+
+| Shared | What's in it |
+|---|---|
+| [settings and data](shared/settings-and-data/CONTEXT.md) | The settings files, the member model, the app's database design |
+| [simulation](shared/simulation/CONTEXT.md) | Fake members and behaviour, the reports, how to measure honestly |
+| [Rust core](shared/rust-core/CONTEXT.md) | The hot loops in Rust and their Python twins |
+
+## How a sprint is run
+
+| Stage | Produces | Done when |
+|---|---|---|
+| [01 spec](process/01-spec/CONTEXT.md) | The sprint's section in `docs/SPEC.md` | The owner agrees on the scope |
+| [02 build](process/02-build/CONTEXT.md) | Code and tests | `./scripts/check.sh` passes; committed locally |
+| [03 simulate](process/03-simulate/CONTEXT.md) | `process/03-simulate/results-sprint-N.md` | Every number has the command that made it |
+| [04 notes](process/04-notes/CONTEXT.md) | `docs/sprints/sprint-N.md`; spec, README and workspace updated | The owner has the notes and the explanation |
+| [05 handoff](process/05-handoff/CONTEXT.md) | `docs/handoff/` for whoever builds the app | Only when an interface the app uses changes |
+
+After stage 04, stop: the owner studies the sprint. Push only when the owner says so.
+
+## Current state
+
+- **Current sprint:** 8, proposed: the forecast and the ratio gate on *delivered* dates. The
+  owner hasn't confirmed the topic; confirm it in process stage 01.
+- **Last finished:** Sprint 7 (`3f6e29c`, pushed), plus the Rust core (`7e0c166`).
+- **Where the engine stands:**
+  - all ten stages are built and tested;
+  - the real booking flow delivers 3 dates to about 68% of men in simulation;
+  - the forecast and gate were fitted on booked dates, which is why Sprint 8 is proposed.
+
+## Rules that matter everywhere
+
+- R1 to R7 in `docs/SPEC.md`: mutual orientation lock, no global attractiveness score,
+  synthetic data only, offline tests, every tunable number in the settings files,
+  dealbreakers as hard filters, seeded randomness.
+- The engine never reads `GroundTruth`.
+- Every test names its requirement (`FR-LM-NN`); never weaken a test.
+- Commits are authored by the owner, with the Claude co-author line.
+- Push only on the owner's word.
+
+## Decisions already made (don't reopen without the owner)
+
+D1 to D17 in `docs/SPEC.md`. The most relevant now:
+- women choose (D1);
+- 50/50 looks and personality (D2);
+- the Phase 1 settings profile (D14);
+- calibration counted in answers (D15);
+- Rust twins for the hot loops (D16);
+- his own absence counts as delivered (D17, pending the lawyer).
+
+## Questions the owner hasn't answered yet (ask, don't assume)
+
+1. D17: should his own late cancellation or no-show count as delivered?
+2. Should a pick he declines count toward his guarantee?
+3. Flag bad actors after about 6 poor ratings (now), or sooner?
+4. Can marketing bring in about 15% new women per cycle?
+5. Which show-up tools are acceptable (reminders, fees, deposits)?

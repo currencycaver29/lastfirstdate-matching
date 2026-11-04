@@ -1,0 +1,55 @@
+# Stage 4: personality
+
+Scores how well two members fit on what they wrote and answered, apart from looks.
+
+## Takes in / passes on
+
+- **In:** prompts or interests, intent answers, Big Five (if collected).
+- **Out:** `P`, an (n, n) personality score.
+
+## The score
+
+    P = w_text · t + w_values · A + w_big5 · p
+
+- **t:** text similarity. TF-IDF cosine over prompt words (`WordEncoder`) or interest tags
+  (`TagEncoder`); Sentence-BERT replaces these in production through the `TextEncoder`
+  interface.
+- **A:** values compatibility. "Accepts" questions, or closeness questions:
+  1 − |rank_i − rank_j| / (options − 1).
+- **p:** Big Five similarity. The weight is 0 in Phase 1, because the site has no personality
+  test.
+
+## Code
+
+`src/lastfirstdate/personality.py`: `personality_matrix`, `interest_similarity`,
+`values_compatibility`, `big5_similarity`, the encoders.
+
+## Settings
+
+`[personality]`: `w_text`, `w_values`, `w_big5`, `text_encoder`; `[[values]]` questions with
+`mode`.
+
+## Tests
+
+FR-LM-05 to FR-LM-08 (`tests/test_personality.py`), FR-LM-30, FR-LM-31
+(`tests/test_phase1.py`).
+
+## Papers
+
+- 8, Sentence-BERT.
+- 9, Joel et al.: traits measured before meeting barely predict desire for one specific
+  person, so treat the weights as guesses and retune them from outcomes.
+
+## Decisions
+
+D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
+
+## What we know
+
+- TF-IDF matches words, not meaning: "rock climbing" and "bouldering" don't match yet.
+- The weights are guesses until real dates exist (paper 9).
+
+## If you change it
+
+P feeds the mutual score (stage 5). Rerun `python -m lastfirstdate.simulate` and check that
+the default population's results are unchanged unless the change is intended.
