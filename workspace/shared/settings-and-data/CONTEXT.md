@@ -33,6 +33,10 @@ What every stage reads: the settings files, the member model and the app's datab
 - **Keeping it in step:** booking states and sources must match `booking.STATES` and
   `booking.SOURCES` (tested in `tests/test_sprint7.py`).
 - **Still missing:** the original pre-filter SQL query belongs in `db/` (see `db/README.md`).
+- **The engine from rows:** `src/lastfirstdate/app.py` loads everything from these tables
+  (Sprint 9). `list_shows` holds the list history (who saw whom, and picks).
+- **What a setting change requires:** `config.setting_impact(name)`; the handoff lists all 119
+  settings by class (FR-LM-48).
 
 ## Tests
 

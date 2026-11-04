@@ -197,11 +197,11 @@ are the same, only slower.
 lastfirstdate-matching/
 ├── config/              settings files and the fitted forecast
 ├── db/schema.sql        the database the app should keep
-├── docs/                specification, research, sprint notes, fit report, risk plan
+├── docs/                specification, research, sprint notes, fit report, risk plan, handoff
 ├── rust/
 │   ├── lastfirstdate-core/   the hot loops in pure Rust
 │   └── lastfirstdate-py/     Python bindings (lastfirstdate._core)
-├── src/lastfirstdate/   the engine (Python) and the simulator
+├── src/lastfirstdate/   the engine (Python; app.py is what the app calls) and the simulator
 ├── tests/               one or more tests per requirement
 ├── workspace/           a map of every algorithm stage, for working with an AI assistant
 └── scripts/check.sh     all the checks
@@ -231,6 +231,7 @@ These rules are never broken, and tests enforce them:
 | [Sprint notes](docs/sprints/) | In-depth study notes for every sprint, with results and limits |
 | [Fit report](docs/fit-report.md) | The engine checked against lastfirstdate's website |
 | [Risk plan](docs/risk-plan.md) | What to do before launch, including a ready-to-send lawyer briefing |
+| [Handoff](docs/handoff/README.md) | For the app developer: which engine call happens when, what it reads and returns |
 | [Workspace](workspace/CONTEXT.md) | A one-page map of each algorithm stage and how sprints are run (Interpretable Context Methodology), so an AI assistant reads only the part it works on |
 
 ## Roadmap
@@ -247,7 +248,8 @@ These rules are never broken, and tests enforce them:
 | – | The Rust core for the hot loops | Done |
 | 7 | Booking, billing, trust, geography and the app's database | Done |
 | 8 | The forecast and the gate on delivered dates | Done |
-| 9 | Handoff to the app: which engine call happens when (proposed) | Next |
+| 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
+| 10 | To be chosen: a step-by-step calibration API, the gate every cycle, or refitting on real data | Next |
 
 ## License
 

@@ -104,6 +104,17 @@ CREATE TABLE calibration_answers (
     CHECK (shown_b IS NULL OR shown_b <> shown_a)
 );
 
+-- Daily list history (FR-LM-47): who was shown to whom, and whether they were picked. The
+-- engine needs it for the 7-day rest, for pairs already picked and for learning (Stage 8).
+CREATE TABLE list_shows (
+    chooser_id   INTEGER NOT NULL REFERENCES members (id),
+    candidate_id INTEGER NOT NULL REFERENCES members (id),
+    shown_on     TEXT NOT NULL,
+    picked       INTEGER NOT NULL DEFAULT 0 CHECK (picked IN (0, 1)),
+    PRIMARY KEY (chooser_id, candidate_id, shown_on),
+    CHECK (chooser_id <> candidate_id)
+);
+
 -- ---------------------------------------------------------------- the men's waitlist and gate
 
 CREATE TABLE waitlist (

@@ -19,36 +19,22 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
 - `Current sprint: N` at the top of `docs/SPEC.md`.
 - New decisions, if any, as rows in the Decisions table (D18 onward).
 
-Numbering continues from FR-LM-46.
+Numbering continues from FR-LM-49.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 9 (proposed, confirm with the owner)
+## Sprint 10 (not chosen yet: ask the owner)
 
-**Goal:** the owner builds the algorithm; someone else builds the app. Write down exactly how the
-app plugs the engine in, so app development can start. This is process stage 05, made a sprint.
+The engine is complete for Phase 1, and the handoff is written. Options:
 
-Candidate requirements (numbering continues from FR-LM-46):
+- **(a) A step-by-step calibration API and caching:** `next_question` / `record_answer` instead
+  of callbacks; keep the market and scores between calls for city scale.
+- **(b) The gate every cycle:** re-run it with real data as men leave and women join, with the
+  recruitment rate as an input.
+- **(c) Wait for real data:** once Phase 1 runs, refit the forecast, the personality weights
+  and the looks prior on real cycles.
 
-- **FR-LM-46 · Call sequence:**
-  - at sign-up, calibration;
-  - every night, scores and lists;
-  - when a woman opens the app, windows;
-  - when she picks, the booking and hold;
-  - after a date, ratings and trust;
-  - every week, alerts;
-  - at cycle end, credits;
-  - before each men's sale, the gate.
-- **FR-LM-47 · Data contract:** each call's inputs and outputs, mapped to `db/schema.sql`, with
-  a test that a full simulated day can run from database rows alone.
-- **FR-LM-48 · Operator settings:** which settings the app's operators may change, and which
-  need a refit or a fresh simulation first.
-
-Alternatives the owner may prefer: re-running the gate every cycle with real data, or a service
-the app can call.
-
-Files the sprint will touch: `docs/handoff/` (new), `db/schema.sql`, the public functions listed
-in `workspace/process/05-handoff/CONTEXT.md`, and a new test file.
+Numbering continues from FR-LM-49.

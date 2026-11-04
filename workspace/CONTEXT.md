@@ -64,15 +64,16 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 9, proposed: the handoff to the app (process stage 05). Confirm it with
-  the owner in process stage 01.
-- **Last finished:** Sprint 8, the forecast and the gate on delivered dates. It is committed
-  but not pushed until the owner says so.
+- **Current sprint:** 10, not chosen yet: a step-by-step calibration API and caching, the gate
+  every cycle, or waiting for real Phase 1 data. Ask the owner in process stage 01.
+- **Last finished:** Sprint 9, the handoff: `app.py` runs the engine from the app's database,
+  and `docs/handoff/README.md` is the app developer's guide.
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;
   - the zone's size matters more than the ratio (about 500 women for a 90% promise);
-  - the Phase 1 gate uses the delivered forecast.
+  - the Phase 1 gate uses the delivered forecast;
+  - the app calls the engine through `src/lastfirstdate/app.py` (see `docs/handoff/`).
 
 ## Rules that matter everywhere
 

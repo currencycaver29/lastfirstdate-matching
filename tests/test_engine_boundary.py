@@ -7,6 +7,7 @@ import lastfirstdate
 
 PKG = Path(lastfirstdate.__file__).parent
 ENGINE = [
+    "app",
     "arrays",
     "billing",
     "booking",
@@ -37,6 +38,7 @@ SIM_ONLY = {
     "lastfirstdate.phase1_report",
     "lastfirstdate.cycle_sim",
     "lastfirstdate.gate_report",
+    "lastfirstdate.app_sim",
 }
 
 

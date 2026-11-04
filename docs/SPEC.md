@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 8
+Current sprint: 9
 
 ## Goal
 
@@ -484,6 +484,50 @@ short of `gate.target` and the delivered forecast admits fewer men (or none); in
 zone, the men the delivered forecast admits reach 3 delivered dates within 5 points of the
 target and of the forecast.
 
+### Sprint 9: handoff to the app
+
+The owner builds the algorithm; someone else builds the app. This sprint makes the engine run
+from the app's database alone, not from simulator objects, and writes down exactly when the
+app calls what.
+
+#### FR-LM-46 · Call sequence
+Sprint: 9
+`docs/handoff/README.md` says when the app calls each engine function, what it passes and what
+it gets back:
+- at sign-up, calibration;
+- every night, scores and taste models;
+- when a woman opens the app, her list with date windows;
+- when she picks, the booking and payment hold;
+- after a date, ratings and trust;
+- every week, delivered-date alerts;
+- at cycle end, delivered dates and credits;
+- before each men's sale, the gate.
+
+Every function it names exists in `src/lastfirstdate/app.py` or the engine modules.
+Test: every function the handoff names can be imported.
+
+#### FR-LM-47 · The engine from database rows
+Sprint: 9
+`app.py` (engine side, no simulation imports) loads members, calibration answers, list
+history, bookings, ratings, subscriptions and the waitlist from the tables in `db/schema.sql`,
+and returns lists with windows, bookings, trust, alerts, credits and gate decisions. Members'
+locations are their neighbourhood centres. The schema gains a `list_shows` table (who was shown
+to whom, and picked).
+Test:
+- members and taste models loaded from rows match those built directly from the same
+  profiles and answers;
+- a full simulated day runs from rows alone: every listed man is eligible and has a window both
+  can make, and bookings written back pass the schema's checks and block those days next time;
+- the gate on rows matches the gate on arrays.
+
+#### FR-LM-48 · Operator settings
+Sprint: 9
+Every setting is classified by what changing it requires: business terms (change any time),
+simulate first, refit the forecast, simulation only, or engineering only. The handoff lists
+them.
+Test: every setting in `Config` is classified, and the handoff's table matches the
+classification.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -576,3 +620,11 @@ target and of the forecast.
   error move the stopping point by about 100 men. FR-LM-45's first test wording ("better than
   the booked forecast everywhere") was wrong for large zones; it now checks protection in a
   small zone and calibration in a large one. Details: `docs/sprints/sprint-8.md`.
+- **Sprint 9.** The engine now runs from the app's database alone (`app.py`), and
+  `docs/handoff/README.md` tells the app developer which call happens when. Loaded from rows,
+  profiles, scores, taste models and gate decisions match the originals exactly; the nightly
+  job takes under a second and a day's lists 0.16 seconds for Phase 1. Two findings: fair
+  lists must be built in one call for all of a day's choosers (the exposure cap is shared
+  across lists), and a signup before the calendar's day 0 needed a proper "no signup" marker.
+  The schema gained `list_shows`; all 119 settings are classified by what a change requires.
+  Details: `docs/sprints/sprint-9.md`.

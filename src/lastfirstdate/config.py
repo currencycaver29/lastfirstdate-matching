@@ -544,3 +544,82 @@ def load(path: str | Path = DEFAULT_PATH) -> Config:
     """Read the TOML file at `path` and return a validated Config."""
     with open(path, "rb") as fh:
         return from_dict(tomllib.load(fh))
+
+
+# ---------------------------------------------------------------- what changing a setting needs
+
+# FR-LM-48: every setting is classified by what changing it in production requires.
+BUSINESS = "business terms: change any time (with legal review where money is involved)"
+SIMULATE = "simulate first: rerun the reports and check fulfilment before changing"
+REFIT = "refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then simulate"
+SIM_ONLY = "simulation only: the app never reads it"
+ENGINEERING = "engineering only: changes the data the app collects or how a model is fitted"
+IMPACTS = (BUSINESS, SIMULATE, REFIT, SIM_ONLY, ENGINEERING)
+
+_SECTION_IMPACT = {
+    "filter": SIMULATE,
+    "personality": SIMULATE,
+    "mix": SIMULATE,
+    "calibration": SIMULATE,
+    "lists": SIMULATE,
+    "fairness": BUSINESS,
+    "learning": SIMULATE,
+    "gate": BUSINESS,
+    "dates": REFIT,
+    "simulation": SIM_ONLY,
+    "population": SIM_ONLY,
+    "values": ENGINEERING,
+    "booking": REFIT,
+    "billing": BUSINESS,
+    "trust": SIMULATE,
+    "geo": BUSINESS,
+    "cycle_simulation": SIM_ONLY,
+}
+_KEY_IMPACT = {
+    "personality.w_big5": ENGINEERING,  # the database holds no Big Five scores
+    "personality.text_encoder": ENGINEERING,
+    "calibration.pca_dim": ENGINEERING,
+    "calibration.l2_penalty": ENGINEERING,
+    "calibration.w0_l2_penalty": ENGINEERING,
+    "calibration.group_share_tolerance": BUSINESS,  # an audit threshold
+    "gate.forecast": ENGINEERING,
+    "gate.forecast_l2": ENGINEERING,
+    "dates.weeks_per_month": ENGINEERING,  # the batch scheduler and booked forecast only
+    "dates.date_value": ENGINEERING,
+    "dates.late_month_bonus": ENGINEERING,
+    "billing.cycle_days": REFIT,  # the forecast is fitted on 28-day cycles
+    "trust.flag_below": BUSINESS,  # safety policy
+    "trust.flag_min_ratings": BUSINESS,
+}
+
+
+def setting_names() -> list[str]:
+    """Every setting as "section.key" ("values" for the intent questions)."""
+    names = []
+    for section, f in Config.__dataclass_fields__.items():
+        if section == "values":
+            names.append("values")
+            continue
+        cls = globals()[f.type] if isinstance(f.type, str) else f.type
+        names += [f"{section}.{key}" for key in cls.__dataclass_fields__]
+    return names
+
+
+def setting_impact(name: str) -> str:
+    """What changing setting `name` ("section.key") requires (FR-LM-48)."""
+    if name in _KEY_IMPACT:
+        return _KEY_IMPACT[name]
+    section = name.split(".", 1)[0]
+    if section not in _SECTION_IMPACT:
+        raise KeyError(f"unknown setting {name!r}")
+    return _SECTION_IMPACT[section]
+
+
+def settings_table() -> str:
+    """The handoff's settings table, grouped by what a change requires (Markdown)."""
+    lines = []
+    for impact in IMPACTS:
+        names = [n for n in setting_names() if setting_impact(n) == impact]
+        lines.append(f"**{impact[0].upper()}{impact[1:]}**\n")
+        lines.append(", ".join(f"`{n}`" for n in names) + "\n")
+    return "\n".join(lines)

@@ -34,6 +34,8 @@ before any app integration.
 An app developer could wire the engine in from `docs/handoff/` alone, without reading the
 engine's code.
 
-## Sprint 8
+## Status
 
-Only needed if the gate's inputs change (for example, if it needs the new-women rate).
+Done in Sprint 9: `docs/handoff/README.md` and `src/lastfirstdate/app.py`. When an interface
+changes, update both. `tests/test_sprint9.py` checks that every call the handoff names exists
+and that its settings table matches `config.settings_table()`.
