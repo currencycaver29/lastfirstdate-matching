@@ -22,9 +22,7 @@ Explain the sprint so the owner can study it, then hand over for review.
    - commands to try;
    - questions for the owner.
 2. A "Changes to this plan" entry in `docs/SPEC.md`.
-3. The Roadmap in `README.md`: the sprint becomes a commit on the `engine` line of the diagram
-   (the next sprint moves to the `phase-1` line, or a new branch), and its number links to its
-   notes in the chapter table.
+3. The sprint's row in the Status table of `README.md`.
 4. `docs/fit-report.md` and `docs/risk-plan.md`, if business numbers or risks changed.
 5. **This workspace, ready for the next sprint:**
    - the "What we know" sections of the algorithm stages the sprint changed
