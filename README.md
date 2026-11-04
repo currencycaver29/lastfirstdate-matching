@@ -39,6 +39,10 @@ python -m venv .venv
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
+The same checks run automatically on GitHub for every push and pull request
+(`.github/workflows/checks.yml`). Fit with the real app: [`docs/fit-report.md`](docs/fit-report.md).
+Risks and the lawyer briefing: [`docs/risk-plan.md`](docs/risk-plan.md).
+
 ## Layout
 
 ```
