@@ -29,9 +29,6 @@ with a date window both people can make. Behind it all, the engine protects the 
 forecasts whether each man will get his dates, and pauses men's sign-ups when the market
 can't serve more of them.
 
-Everything here runs on **synthetic members**. No real profile, photo or embedding is ever
-stored in this repository.
-
 ## How it works
 
 ```mermaid
@@ -117,9 +114,8 @@ All numbers come from synthetic members. They compare designs; they are not pred
 |---|---|
 | How well does the looks model learn a member's taste? | AUC 0.844, against a ceiling of 0.875 |
 | Do fair lists spread attention? | Exposure Gini falls from 0.39 to 0.31 |
-| Does the ratio gate protect the guarantee? | Admitted men reach 3 dates 92% to 96% of the time; admitting everyone gives 12.5% |
-| How many men get 3 *delivered* dates in the real booking flow? | About 82% in a 300-woman zone at 3 women per man |
-| What does the 90% promise need? | A big enough zone: with 500 committed women, about 90% even at 3:1; with 300, only a handful of men |
+| How many men get their 3 dates in the real booking flow? | About 82% with 300 women at 3 women per man; about 90% with 500 women |
+| Does the ratio gate protect the promise? | Yes: with 300 women it admits only the few men it can serve, where admitting 3:1 would deliver about 75% |
 | How much faster is the Rust core? | Looks taste 3.6×, daily lists 10×, the gate 28× to 81×, with identical results |
 
 Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain these results and their limits.
@@ -168,9 +164,10 @@ Each report runs a simulation and prints what it found:
 .venv/bin/python -m lastfirstdate.phase1_report     # Phase 1 rules: pair questions, the ratio gate
 .venv/bin/python -m lastfirstdate.cycle_sim         # the real booking flow over three billing cycles
 .venv/bin/python -m lastfirstdate.gate_report       # the ratio gate in the real flow, two zone sizes
-.venv/bin/python -m lastfirstdate.forecast_fit      # refit the guarantee forecast (about 10 minutes)
-.venv/bin/python -m lastfirstdate.forecast_fit --delivered   # refit it on delivered dates (~16 min)
 ```
+
+To refit the guarantee forecast after changing the settings, run
+`python -m lastfirstdate.forecast_fit --delivered` (about 16 minutes).
 
 ### Checks
 
@@ -200,12 +197,7 @@ are the same, only slower.
 lastfirstdate-matching/
 ├── config/              settings files and the fitted forecast
 ├── db/schema.sql        the database the app should keep
-├── docs/
-│   ├── SPEC.md          requirements, rules and decisions, sprint by sprint
-│   ├── research.md      the 17 papers behind the design
-│   ├── sprints/         study notes for every sprint
-│   ├── fit-report.md    how the engine fits lastfirstdate's real rules
-│   └── risk-plan.md     launch risks and questions for a lawyer
+├── docs/                specification, research, sprint notes, fit report, risk plan
 ├── rust/
 │   ├── lastfirstdate-core/   the hot loops in pure Rust
 │   └── lastfirstdate-py/     Python bindings (lastfirstdate._core)
@@ -239,15 +231,7 @@ These rules are never broken, and tests enforce them:
 | [Sprint notes](docs/sprints/) | In-depth study notes for every sprint, with results and limits |
 | [Fit report](docs/fit-report.md) | The engine checked against lastfirstdate's website |
 | [Risk plan](docs/risk-plan.md) | What to do before launch, including a ready-to-send lawyer briefing |
-| [Workspace](workspace/CONTEXT.md) | A map of the whole algorithm, stage by stage, and how each sprint is run |
-
-## Working with an AI assistant
-
-The [`workspace/`](workspace/CONTEXT.md) folder follows Interpretable Context Methodology
-(ICM). Every stage of the algorithm has a short `CONTEXT.md`: what it does, what it takes in
-and passes on, its code, settings, tests and known findings. An assistant working on, say,
-the daily lists reads only that folder instead of the whole repository. A `process/` folder
-describes how each sprint runs: spec, build, simulate, notes, handoff.
+| [Workspace](workspace/CONTEXT.md) | A one-page map of each algorithm stage and how sprints are run (Interpretable Context Methodology), so an AI assistant reads only the part it works on |
 
 ## Roadmap
 
