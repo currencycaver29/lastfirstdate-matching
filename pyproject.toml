@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
 
 [project]
 name = "lastfirstdate-matching"
@@ -15,10 +15,15 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.5"]
+dev = ["pytest>=8", "ruff>=0.5", "maturin>=1.9,<2.0"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+# The Python package lives in src/; the Rust core (rust/) is compiled into
+# lastfirstdate._core when the package is installed (D16).
+[tool.maturin]
+manifest-path = "rust/lastfirstdate-py/Cargo.toml"
+python-source = "src"
+module-name = "lastfirstdate._core"
+features = ["pyo3/extension-module"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -19,6 +19,7 @@ belong in this repo.
 | 4 | Fair daily lists | Done (guarantee about 82%; 95% needs a business decision, see notes) |
 | 5 | Learning from dates | Done (personal looks weights learned; no measurable gain in second dates yet) |
 | 6 | lastfirstdate's real rules, guarantee forecast and ratio gate | Done (gate keeps admitted men at 92% to 96% where admitting everyone gives 12.5%) |
+| 6 + | Rust core for the hot loops | Done (looks taste 3.6x faster, daily lists 10x, gate 28x to 81x; identical results) |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 [`docs/research.md`](docs/research.md). Study notes per sprint:
@@ -26,7 +27,10 @@ Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 
 ## Run it
 
-Needs Python 3.11 or newer.
+Needs Python 3.11 or newer and Rust (install it from https://rustup.rs). Installing the
+package compiles the Rust core in `rust/` into `lastfirstdate._core`; the engine then uses it
+automatically. Set `LASTFIRSTDATE_BACKEND=python` to run everything in plain Python instead
+(same answers, slower).
 
 ```bash
 python -m venv .venv
@@ -39,7 +43,8 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.learning_report  # three months with and without learning
 .venv/bin/python -m lastfirstdate.phase1_report    # Phase 1 rules: pair questions, ratio gate
 .venv/bin/python -m lastfirstdate.forecast_fit     # refit the guarantee forecast (~10 minutes)
-./scripts/check.sh                     # lint, format, tests, traceability
+./scripts/check.sh                     # Rust and Python lint, format, tests, traceability
+.venv/bin/maturin develop --release --skip-install   # rebuild the Rust core after editing rust/
 ```
 
 The same checks run automatically on GitHub for every push and pull request
@@ -52,6 +57,9 @@ Risks and the lawyer briefing: [`docs/risk-plan.md`](docs/risk-plan.md).
 config/lastfirstdate.toml   every weight, cap and threshold (research defaults)
 config/phase1.toml          lastfirstdate's real Phase 1 rules from its website
 config/forecast_model.toml  guarantee forecast coefficients (written by forecast_fit.py)
+rust/
+  lastfirstdate-core/       the hot loops in pure Rust, with their own tests
+  lastfirstdate-py/         PyO3 bindings: lastfirstdate._core
 src/lastfirstdate/
   config.py                 loads and validates the settings
   models.py                 the member profile
@@ -74,6 +82,7 @@ src/lastfirstdate/
   forecast.py               guarantee forecast, at-risk alerts and the ratio gate
   forecast_fit.py           fits the forecast on simulated markets and tests it on others
   phase1_report.py          Phase 1 rules: pair questions versus singles, the gate in action
+  native.py                 when the engine calls the Rust core (and how to turn it off)
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test

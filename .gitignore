@@ -15,3 +15,7 @@ data/real/
 *.heic
 *.npy
 *.parquet
+# Rust build output and the compiled extension module
+rust/target/
+src/lastfirstdate/_core*.so
+src/lastfirstdate/_core*.pyd

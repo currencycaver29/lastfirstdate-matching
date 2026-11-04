@@ -17,6 +17,7 @@ ENGINE = [
     "looks",
     "models",
     "mutual",
+    "native",
     "personality",
     "scheduler",
 ]

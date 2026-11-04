@@ -33,6 +33,8 @@ from collections.abc import Mapping, Sequence
 
 import numpy as np
 
+from lastfirstdate import native
+
 POLICIES = ("basic", "fair", "nsw")
 
 
@@ -86,8 +88,20 @@ def fair_day_lists(
     """Round-robin lists under an exposure cap. Returns the lists and the cap used.
 
     `reserved` holds slots already given out today (exploration, Sprint 5): they come first in
-    each list and count toward the cap.
+    each list and count toward the cap. Runs in Rust when the compiled core is present
+    (`native.py`); the loop below is the same algorithm in Python.
     """
+    if native.enabled() and len(order):
+        rows = np.asarray(order, dtype=int)
+        lists, cap = native.core.fair_day_lists(
+            np.ascontiguousarray([available[i] for i in order], dtype=bool),
+            np.ascontiguousarray(scores[rows], dtype=float),
+            np.ascontiguousarray(bonus, dtype=float),
+            int(size),
+            float(multiple),
+            [[int(j) for j in reserved.get(i, [])] if reserved else [] for i in order],
+        )
+        return {i: np.array(v, dtype=int) for i, v in zip(order, lists, strict=True)}, cap
     cap = day_exposure_cap(order, available, size, multiple)
     ranked = {i: _ranked(available[i], scores[i], bonus) for i in order}
     lists: dict[int, list[int]] = {i: list(reserved.get(i, [])) if reserved else [] for i in order}

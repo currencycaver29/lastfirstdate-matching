@@ -41,7 +41,8 @@ from pathlib import Path
 
 import numpy as np
 
-from lastfirstdate.config import Config
+from lastfirstdate import native
+from lastfirstdate.config import Config, GateConfig
 from lastfirstdate.looks import fit_logistic, sigmoid
 
 START_FEATURES = (
@@ -217,10 +218,17 @@ def gate_decision(
     applicants: Sequence[int],
     cfg: Config,
 ) -> GateDecision:
-    """How many waitlisted men to admit now, in waitlist order (FR-LM-34)."""
+    """How many waitlisted men to admit now, in waitlist order (FR-LM-34).
+
+    Runs in Rust when the compiled core is present (`native.py`), updating each man's
+    attention share as men are added instead of recounting it; the loop below is the
+    reference version in Python.
+    """
     g = cfg.gate
     women = list(women)
     current = list(men)
+    if native.enabled():
+        return _gate_decision_rust(model, eligible, women, current, list(applicants), g)
     out = GateDecision()
     mf = market_features(eligible, women, current)
     out.women_per_man, out.forecast = mf.women_per_man, forecast_fulfilment(model, mf)
@@ -231,19 +239,54 @@ def gate_decision(
         trial = current + out.admit + [int(a)]
         ratio = len(women) / len(trial)
         if ratio < g.min_women_per_man:
-            out.stopped_because = f"women per man would fall below {g.min_women_per_man:g}"
+            out.stopped_because = _stop_message("ratio", model, g)
             break
         if ratio < model.fitted_women_per_man[0]:
-            out.stopped_because = (
-                f"the forecast was only fitted down to {model.fitted_women_per_man[0]:.2f} "
-                "women per man"
-            )
+            out.stopped_because = _stop_message("fitted", model, g)
             break
         trial_mf = market_features(eligible, women, trial)
         f = forecast_fulfilment(model, trial_mf)
         if f < g.target:
-            out.stopped_because = f"forecast fulfilment would fall below {g.target:.0%}"
+            out.stopped_because = _stop_message("forecast", model, g)
             break
         out.admit.append(int(a))
         out.women_per_man, out.forecast = ratio, f
     return out
+
+
+def _stop_message(kind: str, model: ForecastModel, g: GateConfig) -> str:
+    return {
+        "waitlist empty": "waitlist empty",
+        "ratio": f"women per man would fall below {g.min_women_per_man:g}",
+        "fitted": f"the forecast was only fitted down to {model.fitted_women_per_man[0]:.2f} "
+        "women per man",
+        "forecast": f"forecast fulfilment would fall below {g.target:.0%}",
+    }[kind]
+
+
+def _gate_decision_rust(
+    model: ForecastModel,
+    eligible: np.ndarray,
+    women: list[int],
+    current: list[int],
+    applicants: list[int],
+    g: GateConfig,
+) -> GateDecision:
+    cols = [int(c) for c in current] + [int(a) for a in applicants]
+    e = eligible[np.ix_(np.asarray(women, dtype=int), np.asarray(cols, dtype=int))]
+    admit, deferred, ratio, forecast, stop = native.core.gate_scan(
+        np.ascontiguousarray(e, dtype=bool),
+        len(current),
+        np.ascontiguousarray(model.start, dtype=float),
+        float(g.min_pool),
+        float(g.min_women_per_man),
+        float(model.fitted_women_per_man[0]),
+        float(g.target),
+    )
+    return GateDecision(
+        admit=[cols[c] for c in admit],
+        deferred_small_pool=[cols[c] for c in deferred],
+        women_per_man=ratio,
+        forecast=forecast,
+        stopped_because=_stop_message(stop, model, g),
+    )

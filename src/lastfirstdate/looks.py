@@ -35,11 +35,14 @@ from typing import Protocol
 
 import numpy as np
 
+from lastfirstdate import native
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import Config
 
 MAX_NEWTON_STEPS = 50
 NEWTON_TOL = 1e-8
+MAX_STEP_HALVINGS = 30
+OBJECTIVE_NOISE = 1e-12  # relative rise in the objective treated as rounding, not overshoot
 
 
 class CalibrationIncomplete(RuntimeError):
@@ -129,22 +132,58 @@ def fit_logistic(
     Minimizes  sum_k s_k * logloss(y_k, sigmoid(offset_k + x_k . w))  +  (l2/2) |w - m|^2,
     where m is `prior_mean`. Returns the weights and the Laplace covariance (the inverse
     of the Hessian at the optimum), which measures how unsure the weights are.
+
+    Runs in Rust when the compiled core is present (`native.py`); `_fit_logistic_python`
+    is the same algorithm in NumPy.
     """
+    x = np.ascontiguousarray(x, dtype=float)
     n, d = x.shape
-    y = np.asarray(y, dtype=float)
-    m = np.zeros(d) if prior_mean is None else np.asarray(prior_mean, dtype=float)
-    o = np.zeros(n) if offset is None else np.asarray(offset, dtype=float)
-    s = np.ones(n) if sample_weight is None else np.asarray(sample_weight, dtype=float)
-    w = m.copy() if start is None else np.asarray(start, dtype=float).copy()
-    eye = np.eye(d)
+    y = np.ascontiguousarray(y, dtype=float)
+    m = np.zeros(d) if prior_mean is None else np.ascontiguousarray(prior_mean, dtype=float)
+    o = np.zeros(n) if offset is None else np.ascontiguousarray(offset, dtype=float)
+    s = np.ones(n) if sample_weight is None else np.ascontiguousarray(sample_weight, dtype=float)
+    w = m.copy() if start is None else np.array(start, dtype=float)
+    if native.enabled():
+        return native.core.fit_logistic(
+            x, y, float(l2), m, o, s, w, MAX_NEWTON_STEPS, NEWTON_TOL, MAX_STEP_HALVINGS
+        )
+    return _fit_logistic_python(x, y, l2, m, o, s, w)
+
+
+def _logistic_objective(x, y, l2, m, o, s, w) -> float:
+    """The penalised log loss that fit_logistic minimises (logits clipped like sigmoid)."""
+    z = np.clip(o + x @ w, -35.0, 35.0)
+    softplus = np.maximum(z, 0.0) + np.log1p(np.exp(-np.abs(z)))  # log(1 + e^z)
+    return float(s @ (softplus - y * z) + 0.5 * l2 * np.sum((w - m) ** 2))
+
+
+def _fit_logistic_python(x, y, l2, m, o, s, w) -> tuple[np.ndarray, np.ndarray]:
+    """The Newton loop in NumPy: the reference the Rust version is checked against.
+
+    Step halving: if a full Newton step would make the objective worse, try half of it, then
+    a quarter, and so on. Plain Newton can overshoot and diverge on hard problems. Steps
+    already below the tolerance are always taken in full, and a rise smaller than
+    OBJECTIVE_NOISE (relative) counts as rounding, so near the optimum, and whenever every
+    full step helps (all calibration fits in the simulation), the path is plain Newton's.
+    """
+    eye = np.eye(x.shape[1])
+    f = _logistic_objective(x, y, l2, m, o, s, w)
     for _ in range(MAX_NEWTON_STEPS):
         p = sigmoid(o + x @ w)
         grad = x.T @ (s * (p - y)) + l2 * (w - m)
         hess = (x.T * (s * p * (1 - p))) @ x + l2 * eye
         step = np.linalg.solve(hess, grad)
-        w -= step
         if np.max(np.abs(step)) < NEWTON_TOL:
+            w = w - step
             break
+        t = 1.0
+        for _ in range(MAX_STEP_HALVINGS):
+            trial = w - t * step
+            f_trial = _logistic_objective(x, y, l2, m, o, s, trial)
+            if f_trial <= f + OBJECTIVE_NOISE * (abs(f) + 1.0):
+                break
+            t *= 0.5
+        w, f = trial, f_trial
     p = sigmoid(o + x @ w)
     hess = (x.T * (s * p * (1 - p))) @ x + l2 * eye
     return w, np.linalg.inv(hess)
@@ -303,6 +342,11 @@ class PersonalTaste:
 
     def uncertainty(self, features: np.ndarray) -> np.ndarray:
         """s^2 = x' cov x: how unsure the model is about each candidate's logit."""
+        if native.enabled():
+            return native.core.quad_forms(
+                np.ascontiguousarray(features, dtype=float),
+                np.ascontiguousarray(self.cov, dtype=float),
+            )
         return np.einsum("ij,jk,ik->i", features, self.cov, features)
 
     def information(self, features: np.ndarray, candidate_genders: np.ndarray) -> np.ndarray:
@@ -388,8 +432,16 @@ def select_pair(
         return None
     unc = taste.uncertainty(features[remaining])
     cand = remaining[np.argsort(-unc, kind="stable")[:top]]
-    best, pick = -np.inf, None
     logit = taste.logits(features[cand], genders[cand])
+    if native.enabled():
+        pos = native.core.best_pair(
+            np.ascontiguousarray(features[cand], dtype=float),
+            np.ascontiguousarray(logit, dtype=float),
+            np.ascontiguousarray(genders[cand], dtype=np.int64),
+            np.ascontiguousarray(taste.cov, dtype=float),
+        )
+        return None if pos is None else (int(cand[pos[0]]), int(cand[pos[1]]))
+    best, pick = -np.inf, None
     for a_pos in range(cand.size):
         for b_pos in range(a_pos + 1, cand.size):
             a, b = int(cand[a_pos]), int(cand[b_pos])

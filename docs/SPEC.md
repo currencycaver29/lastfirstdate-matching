@@ -57,6 +57,7 @@ dates, and dates are scheduled into time both people have free.
 | D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's simulation found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
 | D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
 | D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 simulation |
+| D16 | Languages | Python for the engine, the simulator and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the simulator in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
 ## Requirements by sprint
@@ -355,6 +356,16 @@ limit, defers small pools, keeps waitlist order; in simulation, with a waitlist 
 the women, the men it admits reach 3 dates within 5 points of the target and of the forecast,
 while admitting everyone fails most of them.
 
+#### FR-LM-35 · Rust core
+Sprint: 6
+The hot loops run in Rust (D16): `rust/lastfirstdate-core` holds the algorithms with no
+Python dependency (so a future Rust service can reuse them), and `rust/lastfirstdate-py`
+exposes them to Python. The engine uses Rust whenever the compiled module is present.
+Test: on random problems the Rust and Python versions agree (logistic fit weights and
+covariance to 1e-9, uncertainty, pair choice, daily lists and exposure cap, gate decisions
+for every stopping rule); members see the same calibration photos and a simulated month
+books the same dates with either backend; the Rust crate passes its own tests and Clippy.
+
 #### Deferred to Sprint 7 (needs the app's database)
 A proposed date window shown with each profile and a 15-minute payment hold; per-member
 billing cycles, counting only confirmed and paid dates, refills after cancellations; the
@@ -419,3 +430,11 @@ neighborhood geography with venue midpoints.
   zone of about 290 women the 3:1 floor is cautious: the forecast alone admits about 1.8 times
   as many men and still reaches 92%. Booking, billing, trust and geography items wait for the
   app's database (Sprint 7). Details: `docs/sprints/sprint-6.md`.
+- **Rust core (after Sprint 6).** At the owner's request, the loops that profiling showed
+  were slowed by Python's per-call overhead moved to Rust (D16, FR-LM-35). Building every
+  member's looks taste in the 1,000-member city went from 89 to 25 seconds, the daily lists
+  became 10 times faster and the gate 28 to 81 times faster, with identical scores and
+  bookings. Writing the twin found a weakness shared by both versions: plain Newton steps can
+  overshoot and diverge on hard fitting problems (never in the simulation's 9,444
+  calibration fits). Both now halve a step that makes the fit worse. Details:
+  `docs/sprints/rust-core.md`.
