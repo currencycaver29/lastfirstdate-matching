@@ -249,7 +249,8 @@ These rules are never broken, and tests enforce them:
 | 7 | Booking, billing, trust, geography and the app's database | Done |
 | 8 | The forecast and the gate on delivered dates | Done |
 | 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
-| 10 | To be chosen: a step-by-step calibration API, the gate every cycle, or refitting on real data | Next |
+| 10 | Step-by-step photo exercise and a nightly cache | Done |
+| 11 | To be chosen: the gate every cycle, or refitting on real Phase 1 data | Next |
 
 ## License
 

@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 9
+Current sprint: 10
 
 ## Goal
 
@@ -528,6 +528,31 @@ them.
 Test: every setting in `Config` is classified, and the handoff's table matches the
 classification.
 
+### Sprint 10: step-by-step calibration and caching
+
+Two things the handoff (Sprint 9) listed as not covered yet.
+
+#### FR-LM-49 · Step-by-step calibration
+Sprint: 10
+A `CalibrationSession` asks the photo exercise one question at a time: `next_question()`
+returns the next single photo or pair (the same question until it is answered), `answer()`
+records the member's answer, and `resume()` rebuilds a session from stored answers after an
+interruption. `looks.calibrate` runs on top of it, so both always ask the same questions.
+`app.start_calibration` and `app.resume_calibration` speak in database ids.
+Test: with the same answers, a session asks exactly the questions `calibrate` asked before
+this sprint and ends with the same taste model; a session interrupted and resumed asks the same
+remaining questions; answering a finished session or answering twice is refused; the default
+city's scores are unchanged.
+
+#### FR-LM-50 · A cache for the nightly job
+Sprint: 10
+`app.MarketCache` keeps the market, photo features, taste models and scores between calls.
+`refresh()` reloads the members, refits only the taste models of members whose answers
+changed, using the cached starting taste (refitted only when asked), and recomputes the
+scores.
+Test: after new answers arrive, a refresh refits only those members and gives exactly the
+result of a full rebuild with the same starting taste; an unchanged refresh refits nobody.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -628,3 +653,12 @@ classification.
   across lists), and a signup before the calendar's day 0 needed a proper "no signup" marker.
   The schema gained `list_shows`; all 119 settings are classified by what a change requires.
   Details: `docs/sprints/sprint-9.md`.
+- **Sprint 10.** The photo exercise now runs one question at a time (`CalibrationSession`), and
+  `looks.calibrate` runs on top of it, so the app and the simulations share one
+  implementation. It asks exactly what the old code asked: the default city's scores are
+  byte-identical. Interrupted exercises resume where they stopped. `MarketCache` keeps the
+  nightly work, refits only members whose answers changed (equal to a full rebuild with the
+  same frozen photo compression and starting taste), and returns cached scores when nothing
+  changed: 0.07 s instead of 0.5 s for Phase 1. Memory grows with the square of a zone's size
+  (132 MB at 2,000 members), so a city should run as zones of a few thousand. Details:
+  `docs/sprints/sprint-10.md`.

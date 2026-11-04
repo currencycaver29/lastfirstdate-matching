@@ -21,7 +21,9 @@ taste from as few answers as possible.
 
 ## Code
 
-`src/lastfirstdate/looks.py`: `calibrate`, `calibration_pool`, `select_varied`,
+`src/lastfirstdate/looks.py`: `CalibrationSession` (the exercise one question at a time:
+`next_question`, `answer`, `resume`), with `calibrate` running a session to the end, and
+`calibration_pool`, `select_varied`,
 `select_pair`, `PersonalTaste.information`. The quadratic forms and the pair search have Rust
 twins (`native.py`).
 

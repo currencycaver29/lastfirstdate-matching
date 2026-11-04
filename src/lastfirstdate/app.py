@@ -22,7 +22,7 @@ What the database doesn't hold, and so isn't used:
 from __future__ import annotations
 
 from collections import defaultdict
-from dataclasses import dataclass, field
+from dataclasses import astuple, dataclass, field
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -49,12 +49,16 @@ from lastfirstdate.forecast import (
 from lastfirstdate.geo import nearest_place, venue_for
 from lastfirstdate.lists import NEVER_SHOWN, available_row, pick_rights
 from lastfirstdate.looks import (
+    PCA,
     ArrayPhotoEncoder,
+    CalibrationSession,
     PersonalTaste,
+    Question,
     StartingTaste,
     Swipe,
     calibration_pool,
     photo_features,
+    with_intercept,
 )
 from lastfirstdate.models import PARTS_OF_DAY, Member
 from lastfirstdate.mutual import directional_score, looks_scores, mutual_score
@@ -215,6 +219,23 @@ def photo_feature_matrix(embeddings: np.ndarray, cfg: Config) -> np.ndarray:
     return photo_features(ArrayPhotoEncoder(np.asarray(embeddings)), len(embeddings), cfg)[1]
 
 
+def starting_taste(
+    market: Market,
+    features: np.ndarray,
+    answers: dict[int, list[tuple[int, int | None, bool]]],
+    cfg: Config,
+) -> StartingTaste:
+    """The starting taste w_0, fitted on everyone's single-photo answers."""
+    g = market.arr.gender
+    swipes = [
+        Swipe(int(g[v]), int(g[a]), features[a], liked)
+        for v, rows in answers.items()
+        for a, b, liked in rows
+        if b is None
+    ]
+    return StartingTaste.fit(swipes, cfg.calibration.w0_l2_penalty)
+
+
 def fit_tastes(
     market: Market,
     features: np.ndarray,
@@ -231,13 +252,7 @@ def fit_tastes(
     g = market.arr.gender
     c = cfg.calibration
     if start is None:
-        swipes = [
-            Swipe(int(g[v]), int(g[a]), features[a], liked)
-            for v, rows in answers.items()
-            for a, b, liked in rows
-            if b is None
-        ]
-        start = StartingTaste.fit(swipes, c.w0_l2_penalty)
+        start = starting_taste(market, features, answers, cfg)
     tastes = {}
     for v, rows in answers.items():
         taste = PersonalTaste(int(g[v]), start, c.l2_penalty, c.n_profiles)
@@ -276,6 +291,119 @@ def nightly_scores(
     v = looks_scores(tastes, features, arr.gender, eligible)
     s = directional_score(v, p, eligible, cfg.mix.looks_weight)
     return NightlyScores(eligible, p, v, s, mutual_score(s, cfg.mix.chooser_weight))
+
+
+# ---------------------------------------------------------------- the photo exercise, step by step
+
+
+def start_calibration(
+    market: Market, features: np.ndarray, member_id: int, start: StartingTaste, cfg: Config
+) -> CalibrationSession:
+    """A new member's photo exercise (FR-LM-49): call `next_question`, show it, `answer` it."""
+    v = market.row[member_id]
+    c = cfg.calibration
+    taste = PersonalTaste(int(market.arr.gender[v]), start, c.l2_penalty, c.n_profiles)
+    pool = calibration_pool(market.arr, cfg, v)
+    return CalibrationSession(taste, pool, features, market.arr.gender, cfg, pairs=c.n_pairs > 0)
+
+
+def resume_calibration(
+    con, market: Market, features: np.ndarray, member_id: int, start: StartingTaste, cfg: Config
+) -> CalibrationSession:
+    """The member's photo exercise, continued from the answers stored so far."""
+    session = start_calibration(market, features, member_id, start, cfg)
+    session.resume(calibration_answers(con, market).get(market.row[member_id], []))
+    return session
+
+
+def question_photo_ids(market: Market, q: Question) -> tuple[int, ...]:
+    """The database ids of the members whose photos the question shows (one, or two)."""
+    rows = (q.a,) if q.b is None else (q.a, q.b)
+    return tuple(int(market.ids[r]) for r in rows)
+
+
+def answer_row(
+    market: Market, member_id: int, position: int, q: Question, value: bool, asked_at: datetime
+) -> dict:
+    """Column values for `calibration_answers` (answer 1: liked the photo, or chose the
+    first photo of a pair)."""
+    return {
+        "member_id": member_id,
+        "position": position,
+        "shown_a": int(market.ids[q.a]),
+        "shown_b": None if q.b is None else int(market.ids[q.b]),
+        "answer": int(bool(value)),
+        "asked_at": asked_at.isoformat(timespec="seconds"),
+    }
+
+
+# ---------------------------------------------------------------- the nightly cache
+
+
+class MarketCache:
+    """The nightly work kept between calls (FR-LM-50).
+
+    The photo features' compression (PCA) and the starting taste are frozen until
+    `refresh(..., refit_start=True)` (for example once a week), because refitting either one
+    changes every taste model. In between, a refresh refits only the members whose answers
+    changed and recomputes the scores; if neither the members nor any answers changed, it
+    returns the cached scores.
+    """
+
+    def __init__(self, cfg: Config, calendar: Calendar):
+        self.cfg, self.calendar = cfg, calendar
+        self.pca: PCA | None = None
+        self.start: StartingTaste | None = None
+        self.market: Market | None = None
+        self.features: np.ndarray | None = None
+        self.scores: NightlyScores | None = None
+        self.tastes_by_id: dict[int, PersonalTaste] = {}
+        self.answer_counts: dict[int, int] = {}
+        self.last_refitted: list[int] = []  # database ids refitted by the last refresh
+
+    def refresh(
+        self, con, today: date, embeddings: np.ndarray, refit_start: bool = False
+    ) -> NightlyScores:
+        """Reload members; refit what changed; recompute the scores. `embeddings` are the
+        decrypted photo embeddings, one row per member in database-id order."""
+        cfg = self.cfg
+        market = load_market(con, cfg, self.calendar, today)
+        raw = np.asarray(embeddings)
+        if self.pca is None or refit_start:
+            self.pca = PCA.fit(raw, cfg.calibration.pca_dim)
+        features = with_intercept(self.pca.transform(raw))
+        answers = calibration_answers(con, market)
+        if self.start is None or refit_start:
+            self.start = starting_taste(market, features, answers, cfg)
+            self.tastes_by_id, self.answer_counts = {}, {}
+        changed = {
+            v: rows
+            for v, rows in answers.items()
+            if self.answer_counts.get(int(market.ids[v])) != len(rows)
+        }
+        same_members = (
+            self.market is not None
+            and market.ids.tolist() == self.market.ids.tolist()
+            and all(
+                astuple(a) == astuple(b)
+                for a, b in zip(market.members, self.market.members, strict=True)
+            )
+        )
+        if not changed and same_members and not refit_start and self.scores is not None:
+            self.market, self.last_refitted = market, []
+            return self.scores  # nothing changed since the last refresh
+        fresh = fit_tastes(market, features, changed, cfg, start=self.start)
+        for v, rows in changed.items():
+            mid = int(market.ids[v])
+            self.answer_counts[mid] = len(rows)
+            self.tastes_by_id.pop(mid, None)
+            if v in fresh:
+                self.tastes_by_id[mid] = fresh[v]
+        tastes = {market.row[m]: t for m, t in self.tastes_by_id.items() if m in market.row}
+        self.market, self.features = market, features
+        self.scores = nightly_scores(market, tastes, features, cfg)
+        self.last_refitted = sorted(int(market.ids[v]) for v in changed)
+        return self.scores
 
 
 # ---------------------------------------------------------------- bookings, history, subscriptions

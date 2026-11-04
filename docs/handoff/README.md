@@ -24,8 +24,8 @@ Everything below is tested on a database filled with fake members
 | When | Call | Reads (tables) | Returns | The app then |
 |---|---|---|---|---|
 | **Sign-up** | `app.nearest_neighbourhood_id` | neighbourhoods | a neighbourhood id | stores only the neighbourhood, never the address |
-| **Photo exercise** | `looks.calibrate`, with the questions chosen by `looks.select_varied`, `looks.select_pair` and `PersonalTaste.information` | (in memory) | the next photo or pair, until done | stores each answer in `calibration_answers` |
-| **Every night** | `app.load_market`, `app.photo_feature_matrix`, `app.calibration_answers`, `app.fit_tastes`, `app.nightly_scores` | members, free_slots, intent_answers, prompts, neighbourhoods, calibration_answers | a `Market` and today's `NightlyScores` | keeps both in memory for the day |
+| **Photo exercise** | `app.start_calibration` (or `app.resume_calibration` after an interruption), then `CalibrationSession.next_question` and `CalibrationSession.answer`, one question at a time | calibration_answers (to resume) | the next photo or pair (`app.question_photo_ids`), until done | shows it; saves each answer with `app.answer_row` |
+| **Every night** | `MarketCache.refresh`: it calls `app.load_market`, `app.calibration_answers`, `app.fit_tastes` and `app.nightly_scores`, refitting only members whose answers changed | members, free_slots, intent_answers, prompts, neighbourhoods, calibration_answers | today's `NightlyScores` (also kept in the cache) | passes the decrypted photo embeddings; once a week passes `refit_start=True` |
 | **Every morning** | `app.day_lists`, once, for all the day's choosers | bookings, payments, list_shows, subscriptions, ratings, waitlist, venues | each woman's list: up to 30 `ListEntry` (profile id, date, part of day) | when she opens the app, shows her list; inserts a `list_shows` row for each profile |
 | **She picks** | `app.propose` | venues | a `Booking` and the fair venue's id | sets `list_shows.picked = 1`; asks him |
 | **He accepts** | `Booking.hold`, then `Booking.pay` for each $10 payment | (in memory) | confirmed, or expired after 15 minutes | saves `app.booking_row` and the `payments`; reveals the venue |
@@ -38,12 +38,35 @@ Everything below is tested on a database filled with fake members
 
 ### The photo exercise in practice
 
-`looks.calibrate(taste, pool, features, genders, swipe, cfg, pair=pair)` asks its questions one
-at a time through the two callbacks: `swipe(j)` must return whether the member liked photo
-`j`, and `pair(a, b)` whether they chose `a`. In the app, run it in a session whose callbacks
-wait for the member's tap. Store every answer in `calibration_answers`, in order (`shown_b` is
-empty for a single photo). The nightly `app.fit_tastes` rebuilds the same taste models from
-those rows: the tests check they match to the last digit.
+```python
+session = app.start_calibration(market, features, member_id, cache.start, cfg)
+q = session.next_question()                 # the same question until it is answered
+show(app.question_photo_ids(market, q))     # one photo, or two for "who are you more drawn to?"
+session.answer(tapped, question=q)          # liked it, or chose the first photo
+save(app.answer_row(market, member_id, position, q, tapped, now))
+```
+
+Repeat until `session.done`. If the member leaves halfway, `app.resume_calibration` rebuilds
+the session from the stored answers and asks exactly the question they would have seen next.
+Passing `question=q` refuses an answer to a question already answered, for example after a
+double tap. The nightly refit rebuilds the same taste models from the stored rows; the tests
+check they match to the last digit.
+
+### The nightly cache
+
+`cache = app.MarketCache(cfg, calendar)` lives in the app's server process.
+`cache.refresh(con, today, embeddings)` each night:
+- refits only the members whose answers changed;
+- recomputes the scores;
+- if nothing changed at all, returns the cached scores in a fraction of a second.
+
+Once a week, `refresh(..., refit_start=True)` refits the photo compression and the starting
+taste, and with them every taste model.
+
+| Zone size | Full rebuild | One member's answers changed | Nothing changed | Scores in memory |
+|---|---:|---:|---:|---:|
+| 400 members (Phase 1) | 0.5 s | 0.23 s | 0.07 s | 5 MB |
+| 2,000 members | 4.9 s | 3.1 s | 0.5 s | 132 MB |
 
 ### The daily list
 
@@ -118,7 +141,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 ## Not covered yet
 
-- **A step-by-step calibration API:** today the app wraps `looks.calibrate` with callbacks.
 - **Re-running the gate every cycle** with real data as men leave and women join.
-- **Speed at city scale.** Each call reloads the tables it needs; that is instant for Phase 1
-  (hundreds of members). A city launch would cache the market and scores between calls.
+- **City scale:** the scores are five members-by-members grids, so memory grows with the
+  square of a zone's size (about 3.3 GB at 10,000 members). Run a city as separate zones of a
+  few thousand members, each with its own `MarketCache`.

@@ -456,6 +456,139 @@ def select_pair(
     return pick
 
 
+@dataclass(frozen=True)
+class Question:
+    """One photo-exercise question: a single photo, or a pair ("who are you more drawn to?")."""
+
+    a: int  # the photo shown (a member row); in a pair, the first photo
+    b: int | None = None  # the second photo of a pair
+
+    @property
+    def is_pair(self) -> bool:
+        return self.b is not None
+
+
+class CalibrationSession:
+    """The photo exercise one question at a time (FR-LM-49).
+
+    The order never changes: `calibration.n_variety` varied single photos (chosen up front;
+    the model is refitted once after the last of them), then up to `calibration.n_pairs` pair
+    questions, then the most informative single photos, until `calibration.n_profiles` photos
+    have been shown or the pool runs out. `next_question()` returns the same question until it
+    is answered; `answer()` records the answer and moves on.
+    """
+
+    def __init__(
+        self,
+        taste: PersonalTaste,
+        pool_ids: np.ndarray,
+        features: np.ndarray,
+        genders: np.ndarray,
+        cfg: Config,
+        pairs: bool = True,
+    ):
+        c = cfg.calibration
+        self.taste, self.features, self.genders = taste, features, genders
+        self.pool = np.asarray(pool_ids, dtype=int)
+        self.k = min(c.n_profiles, self.pool.size)
+        self.n_pairs = c.n_pairs if pairs else 0
+        rows = select_varied(features[self.pool][:, :-1], min(c.n_variety, self.k))
+        self.variety = [int(self.pool[r]) for r in rows]
+        self.shown: list[int] = []
+        self.answers: list[tuple[int, int | None, bool]] = []
+        self.pairs_asked = 0
+        self._next_variety = 0
+        self._pending: Question | None = None
+        self._phase = "variety"
+        self.remaining = self.pool
+        if not self.variety:
+            self._end_variety()
+
+    def _end_variety(self) -> None:
+        if self.shown:
+            self.taste.refit()
+        self.remaining = np.setdiff1d(self.pool, self.shown)
+        self._phase = "pairs"
+
+    @property
+    def done(self) -> bool:
+        return self.next_question() is None
+
+    def next_question(self) -> Question | None:
+        """The question to show now, or None when the exercise is finished."""
+        if self._pending is None:
+            self._pending = self._choose()
+        return self._pending
+
+    def _choose(self) -> Question | None:
+        if self._phase == "variety":
+            return Question(self.variety[self._next_variety])
+        if self._phase == "pairs":
+            if self.pairs_asked < self.n_pairs and len(self.shown) + 2 <= self.k:
+                chosen = select_pair(self.taste, self.remaining, self.features, self.genders)
+                if chosen is not None:
+                    return Question(*chosen)
+            self._phase = "singles"
+        if self._phase == "singles" and len(self.shown) < self.k and self.remaining.size:
+            info = self.taste.information(
+                self.features[self.remaining], self.genders[self.remaining]
+            )
+            return Question(int(self.remaining[int(np.argmax(info))]))
+        self._phase = "done"
+        self.taste.complete = True
+        return None
+
+    def answer(self, value: bool, question: Question | None = None) -> None:
+        """Record the answer to the current question: liked the photo, or chose `a`.
+
+        Pass the question that was shown to guard against answering one twice.
+        """
+        q = self.next_question()
+        if q is None:
+            raise ValueError("the photo exercise is already finished")
+        if question is not None and question != q:
+            raise ValueError("that question was already answered")
+        self._record(q.a, q.b, bool(value), asked=True)
+
+    def _record(self, a: int, b: int | None, value: bool, asked: bool) -> None:
+        f, g = self.features, self.genders
+        new = [a] if b is None else [a, b]
+        if self._phase == "variety" and asked:
+            self.taste.add_swipe(f[a], g[a], value, refit=False)
+        elif b is None:
+            self.taste.add_swipe(f[a], g[a], value)
+        else:
+            self.taste.add_pair(f[a], f[b], g[a], value)
+        self.shown += new
+        self.pairs_asked += b is not None
+        self.answers.append((a, b, value))
+        self._pending = None
+        if self._phase == "variety":
+            if asked:
+                self._next_variety += 1
+            else:  # an answer the session didn't ask: drop those photos from the variety list
+                done, rest = self.variety[: self._next_variety], self.variety[self._next_variety :]
+                self.variety = done + [x for x in rest if x not in new]
+            if self._next_variety >= len(self.variety):
+                self._end_variety()
+        else:
+            self.remaining = self.remaining[~np.isin(self.remaining, new)]
+
+    def resume(self, answers) -> None:
+        """Replay stored answers, (a, b or None, value) in order, after an interruption.
+
+        Answers to the questions the session would ask are replayed exactly. An answer it
+        wouldn't ask (the pool or the starting taste changed meanwhile) is still learned from,
+        and those photos aren't shown again.
+        """
+        for a, b, value in answers:
+            q = self.next_question()
+            if q is not None and (q.a, q.b) == (a, b):
+                self._record(a, b, bool(value), asked=True)
+            else:
+                self._record(a, b, bool(value), asked=False)
+
+
 def calibrate(
     taste: PersonalTaste,
     pool_ids: np.ndarray,
@@ -469,52 +602,24 @@ def calibrate(
 ) -> list[int]:
     """Show up to `calibration.n_profiles` photos from the pool and learn from each answer.
 
-    strategy "calibrated": `calibration.n_variety` varied single photos; then, if
-    `calibration.n_pairs` > 0 and a `pair` callback is given, that many pair questions
-    (two photos each); then informative single photos for whatever is left. strategy
-    "random": single photos drawn at random (the comparison baseline). `features` and
-    `genders` cover all members; `swipe(j)` says whether the member liked j and
-    `pair(a, b)` whether they chose a over b. Returns the ids shown, in order.
+    strategy "calibrated": a `CalibrationSession` run to the end (`swipe(j)` says whether the
+    member liked j, `pair(a, b)` whether they chose a over b; without `pair`, no pair
+    questions). strategy "random": single photos drawn at random (the comparison baseline).
+    `features` and `genders` cover all members. Returns the ids shown, in order.
     """
     pool_ids = np.asarray(pool_ids, dtype=int)
-    k = min(cfg.calibration.n_profiles, pool_ids.size)
-    shown: list[int] = []
     if strategy == "random":
         if rng is None:
             raise ValueError("strategy 'random' needs an rng")
-        order = rng.permutation(pool_ids)[:k]
-        for j in order:
+        shown: list[int] = []
+        for j in rng.permutation(pool_ids)[: min(cfg.calibration.n_profiles, pool_ids.size)]:
             taste.add_swipe(features[j], genders[j], swipe(int(j)))
             shown.append(int(j))
         taste.complete = True
         return shown
     if strategy != "calibrated":
         raise ValueError(f"unknown strategy {strategy!r}")
-    pool_x = features[pool_ids][:, :-1]  # without the intercept column
-    for row in select_varied(pool_x, min(cfg.calibration.n_variety, k)):
-        j = int(pool_ids[row])
-        # variety picks don't depend on the model, so fit once after all of them
-        taste.add_swipe(features[j], genders[j], swipe(j), refit=False)
-        shown.append(j)
-    if shown:
-        taste.refit()
-    remaining = np.setdiff1d(pool_ids, shown)
-    n_pairs = cfg.calibration.n_pairs if pair is not None else 0
-    for _ in range(n_pairs):
-        if len(shown) + 2 > k:
-            break
-        chosen = select_pair(taste, remaining, features, genders)
-        if chosen is None:
-            break
-        a, b = chosen
-        taste.add_pair(features[a], features[b], genders[a], pair(a, b))
-        shown += [a, b]
-        remaining = remaining[(remaining != a) & (remaining != b)]
-    while len(shown) < k and remaining.size:
-        info = taste.information(features[remaining], genders[remaining])
-        j = int(remaining[int(np.argmax(info))])
-        taste.add_swipe(features[j], genders[j], swipe(j))
-        shown.append(j)
-        remaining = remaining[remaining != j]
-    taste.complete = True
-    return shown
+    session = CalibrationSession(taste, pool_ids, features, genders, cfg, pairs=pair is not None)
+    while (q := session.next_question()) is not None:
+        session.answer(swipe(q.a) if q.b is None else pair(q.a, q.b))
+    return session.shown

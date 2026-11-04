@@ -19,22 +19,21 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
 - `Current sprint: N` at the top of `docs/SPEC.md`.
 - New decisions, if any, as rows in the Decisions table (D18 onward).
 
-Numbering continues from FR-LM-49.
+Numbering continues from FR-LM-51.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 10 (not chosen yet: ask the owner)
+## Sprint 11 (not chosen yet: ask the owner)
 
-The engine is complete for Phase 1, and the handoff is written. Options:
+Options:
 
-- **(a) A step-by-step calibration API and caching:** `next_question` / `record_answer` instead
-  of callbacks; keep the market and scores between calls for city scale.
-- **(b) The gate every cycle:** re-run it with real data as men leave and women join, with the
+- **(a) The gate every cycle:** re-run it with real data as men leave and women join, with the
   recruitment rate as an input.
-- **(c) Wait for real data:** once Phase 1 runs, refit the forecast, the personality weights
-  and the looks prior on real cycles.
+- **(b) Wait for real data:** once Phase 1 runs, refit the forecast, the personality weights and
+  the looks prior on real cycles.
+- **(c) Whatever the app developer asks for** after reading `docs/handoff/README.md`.
 
-Numbering continues from FR-LM-49.
+Numbering continues from FR-LM-51.

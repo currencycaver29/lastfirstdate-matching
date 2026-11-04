@@ -64,10 +64,10 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 10, not chosen yet: a step-by-step calibration API and caching, the gate
-  every cycle, or waiting for real Phase 1 data. Ask the owner in process stage 01.
-- **Last finished:** Sprint 9, the handoff: `app.py` runs the engine from the app's database,
-  and `docs/handoff/README.md` is the app developer's guide.
+- **Current sprint:** 11, not chosen yet: the gate every cycle, waiting for real Phase 1 data,
+  or what the app developer asks for. Ask the owner in process stage 01.
+- **Last finished:** Sprint 10: the step-by-step photo exercise (`CalibrationSession`) and the
+  nightly cache (`app.MarketCache`).
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;

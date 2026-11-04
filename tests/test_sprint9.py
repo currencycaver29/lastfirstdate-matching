@@ -67,7 +67,8 @@ def test_every_call_in_the_handoff_exists():
     calls = HANDOFF.read_text().split("<!-- settings:start -->")[0]  # not the settings table
     names = set(
         re.findall(
-            r"`((?:app|looks|billing)\.[a-z_]+|(?:Booking|TrustBook|PersonalTaste)\.[a-z_]+)`",
+            r"`((?:app|looks|billing)\.[a-z_]+"
+            r"|(?:Booking|TrustBook|PersonalTaste|CalibrationSession|MarketCache)\.[a-z_]+)`",
             calls,
         )
     )
@@ -79,6 +80,8 @@ def test_every_call_in_the_handoff_exists():
         "Booking": importlib.import_module("lastfirstdate.booking").Booking,
         "TrustBook": importlib.import_module("lastfirstdate.trust").TrustBook,
         "PersonalTaste": importlib.import_module("lastfirstdate.looks").PersonalTaste,
+        "CalibrationSession": importlib.import_module("lastfirstdate.looks").CalibrationSession,
+        "MarketCache": importlib.import_module("lastfirstdate.app").MarketCache,
     }
     for name in names:
         owner, attr = name.split(".")
