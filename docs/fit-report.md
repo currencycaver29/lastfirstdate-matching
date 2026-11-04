@@ -25,8 +25,8 @@ arithmetic; they are not predictions of real behavior.
 2. **The Phase 1 plan works, but below the 90% north star once real friction is counted.** The
    batch simulations gave about **87%** of men 3 *booked* dates at 3:1 and **94%** at 5:1. Sprint 7
    simulated the real flow (payment holds, cancellations, no-shows, refills, billing cycles):
-   about **68%** of men get 3 *delivered* dates a cycle, and credits cost about 17% of
-   subscription revenue (section 8).
+   about **82%** of men get 3 *delivered* dates a cycle at 3:1, and credits cost about 12% of
+   subscription revenue. Reaching 90% delivered takes about **4.5 women per man** (section 8).
 3. **The women's promise needs rewording.** At 3:1 the average woman can get at most about 1 date
    a month (100 men × 3 dates = 300 dates for 300 women), and in simulation 34% get none. "Commit
    to three dates a month" should read "up to three".
@@ -177,12 +177,24 @@ cycle):
 
 | Version | Men with 3 delivered dates | Credits (share of subscriptions) |
 |---|---:|---:|
-| Real flow | **68% ± 1** | 17% |
-| Real flow, no new women | 58% ± 2 | 26% |
-| Show-ups 97% instead of 92% | 76% ± 2 | 14% |
-| Everyone pays within the 15 minutes | 69% ± 3 | 16% |
+| Real flow | **82% ± 3** | 12% |
+| Real flow, no new women | 69% ± 3 | 24% |
+| Show-ups 97% instead of 92% | 82% ± 2 | 12% |
+| Everyone pays within the 15 minutes | 85% ± 2 | 10% |
 | No friction at all | 90% ± 3 | 7% |
 
-About one booked date in three falls through (hold not paid in time, cancellation or no-show),
-and a man's cycle often ends before the slot is refilled. Show-ups are the biggest lever; new
-women joining every cycle keep the market from wearing out. Details: `docs/sprints/sprint-7.md`.
+These are the corrected figures: Sprint 7 first reported 68%, because its simulation never
+refilled a man's slot after a woman didn't show up (fixed in Sprint 8). About one booked date in
+three still falls through, but most are refilled in time. New women joining every cycle are the
+biggest lever; without them the market wears out.
+
+By women per man (real flow, 100 men, 15% new women per cycle, 2 simulated markets):
+
+| Women per man | 2 | 3 | 4 | 5 | 8 |
+|---|---:|---:|---:|---:|---:|
+| Men with 3 delivered dates | 64% | 81% | 87% | 95% | 98% |
+
+With 100 men, a higher ratio also means more women. Separating the two (Sprint 8) shows the
+zone's size is what matters: with 500 women about 90% of men get their dates even at 3:1, and
+with 300 women the 90% promise covers only a handful of men. Aim for the top of the 300 to 500
+plan. Details: `docs/sprints/sprint-7.md` and `docs/sprints/sprint-8.md`.

@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 7
+Current sprint: 8
 
 ## Goal
 
@@ -442,10 +442,47 @@ and credits, over `cycle_simulation.cycles` billing cycles per man, with cycle s
 launch day or spread out.
 Test: the books balance (every past booking ends in a final state; nobody passes a cap;
 delivered dates never exceed 3 a cycle; credits match missing dates; refunds never exceed
-fees); with no friction at least 10 points more men reach 3 delivered dates; trust flags at
+fees); with no friction at least 5 points more men reach 3 delivered dates (10 before the
+Sprint 8 correction); trust flags at
 least 80% of simulated bad actors with 6 or more ratings, at least 80% of flags are bad
 actors, and trust does not track looks. Reaching `gate.target` in the real flow is tracked as
 a strict expected failure (Sprint 7 finding).
+
+### Sprint 8: the forecast and the gate on delivered dates
+
+Sprint 6 fitted the guarantee forecast on the batch simulation's *booked* dates; Sprint 7
+showed the real booking flow delivers fewer. This sprint refits the forecast and the
+mid-cycle alerts on the real flow, and lets the gate use them.
+
+#### FR-LM-43 · Forecast on delivered dates
+Sprint: 8
+At launch, each paying man's chance of 3 delivered dates in a cycle, averaged over his first
+`cycle_simulation.cycles` cycles, from the same features as FR-LM-33 (women per man, his
+possible matches, his share of women's attention, the shortfall below one woman per man).
+Fitted on the real flow (`cycle_sim.py`) across market sizes and women per man, under the
+settings' frictions and rate of new women, and saved with its fitted range and those
+assumptions in `config/forecast_delivered.toml`.
+Test: the model file loads and records what it assumes; on a market it never saw, the
+forecast is within 7 points of the share of man-cycles that reached 3 delivered dates.
+
+#### FR-LM-44 · Mid-cycle alerts on delivered dates
+Sprint: 8
+Each week of a man's cycle, his chance of ending it with 3 delivered dates, from the start
+features plus dates delivered so far, confirmed dates still to come and days left in his own
+cycle. Men below `gate.at_risk_threshold` are flagged.
+Test: on a market it never saw, the weekly chances rank men who end the cycle with 3
+delivered dates above those who don't (AUC above 0.85), and delivered dates so far raise the
+chance.
+
+#### FR-LM-45 · The gate on delivered dates
+Sprint: 8
+`gate.forecast` chooses the forecast the gate uses: `booked` (Sprint 6) or `delivered`
+(FR-LM-43). The Phase 1 settings use `delivered`; the gate's rules and code are unchanged.
+Test: the setting picks the model file and is validated. In the real flow with a long
+waitlist: in a 300-woman zone, the men the booked forecast admits fall more than 5 points
+short of `gate.target` and the delivered forecast admits fewer men (or none); in a 500-woman
+zone, the men the delivered forecast admits reach 3 delivered dates within 5 points of the
+target and of the forecast.
 
 ## Changes to this plan
 
@@ -528,3 +565,14 @@ a strict expected failure (Sprint 7 finding).
   is kept as a strict expected failure. Writing the books-balance test also caught a
   simulation bug: his own late cancellation was counted as delivered and also gave his slot
   back. Details: `docs/sprints/sprint-7.md`.
+- **Sprint 8.** A second Sprint 7 bug turned up first: a no-show was never refilled (the man
+  never got his slot back). Fixed; the real flow is about **82%**, not 68%, and credits about
+  12%. The forecast and the mid-cycle alerts were refitted on delivered dates in the real flow
+  (held-out error 3.8 points; alerts AUC 0.97 to 1.00), and the Phase 1 gate now uses them.
+  The headline: **the size of the zone matters far more than women per man.** With 500 women,
+  about 90% of men get 3 delivered dates even at 3:1; with 300, the 90% promise covers only a
+  handful of men (the Sprint 6 gate would sell 95 there at about 75%). In large zones the gate
+  is sensitive, because fulfilment is flat in the number of men, so a few points of forecast
+  error move the stopping point by about 100 men. FR-LM-45's first test wording ("better than
+  the booked forecast everywhere") was wrong for large zones; it now checks protection in a
+  small zone and calibration in a large one. Details: `docs/sprints/sprint-8.md`.

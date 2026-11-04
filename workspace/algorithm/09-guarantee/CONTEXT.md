@@ -22,6 +22,20 @@ men to admit, and counts what was delivered and what is owed.
   fitted range, and the forecast ≥ the target (90%) (`forecast.gate_decision`, with a Rust
   twin).
 
+## On delivered dates (Sprint 8)
+
+- **Forecast:** `forecast_fit.py --delivered` fits the same five start features on the real
+  booking flow (`cycle_sim.py`). Each paying man's market at launch is labelled with the share
+  of his paid cycles that reached 3 delivered dates. It is saved to
+  `config/forecast_delivered.toml` with its fitted range and the frictions and rate of new
+  women it assumes.
+- **Mid-cycle alerts:** the same start features plus delivered so far ÷ 3, log(1 + confirmed
+  dates to come) and days left ÷ cycle days (`delivered_progress_matrix`,
+  `at_risk_delivered`).
+- **Which forecast the gate uses:** `[gate] forecast = "booked" | "delivered"` picks the file
+  (`forecast.gate_model`). Phase 1 uses `delivered`; the gate's code and its Rust twin are
+  unchanged.
+
 ## Billing (Sprint 7)
 
 - **Cycles:** a 30-day free trial, then 28-day cycles per man (`billing.cycle_on`).
@@ -31,16 +45,18 @@ men to admit, and counts what was delivered and what is owed.
 
 ## Code
 
-`src/lastfirstdate/forecast.py`, `forecast_fit.py`, `billing.py`; `phase1_report.py` runs the
-gate trial.
+`src/lastfirstdate/forecast.py`, `forecast_fit.py`, `billing.py`. The gate trial in the batch
+flow is in `phase1_report.py`; in the real flow, in `gate_report.py`.
 
 ## Settings
 
-`[gate]`, `[billing]`, `config/forecast_model.toml`.
+`[gate]` (including `forecast`), `[billing]`, `config/forecast_model.toml` (booked),
+`config/forecast_delivered.toml` (delivered).
 
 ## Tests
 
-FR-LM-33, FR-LM-34 (`tests/test_phase1.py`), FR-LM-38, FR-LM-42 (`tests/test_sprint7.py`).
+FR-LM-33, FR-LM-34 (`tests/test_phase1.py`), FR-LM-38, FR-LM-42 (`tests/test_sprint7.py`),
+FR-LM-43 to FR-LM-45 (`tests/test_sprint8.py`).
 
 ## What we know
 
@@ -48,9 +64,14 @@ FR-LM-33, FR-LM-34 (`tests/test_phase1.py`), FR-LM-38, FR-LM-42 (`tests/test_spr
   per man, said 83% where 7% actually got 3 dates. Hence the shortfall term and the fitted
   range.
 - The gate keeps admitted men at 92% to 96% of *booked* dates; admitting everyone gives 12.5%.
-- **The real flow delivers only about 68%** (Sprint 7), but the forecast and gate were fitted on
-  booked dates. Refitting them on delivered dates is the proposed Sprint 8.
-- Credits cost about 17% of subscription revenue in the real flow.
+- **The real flow delivers about 82%** at 3:1 in a 300-woman zone (Sprint 7, corrected in
+  Sprint 8). The delivered forecast's held-out error is 3.8 points; its alerts reach AUC 0.97
+  to 1.00.
+- **The zone's size matters far more than the ratio.** With 500 women, about 90% even at 3:1;
+  with 300, the delivered gate admits only a handful of men at a 90% target.
+- **In large zones the gate is sensitive:** fulfilment is flat in the number of men, so 2 to 3
+  points of forecast error move the stopping point by about 100 men.
+- Credits run about 7% of revenue in a 500-woman zone and 16% in a 300-woman zone at 3:1.
 
 ## If you change it
 

@@ -50,7 +50,9 @@ delivered).
 ## What we know
 
 - About one booked date in three falls through: the hold expires, someone cancels, or someone
-  doesn't show up.
+  doesn't show up. Most are refilled in time.
+- Whoever is stood up gets their week and cap slot back (`CycleSimulation.release_slot`).
+  Sprint 7 missed this, which understated delivered dates (corrected in Sprint 8).
 - Allowing 2 dates a week instead of 1 didn't help.
 - Venue trips averaged under 1 km in Phase 1.
 

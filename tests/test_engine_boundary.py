@@ -36,6 +36,7 @@ SIM_ONLY = {
     "lastfirstdate.forecast_fit",
     "lastfirstdate.phase1_report",
     "lastfirstdate.cycle_sim",
+    "lastfirstdate.gate_report",
 }
 
 

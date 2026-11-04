@@ -22,16 +22,19 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   every men's sale and pauses the waitlist when it says stop.
 - [ ] **Reword the women's commitment** to "up to three dates a month". At 3:1 the average woman
   can have at most about 1 date a month. *Owner: Founder.*
-- [ ] **Budget for credits** from day one and track fulfilment weekly. *Owner: Founder.* Sprint 7
-  simulated the real booking flow (payment holds, cancellations, no-shows, refills): in Phase 1
-  about **68% of men get 3 delivered dates a cycle** and credits cost about **17% of
-  subscription revenue**. The earlier 87% to 96% counted booked dates only.
+- [ ] **Recruit about 500 committed women for the Phase 1 zone, the top of the plan.** In the
+  simulated real booking flow, the size of the zone matters more than the ratio: with 500 women,
+  about 90% of men get 3 delivered dates even at 3 women per man; with 300, about 75% at 3:1, and
+  the 90% promise covers only a handful of men. The Phase 1 gate now uses a forecast fitted on
+  delivered dates and will sell almost nothing in a 300-woman zone (Sprint 8). *Owner: Founder.*
+- [ ] **Budget for credits** from day one and track fulfilment weekly: about 7% of subscription
+  revenue in a 500-woman zone at 3:1, about 16% in a 300-woman zone. *Owner: Founder.*
 - [ ] **Keep recruiting women after launch,** about 15% of the launch number every cycle. Without
-  new women, fulfilment falls each cycle (66%, 60%, 49% in simulation) because the same people
+  new women, fulfilment falls each cycle (86%, 69%, 53% in simulation) because the same people
   keep passing on each other. *Owner: Founder.*
-- [ ] **Raise show-ups.** Each no-show or cancellation needs a refill. Show-ups of 97% instead of
-  92% add about 8 points of fulfilment, the biggest single lever found. Reminders, the $10 fee and
-  reliability in the trust score all help. *Owner: Founder and Engineering.*
+- [ ] **Keep no-shows and cancellations low.** Each one needs a refill before his cycle ends; with
+  none at all, fulfilment would be about 8 points higher. Reminders, the $10 fee and reliability in
+  the trust score all help. *Owner: Founder and Engineering.*
 - [ ] **Decide who the guarantee is offered to.** In simulation, offering it only to men with 50 or
   more possible matches reaches about 96%. Pool size depends only on a member's own settings and
   location, so it is fair to use. Never use how often someone is picked: that would be a

@@ -52,6 +52,7 @@ from lastfirstdate.booking import (
 from lastfirstdate.config import Config, load
 from lastfirstdate.fairness import fair_day_lists
 from lastfirstdate.filter import eligibility_matrix, member_ok
+from lastfirstdate.forecast import delivered_progress_matrix, market_features, start_matrix
 from lastfirstdate.lists import NEVER_SHOWN, available_row, pick_rights
 from lastfirstdate.mutual_report import build_scores
 from lastfirstdate.simulate import month_people, run_month
@@ -160,8 +161,12 @@ class CycleSimulation:
         seed: int,
         scores: np.ndarray,
         join_day: np.ndarray | None = None,
+        record: bool = False,
     ):
         self.cfg, self.seed, self.scores = cfg, seed, scores
+        self.record = record  # keep forecast rows (FR-LM-43, FR-LM-44)
+        self.launch_rows: np.ndarray | None = None
+        self.week_rows: list[tuple[np.ndarray, np.ndarray, int]] = []  # rows, men, cycle
         cs, b = cfg.cycle_simulation, cfg.billing
         n = len(pop)
         self.n = n
@@ -246,6 +251,12 @@ class CycleSimulation:
                 period = int(self.period(np.array([m]), np.array([bk.day]))[0])
                 self.period_count[m, period] += sign
 
+    def release_slot(self, bk: Booking, m: int) -> None:
+        """Give m back the week and cap a date used, when it didn't happen through no fault
+        of theirs (the other person didn't come). The evening itself has passed."""
+        self.week_count[m, bk.day // 7] -= 1
+        self.period_count[m, int(self.period(np.array([m]), np.array([bk.day]))[0])] -= 1
+
     def counts_for(self, bk: Booking, m: int) -> bool:
         """Does this booking count as one of paying member m's delivered dates?"""
         if not self.guaranteed[m]:
@@ -257,6 +268,8 @@ class CycleSimulation:
 
     def run(self, label: str) -> CycleReport:
         for today in range(self.days):
+            if self.record:
+                self.snapshot(today)
             self.cancellations(today)
             self.dates(today)
             self.lists(today)
@@ -289,6 +302,8 @@ class CycleSimulation:
             bk.finish(*came)
             for m, c in zip(bk.members, came, strict=True):
                 self.trust.add_attendance(m, kept=c)
+                if c and not all(came):
+                    self.release_slot(bk, m)  # stood up: the slot is refilled
             if all(came):
                 for rater, rated in ((bk.a, bk.b), (bk.b, bk.a)):
                     self.trust.add_rating(self.rate(rater, rated))
@@ -317,25 +332,79 @@ class CycleSimulation:
             self.paused[m] = True
             self.ratings_at_flag[m] = int(self.trust.n_ratings[m])
 
-    def missing_now(self, today: int) -> tuple[np.ndarray, np.ndarray]:
-        """Each paying man's missing dates and days left in his current cycle."""
-        g = self.cfg.dates.guaranteed_per_month_paying
-        missing = np.zeros(self.n)
+    def progress(self, today: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Each paying man's dates delivered so far, confirmed dates to come and days left,
+        all in his current cycle (indexed by member id)."""
+        delivered, upcoming = np.zeros(self.n), np.zeros(self.n)
         days_left = np.ones(self.n)
         for m in np.flatnonzero(self.guaranteed):
             cyc = cycle_on(int(m), self.signup(m), today, self.cfg)
-            done = upcoming = 0
             for idx in self.by_member[m]:
                 bk = self.bookings[idx]
                 if not cyc.contains(bk.day):
                     continue
                 if bk.state == "confirmed":
-                    upcoming += 1
+                    upcoming[m] += 1
                 elif counts_toward_guarantee(bk, int(m), cyc, self.cfg):
-                    done += 1
-            missing[m] = max(0, g - done - upcoming)
+                    delivered[m] += 1
             days_left[m] = cyc.days_left(today)
+        return delivered, upcoming, days_left
+
+    def missing_now(self, today: int) -> tuple[np.ndarray, np.ndarray]:
+        """Each paying man's missing dates and days left in his current cycle."""
+        g = self.cfg.dates.guaranteed_per_month_paying
+        delivered, upcoming, days_left = self.progress(today)
+        missing = np.where(self.guaranteed, np.maximum(0, g - delivered - upcoming), 0)
         return missing, days_left
+
+    def market_now(self, today: int):
+        """Market features of the women present and the paying men active today."""
+        women = np.flatnonzero(
+            self.matchable & ~self.arr.paying & (self.join_day <= today) & ~self.paused
+        )
+        men = np.flatnonzero(self.guaranteed & ~self.paused)
+        return market_features(self.eligible, women, men)
+
+    def snapshot(self, today: int) -> None:
+        """Forecast rows: every man's market at launch, and his progress each week of his
+        paid cycles (FR-LM-43, FR-LM-44)."""
+        c, cycles = self.cfg.billing.cycle_days, self.cfg.cycle_simulation.cycles
+        if today == 0:
+            launch = market_features(
+                self.eligible,
+                np.flatnonzero(self.matchable & ~self.arr.paying & (self.join_day == 0)),
+                np.flatnonzero(self.guaranteed),
+            )
+            self.launch_rows = start_matrix(launch)
+        into = today - self.anchor
+        weekly = self.guaranteed & ~self.paused & (into > 0) & (into < cycles * c)
+        weekly &= (into % c > 0) & (into % 7 == 0)
+        if not weekly.any():
+            return
+        mf = self.market_now(today)
+        delivered, upcoming, days_left = self.progress(today)
+        x = delivered_progress_matrix(mf, delivered, upcoming, days_left, self.cfg)
+        keep = weekly[mf.men]
+        for k in range(cycles):
+            in_k = keep & ((into[mf.men] // c) == k)
+            if in_k.any():
+                self.week_rows.append((x[in_k], mf.men[in_k], k))
+
+    def forecast_rows(self, report: CycleReport):
+        """(x_start, y_start, x_progress, y_progress) from a recorded run.
+
+        y_start: the share of each man's paid cycles that reached 3 delivered dates.
+        y_progress: whether the cycle of each weekly snapshot ended with 3.
+        """
+        reached = report.delivered >= self.cfg.dates.guaranteed_per_month_paying
+        row_of = {int(m): r for r, m in enumerate(np.flatnonzero(self.guaranteed))}
+        xs, ys = [], []
+        for rows, men, k in self.week_rows:
+            xs.append(rows)
+            ys.append(np.array([reached[row_of[int(m)], k] for m in men]))
+        x_progress = np.vstack(xs) if xs else np.zeros((0, 8))
+        y_progress = np.concatenate(ys) if ys else np.zeros(0)
+        return self.launch_rows, reached.mean(axis=1), x_progress, y_progress
 
     def lists(self, today: int) -> None:
         cfg, n = self.cfg, self.n

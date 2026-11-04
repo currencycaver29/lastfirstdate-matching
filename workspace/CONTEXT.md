@@ -64,13 +64,15 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 8, proposed: the forecast and the ratio gate on *delivered* dates. The
-  owner hasn't confirmed the topic; confirm it in process stage 01.
-- **Last finished:** Sprint 7 (`3f6e29c`, pushed), plus the Rust core (`7e0c166`).
+- **Current sprint:** 9, proposed: the handoff to the app (process stage 05). Confirm it with
+  the owner in process stage 01.
+- **Last finished:** Sprint 8, the forecast and the gate on delivered dates. It is committed
+  but not pushed until the owner says so.
 - **Where the engine stands:**
   - all ten stages are built and tested;
-  - the real booking flow delivers 3 dates to about 68% of men in simulation;
-  - the forecast and gate were fitted on booked dates, which is why Sprint 8 is proposed.
+  - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;
+  - the zone's size matters more than the ratio (about 500 women for a 90% promise);
+  - the Phase 1 gate uses the delivered forecast.
 
 ## Rules that matter everywhere
 
@@ -99,3 +101,5 @@ D1 to D17 in `docs/SPEC.md`. The most relevant now:
 3. Flag bad actors after about 6 poor ratings (now), or sooner?
 4. Can marketing bring in about 15% new women per cycle?
 5. Which show-up tools are acceptable (reminders, fees, deposits)?
+6. Can Phase 1 recruit about 500 committed women before selling subscriptions?
+7. Keep the 90% gate target, or use 85% to 88% in large zones, where the gate is sensitive?

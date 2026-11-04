@@ -62,6 +62,7 @@ min_women_per_man = 3.0       # and active committed women per paying man stays 
 min_pool = 10                 # defer applicants with fewer possible matches than this
 at_risk_threshold = 0.5       # mid-cycle alert below this chance of reaching the guarantee
 forecast_l2 = 1.0             # penalty that keeps the forecast regressions stable
+forecast = "delivered"        # the gate's forecast: delivered dates in the real booking flow
 
 [fairness]                    # Exposure and fairness report (FR-LM-23)
 min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate

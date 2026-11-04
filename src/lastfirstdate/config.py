@@ -82,6 +82,7 @@ class GateConfig:
     min_pool: int
     at_risk_threshold: float
     forecast_l2: float
+    forecast: str
 
 
 @dataclass(frozen=True)
@@ -317,6 +318,8 @@ def validate(cfg: Config) -> None:
     _check_positive("gate.forecast_l2", gate.forecast_l2)
     if gate.min_pool < 0:
         raise ConfigError("gate.min_pool must not be negative")
+    if gate.forecast not in ("booked", "delivered"):
+        raise ConfigError("gate.forecast must be booked or delivered")
     learn = cfg.learning
     _check_positive("learning.months", learn.months)
     for name in (

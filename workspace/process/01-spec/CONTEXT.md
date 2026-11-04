@@ -19,30 +19,36 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
 - `Current sprint: N` at the top of `docs/SPEC.md`.
 - New decisions, if any, as rows in the Decisions table (D18 onward).
 
-Numbering continues from FR-LM-43.
+Numbering continues from FR-LM-46.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 8 (proposed, confirm with the owner)
+## Sprint 9 (proposed, confirm with the owner)
 
-**Goal:** the forecast and the ratio gate (Sprint 6) assume about 90% fulfilment from the old
-batch simulation, but the real booking flow (Sprint 7) delivers about 68%. Refit them on the
-real flow so the gate stops selling subscriptions the market can't deliver.
+**Goal:** the owner builds the algorithm; someone else builds the app. Write down exactly how the
+app plugs the engine in, so app development can start. This is process stage 05, made a sprint.
 
-Candidate requirements:
+Candidate requirements (numbering continues from FR-LM-46):
 
-- **FR-LM-43 · Forecast on delivered dates:** fit the start-of-cycle forecast on rows from
-  `cycle_sim.py` (target: 3 delivered dates in his cycle), across market sizes, women per man
-  and new-women rates.
-- **FR-LM-44 · Mid-cycle alerts on delivered dates:** the at-risk model with delivered dates
-  so far, confirmed dates still to come, and days left in his own cycle.
-- **FR-LM-45 · Gate on the real flow:** the gate uses the delivered-date forecast. In the
-  cycle simulation, admitted men reach 3 delivered dates near `gate.target`, or the shortfall
-  is recorded as a finding.
+- **FR-LM-46 · Call sequence:**
+  - at sign-up, calibration;
+  - every night, scores and lists;
+  - when a woman opens the app, windows;
+  - when she picks, the booking and hold;
+  - after a date, ratings and trust;
+  - every week, alerts;
+  - at cycle end, credits;
+  - before each men's sale, the gate.
+- **FR-LM-47 · Data contract:** each call's inputs and outputs, mapped to `db/schema.sql`, with
+  a test that a full simulated day can run from database rows alone.
+- **FR-LM-48 · Operator settings:** which settings the app's operators may change, and which
+  need a refit or a fresh simulation first.
 
-Files the sprint will touch: `src/lastfirstdate/forecast.py`, `forecast_fit.py`,
-`cycle_sim.py`, `config/forecast_model.toml`, `config/phase1.toml` (`[gate]`), and the FR-LM-33
-and FR-LM-34 tests in `tests/test_phase1.py`.
+Alternatives the owner may prefer: re-running the gate every cycle with real data, or a service
+the app can call.
+
+Files the sprint will touch: `docs/handoff/` (new), `db/schema.sql`, the public functions listed
+in `workspace/process/05-handoff/CONTEXT.md`, and a new test file.

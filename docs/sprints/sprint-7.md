@@ -1,5 +1,26 @@
 # Sprint 7: booking, billing, trust and geography
 
+> **Correction (Sprint 8).** The simulation in this sprint never gave a man his slot back after a
+> woman didn't show up, so a no-show could never be refilled, though the site says it is. Fixed
+> in Sprint 8 (`CycleSimulation.release_slot`). Corrected results for the same three markets:
+>
+> | Version | Reported here | Corrected |
+> |---|---:|---:|
+> | Real flow, 15% new women per cycle | 67.7% | **81.9% ± 2.8** |
+> | Real flow, no new women | 58.2% | 69.2% ± 3.2 |
+> | Every cycle starts on launch day | 70.4% | 86.6% ± 1.6 |
+> | Show-up 97% instead of 92% | 75.5% | 81.7% ± 2.3 |
+> | Everyone pays within the 15 minutes | 68.9% | 84.7% ± 1.8 |
+> | No friction | 89.5% | 89.5% ± 3.1 |
+> | Credits, real flow | 17.2% | 12.2% |
+>
+> What changes in the conclusions below:
+> - friction costs about 8 points, not 22;
+> - show-ups are no longer the biggest lever (refills absorb most no-shows);
+> - new women joining every cycle are (+13 points);
+> - the gap to the 90% north star is about the ratio: it takes about 4.5 women per man
+>   (`docs/sprints/sprint-8.md`).
+
 **In one paragraph.** Your website describes how a date actually happens: his profile appears
 on her list *with a proposed date window*, she chooses, both $10 payments must arrive within
 15 minutes, the venue is revealed, and the date counts toward his 3 only if it really happened

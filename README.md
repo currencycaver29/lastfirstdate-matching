@@ -118,7 +118,8 @@ All numbers come from synthetic members. They compare designs; they are not pred
 | How well does the looks model learn a member's taste? | AUC 0.844, against a ceiling of 0.875 |
 | Do fair lists spread attention? | Exposure Gini falls from 0.39 to 0.31 |
 | Does the ratio gate protect the guarantee? | Admitted men reach 3 dates 92% to 96% of the time; admitting everyone gives 12.5% |
-| How many men get 3 *delivered* dates in the real booking flow? | About 68%; 90% with no cancellations, no-shows or missed payments |
+| How many men get 3 *delivered* dates in the real booking flow? | About 82% in a 300-woman zone at 3 women per man |
+| What does the 90% promise need? | A big enough zone: with 500 committed women, about 90% even at 3:1; with 300, only a handful of men |
 | How much faster is the Rust core? | Looks taste 3.6×, daily lists 10×, the gate 28× to 81×, with identical results |
 
 Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain these results and their limits.
@@ -166,7 +167,9 @@ Each report runs a simulation and prints what it found:
 .venv/bin/python -m lastfirstdate.learning_report   # three months with and without learning
 .venv/bin/python -m lastfirstdate.phase1_report     # Phase 1 rules: pair questions, the ratio gate
 .venv/bin/python -m lastfirstdate.cycle_sim         # the real booking flow over three billing cycles
+.venv/bin/python -m lastfirstdate.gate_report       # the ratio gate in the real flow, two zone sizes
 .venv/bin/python -m lastfirstdate.forecast_fit      # refit the guarantee forecast (about 10 minutes)
+.venv/bin/python -m lastfirstdate.forecast_fit --delivered   # refit it on delivered dates (~16 min)
 ```
 
 ### Checks
@@ -259,7 +262,8 @@ describes how each sprint runs: spec, build, simulate, notes, handoff.
 | 6 | lastfirstdate's real rules, the guarantee forecast and the ratio gate | Done |
 | – | The Rust core for the hot loops | Done |
 | 7 | Booking, billing, trust, geography and the app's database | Done |
-| 8 | The forecast and the gate on delivered dates | Next |
+| 8 | The forecast and the gate on delivered dates | Done |
+| 9 | Handoff to the app: which engine call happens when (proposed) | Next |
 
 ## License
 

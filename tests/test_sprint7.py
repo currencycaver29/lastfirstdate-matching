@@ -349,6 +349,8 @@ def test_the_books_balance(p1cfg, phase1_cycles):
         if bk.state in ("expired", "cancelled"):
             continue
         for m in bk.members:
+            if bk.state == "no_show" and bk.showed[m]:
+                continue  # stood up: the slot went back to them
             period = int(sim.period(np.array([m]), np.array([bk.day]))[0])
             counts[m, period] = counts.get((m, period), 0) + 1
             weeks[m, bk.day // 7] = weeks.get((m, bk.day // 7), 0) + 1
@@ -360,11 +362,12 @@ def test_the_books_balance(p1cfg, phase1_cycles):
     assert 0 <= rep.fees_refunded <= rep.fees_paid
 
 
-def test_friction_costs_far_more_than_the_flow_itself(phase1_cycles):
-    """FR-LM-42: with everyone paying in time, nobody cancelling and everyone showing up, far
-    more men reach 3 delivered dates: holds, cancellations and no-shows are the main loss."""
+def test_friction_costs_men_their_dates(phase1_cycles):
+    """FR-LM-42: with everyone paying in time, nobody cancelling and everyone showing up, at
+    least 5 points more men reach 3 delivered dates. (Sprint 7 claimed 10; that came from a
+    simulation bug that never refilled a slot after a no-show, fixed in Sprint 8.)"""
     _, real, smooth = phase1_cycles
-    assert smooth.guarantee_share >= real.guarantee_share + 0.10
+    assert smooth.guarantee_share >= real.guarantee_share + 0.05
 
 
 def test_trust_flags_bad_actors_and_not_looks(phase1_cycles):
@@ -380,8 +383,9 @@ def test_trust_flags_bad_actors_and_not_looks(phase1_cycles):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="Sprint 7 finding: with payment holds, cancellations and no-shows, about 68% of men "
-    "(3 simulated markets) get 3 delivered dates a cycle, against 90% in the batch simulation",
+    reason="Sprint 7 finding (corrected in Sprint 8): at 3 women per man, with payment holds, "
+    "cancellations and no-shows, about 82% of men (3 simulated markets) get 3 delivered dates "
+    "a cycle; reaching 90% takes about 4.5 women per man",
 )
 def test_the_real_flow_reaches_the_north_star(p1cfg, phase1_cycles):
     """FR-LM-42: at least gate.target of men get 3 delivered dates in the real flow."""
