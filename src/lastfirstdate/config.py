@@ -30,6 +30,7 @@ class PersonalityConfig:
     w_text: float
     w_values: float
     w_big5: float
+    text_encoder: str
 
 
 @dataclass(frozen=True)
@@ -42,6 +43,7 @@ class MixConfig:
 class CalibrationConfig:
     n_profiles: int
     n_variety: int
+    n_pairs: int
     pca_dim: int
     l2_penalty: float
     w0_l2_penalty: float
@@ -71,6 +73,15 @@ class LearningConfig:
     lambda_prior_strength: float
     lambda_min: float
     lambda_max: float
+
+
+@dataclass(frozen=True)
+class GateConfig:
+    target: float
+    min_women_per_man: float
+    min_pool: int
+    at_risk_threshold: float
+    forecast_l2: float
 
 
 @dataclass(frozen=True)
@@ -112,8 +123,26 @@ class SimulationConfig:
 
 @dataclass(frozen=True)
 class ValuesQuestion:
+    """One values or intent question.
+
+    mode "accepts": each member gives an answer and the answers they accept (Sprints 1-5).
+    mode "closeness": each member gives one answer; options are listed in order and two
+    answers are as compatible as they are close. `incompatible` lists answer pairs that
+    rule a pair out for everyone (a shared dealbreaker), in either order.
+    """
+
     key: str
     options: tuple[str, ...]
+    mode: str = "accepts"
+    incompatible: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class Area:
+    name: str
+    lat: float
+    lon: float
+    share: float
 
 
 @dataclass(frozen=True)
@@ -136,6 +165,10 @@ class PopulationConfig:
     slots_min: int
     slots_max: int
     dealbreaker_rate: float
+    area_jitter_deg: float
+    prompt_style: str
+    exact_counts: bool
+    areas: tuple[Area, ...]
 
 
 @dataclass(frozen=True)
@@ -147,6 +180,7 @@ class Config:
     lists: ListsConfig
     fairness: FairnessConfig
     learning: LearningConfig
+    gate: GateConfig
     dates: DatesConfig
     simulation: SimulationConfig
     population: PopulationConfig
@@ -184,6 +218,8 @@ def validate(cfg: Config) -> None:
         _check_share(f"personality.{name}", w)
     if not math.isclose(p.w_text + p.w_values + p.w_big5, 1.0, abs_tol=1e-9):
         raise ConfigError("personality weights must add up to 1")
+    if p.text_encoder not in ("tags", "words"):
+        raise ConfigError("personality.text_encoder must be tags or words")
 
     _check_share("mix.looks_weight", cfg.mix.looks_weight)
     if not 0.0 < cfg.mix.chooser_weight < 1.0:
@@ -193,6 +229,8 @@ def validate(cfg: Config) -> None:
     _check_positive("calibration.n_profiles", c.n_profiles)
     if not 0 <= c.n_variety <= c.n_profiles:
         raise ConfigError("calibration.n_variety must be between 0 and n_profiles")
+    if c.n_pairs < 0 or c.n_variety + 2 * c.n_pairs > c.n_profiles:
+        raise ConfigError("calibration: n_variety + 2 * n_pairs must not exceed n_profiles")
     _check_positive("calibration.pca_dim", c.pca_dim)
     _check_positive("calibration.l2_penalty", c.l2_penalty)
     _check_positive("calibration.w0_l2_penalty", c.w0_l2_penalty)
@@ -208,6 +246,13 @@ def validate(cfg: Config) -> None:
     if lists.guarantee_priority < 0 or lists.holdback_yeses < 0:
         raise ConfigError("lists.guarantee_priority and lists.holdback_yeses must not be negative")
     _check_share("fairness.min_rate_ratio", cfg.fairness.min_rate_ratio)
+    gate = cfg.gate
+    _check_share("gate.target", gate.target)
+    _check_share("gate.at_risk_threshold", gate.at_risk_threshold)
+    _check_positive("gate.min_women_per_man", gate.min_women_per_man)
+    _check_positive("gate.forecast_l2", gate.forecast_l2)
+    if gate.min_pool < 0:
+        raise ConfigError("gate.min_pool must not be negative")
     learn = cfg.learning
     _check_positive("learning.months", learn.months)
     for name in (
@@ -283,6 +328,14 @@ def validate(cfg: Config) -> None:
             raise ConfigError(f"population.{lo} must be positive and <= {hi}")
     if pop.slots_max > 21:
         raise ConfigError("population.slots_max cannot exceed 21 weekly slots")
+    if not pop.areas:
+        raise ConfigError("population needs at least one [[population.areas]] entry")
+    if any(a.share <= 0 for a in pop.areas):
+        raise ConfigError("population.areas shares must be positive")
+    if pop.prompt_style not in ("bio", "prompts"):
+        raise ConfigError("population.prompt_style must be bio or prompts")
+    if pop.area_jitter_deg < 0:
+        raise ConfigError("population.area_jitter_deg must not be negative")
     for name in ("embedding_dim", "n_look_types", "n_audit_groups"):
         _check_positive(f"population.{name}", getattr(pop, name))
     if c.pca_dim > pop.embedding_dim:
@@ -296,6 +349,26 @@ def validate(cfg: Config) -> None:
     for q in cfg.values:
         if len(q.options) < 2 or len(set(q.options)) != len(q.options):
             raise ConfigError(f"values question {q.key!r} needs 2+ unique options")
+        if q.mode not in ("accepts", "closeness"):
+            raise ConfigError(f"values question {q.key!r}: mode must be accepts or closeness")
+        for pair in q.incompatible:
+            if len(pair) != 2 or not set(pair) <= set(q.options):
+                raise ConfigError(f"values question {q.key!r}: bad incompatible pair {pair!r}")
+        if q.incompatible and q.mode != "closeness":
+            raise ConfigError(f"values question {q.key!r}: incompatible needs mode closeness")
+
+
+def _population(raw: dict) -> PopulationConfig:
+    if "population" not in raw:
+        raise ConfigError("missing section [population]")
+    data = dict(raw["population"])
+    try:
+        data["areas"] = tuple(Area(**a) for a in data.get("areas", []))
+    except TypeError as exc:
+        raise ConfigError(
+            f"[[population.areas]] entries need name, lat, lon, share: {exc}"
+        ) from exc
+    return _section({"population": data}, "population", PopulationConfig)
 
 
 def from_dict(raw: dict) -> Config:
@@ -303,7 +376,13 @@ def from_dict(raw: dict) -> Config:
     values_raw = raw.get("values", [])
     try:
         values = tuple(
-            ValuesQuestion(key=q["key"], options=tuple(q["options"])) for q in values_raw
+            ValuesQuestion(
+                key=q["key"],
+                options=tuple(q["options"]),
+                mode=q.get("mode", "accepts"),
+                incompatible=tuple(tuple(pair) for pair in q.get("incompatible", [])),
+            )
+            for q in values_raw
         )
     except KeyError as exc:
         raise ConfigError(f"[[values]] entry is missing {exc}") from exc
@@ -315,9 +394,10 @@ def from_dict(raw: dict) -> Config:
         lists=_section(raw, "lists", ListsConfig),
         fairness=_section(raw, "fairness", FairnessConfig),
         learning=_section(raw, "learning", LearningConfig),
+        gate=_section(raw, "gate", GateConfig),
         dates=_section(raw, "dates", DatesConfig),
         simulation=_section(raw, "simulation", SimulationConfig),
-        population=_section(raw, "population", PopulationConfig),
+        population=_population(raw),
         values=values,
     )
     validate(cfg)

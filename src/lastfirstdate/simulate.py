@@ -73,6 +73,8 @@ class MonthReport:
     total_shown: int  # all list slots shown
     choices: tuple[np.ndarray, np.ndarray, np.ndarray] | None  # (chooser, candidate, picked)
     date_records: list[DateRecord]
+    weekly_dates: list[np.ndarray]
+    weekly_pending: list[np.ndarray]
     audience: np.ndarray  # (n,) choosers who were allowed to see each member
     pair_appeal: float  # average true appeal within booked pairs, both directions (simulation)
     both_keen: float  # share of booked pairs where each truly likes the other above average
@@ -215,6 +217,8 @@ def run_month(
     choice_whom: list[np.ndarray] = []
     choice_picked: list[np.ndarray] = []
     date_records: list[DateRecord] = []
+    weekly_dates: list[np.ndarray] = []  # dates booked so far, after each week (record only)
+    weekly_pending: list[np.ndarray] = []  # accepted pairs still waiting, after each week
 
     for week in range(d.weeks_per_month):
         weeks_left = d.weeks_per_month - week
@@ -395,6 +399,13 @@ def run_month(
                 DateRecord(bk.a, bk.b, week, all(showed), again_a, again_b, rating_a, rating_b)
             )
         pending = {p for p in pending if dates[p[0]] < cap[p[0]] and dates[p[1]] < cap[p[1]]}
+        if record:
+            waiting = np.zeros(n, dtype=int)
+            for a, b in pending:
+                waiting[a] += 1
+                waiting[b] += 1
+            weekly_dates.append(dates.copy())
+            weekly_pending.append(waiting)
 
     paying = arr.paying & matchable
     u = behavior.utility
@@ -424,6 +435,8 @@ def run_month(
             else None
         ),
         date_records=date_records,
+        weekly_dates=weekly_dates,
+        weekly_pending=weekly_pending,
         audience=(eligible & rights).sum(axis=0),
         picks=picks,
         accepts=accepts,

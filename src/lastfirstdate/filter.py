@@ -10,10 +10,12 @@ other's dealbreakers (R6), enough shared free slots, and not already dated or bl
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import numpy as np
 
 from lastfirstdate.arrays import MemberArrays, distance_matrix, haversine_km, shared_slots
-from lastfirstdate.config import Config
+from lastfirstdate.config import Config, ValuesQuestion
 from lastfirstdate.models import Member
 
 
@@ -25,11 +27,27 @@ def member_ok(arr: MemberArrays, cfg: Config) -> np.ndarray:
     return ok
 
 
-def dealbreakers_pass(arr: MemberArrays) -> np.ndarray:
-    """(n, n) True where j's answers pass every one of i's dealbreakers, and vice versa."""
+def dealbreakers_pass(
+    arr: MemberArrays, questions: Sequence[ValuesQuestion] | None = None
+) -> np.ndarray:
+    """(n, n) True where no dealbreaker rules the pair out, in either direction.
+
+    "accepts" questions: j's answer must be one i accepts on each of i's dealbreakers.
+    "closeness" questions: the two answers must not be a listed incompatible pair.
+    """
     n = arr.n
     one_way = np.ones((n, n), dtype=bool)
     for q in range(arr.answer.shape[1]):
+        question = questions[q] if questions is not None else None
+        if question is not None and question.mode == "closeness":
+            if question.incompatible:
+                k = len(question.options)
+                bad = np.zeros((k, k), dtype=bool)
+                for x, y in question.incompatible:
+                    a, b = question.options.index(x), question.options.index(y)
+                    bad[a, b] = bad[b, a] = True
+                one_way &= ~bad[arr.answer[:, q][:, None], arr.answer[:, q][None, :]]
+            continue
         # bit answer[j] of accepts[i] says whether i accepts j's answer to question q
         accepted = ((arr.accepts[:, q][:, None] >> arr.answer[:, q][None, :]) & 1).astype(bool)
         one_way &= ~arr.dealbreaker[:, q][:, None] | accepted
@@ -55,7 +73,7 @@ def eligibility_matrix(
     # D9 distance within both limits
     e &= distance_matrix(arr) <= np.minimum(arr.max_km[:, None], arr.max_km[None, :])
     # R6 dealbreakers are hard filters
-    e &= dealbreakers_pass(arr)
+    e &= dealbreakers_pass(arr, cfg.values)
     # a date needs a shared free slot
     e &= shared_slots(arr) >= max(1, cfg.filter.min_shared_slots)
     if excluded is not None:
@@ -82,8 +100,14 @@ def pair_passes(a: Member, b: Member, cfg: Config) -> bool:
         return False
     if haversine_km(a.lat, a.lon, b.lat, b.lon) > min(a.max_km, b.max_km):
         return False
+    modes = {q.key: q for q in cfg.values}
     for x, y in ((a, b), (b, a)):
         for q in x.dealbreakers:
-            if y.values[q] not in x.accepts[q]:
+            if modes[q].mode == "accepts" and y.values[q] not in x.accepts[q]:
+                return False
+    for q in cfg.values:
+        if q.mode == "closeness":
+            pair = {a.values[q.key], b.values[q.key]}
+            if any(pair == {x, y} for x, y in q.incompatible):
                 return False
     return len(a.free_slots & b.free_slots) >= max(1, f.min_shared_slots)

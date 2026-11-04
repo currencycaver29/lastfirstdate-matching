@@ -6,12 +6,30 @@ from pathlib import Path
 import lastfirstdate
 
 PKG = Path(lastfirstdate.__file__).parent
-ENGINE = ["arrays", "config", "filter", "lists", "looks", "models", "personality", "scheduler"]
+ENGINE = [
+    "arrays",
+    "config",
+    "fairness",
+    "filter",
+    "forecast",
+    "learning",
+    "lists",
+    "looks",
+    "models",
+    "mutual",
+    "personality",
+    "scheduler",
+]
 SIM_ONLY = {
     "lastfirstdate.synthetic",
     "lastfirstdate.simulator",
     "lastfirstdate.simulate",
     "lastfirstdate.looks_report",
+    "lastfirstdate.mutual_report",
+    "lastfirstdate.fairness_report",
+    "lastfirstdate.learning_report",
+    "lastfirstdate.forecast_fit",
+    "lastfirstdate.phase1_report",
 }
 
 

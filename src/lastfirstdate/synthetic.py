@@ -22,20 +22,6 @@ import numpy as np
 from lastfirstdate.config import Config, ValuesQuestion, load
 from lastfirstdate.models import N_SLOTS, Member
 
-# Neighborhood centers (lat, lon) and the share of members living near each.
-AREAS: tuple[tuple[str, float, float, float], ...] = (
-    ("Midtown", 40.754, -73.984, 0.20),
-    ("Lower Manhattan", 40.715, -74.005, 0.12),
-    ("Upper Manhattan", 40.785, -73.965, 0.12),
-    ("North Brooklyn", 40.714, -73.955, 0.14),
-    ("Brownstone Brooklyn", 40.672, -73.977, 0.12),
-    ("Astoria and LIC", 40.760, -73.925, 0.12),
-    ("Bronx", 40.840, -73.890, 0.06),
-    ("Jersey City", 40.720, -74.050, 0.07),
-    ("Staten Island", 40.580, -74.150, 0.05),
-)
-AREA_JITTER_DEG = 0.015  # about 1.5 km
-
 # Fake photo embedding shape. Lengths are relative to a look-type center of length 1:
 # photos of one type sit at cosine about 0.5 to each other and near 0 to other types,
 # roughly like a real image model.
@@ -183,6 +169,11 @@ def _values(
     for q, probs in zip(questions, answer_probs, strict=True):
         own = str(rng.choice(q.options, p=probs))
         answers[q.key] = own
+        if q.mode == "closeness":
+            # one answer only; compatibility comes from closeness, dealbreakers from the
+            # question's shared incompatible pairs
+            accepts[q.key] = frozenset(q.options)
+            continue
         if rng.random() < dealbreaker_rate:
             # A dealbreaker still accepts the options next to their own (options are
             # listed in order in the config) half the time, like real people do.
@@ -220,7 +211,8 @@ def generate(
     d, k_types, n_groups = pop.embedding_dim, pop.n_look_types, pop.n_audit_groups
 
     # Population-level draws first, so the per-member stream stays aligned.
-    area_p = np.array([a[3] for a in AREAS])
+    areas = pop.areas
+    area_p = np.array([a.share for a in areas])
     area_p = area_p / area_p.sum()
     answer_probs = [rng.dirichlet(np.full(len(q.options), 2.0)) for q in cfg.values]
     type_centers = _unit(rng.normal(size=(k_types, d)))
@@ -237,6 +229,9 @@ def generate(
     group_names = list(INTEREST_GROUPS)
     all_tags = [t for tags in INTEREST_GROUPS.values() for t in tags]
 
+    if pop.exact_counts:
+        n_men = round(n * pop.share_men)
+        exact_genders = rng.permutation(["man"] * n_men + ["woman"] * (n - n_men))
     members: list[Member] = []
     embeddings = np.empty((n, d))
     taste = np.empty((n, d))
@@ -246,7 +241,10 @@ def generate(
     lifestyle = np.empty(n, dtype=int)
 
     for i in range(n):
-        gender = "man" if rng.random() < pop.share_men else "woman"
+        if pop.exact_counts:
+            gender = str(exact_genders[i])
+        else:
+            gender = "man" if rng.random() < pop.share_men else "woman"
         seeking = _seeking(rng, gender, pop.orientation)
 
         span = pop.age_max - pop.age_min
@@ -256,9 +254,9 @@ def generate(
         age_min_pref = max(pop.age_min, age - younger)
         age_max_pref = min(pop.age_max + 10, age + older)
 
-        area = rng.choice(len(AREAS), p=area_p)
-        lat = AREAS[area][1] + rng.normal(0.0, AREA_JITTER_DEG)
-        lon = AREAS[area][2] + rng.normal(0.0, AREA_JITTER_DEG)
+        area = rng.choice(len(areas), p=area_p)
+        lat = areas[area].lat + rng.normal(0.0, pop.area_jitter_deg)
+        lon = areas[area].lon + rng.normal(0.0, pop.area_jitter_deg)
         max_km = float(rng.uniform(pop.max_km_min, pop.max_km_max))
 
         verified = bool(rng.random() < pop.verified_share)
@@ -282,9 +280,17 @@ def generate(
             tag = str(rng.choice(pool))
             if tag not in tags:
                 tags.append(tag)
-        a, b, c = tags[:3]
-        bio = str(rng.choice(BIO_TEMPLATES)).format(a=a, b=b, c=c)
-        bio = bio[0].upper() + bio[1:]
+        if pop.prompt_style == "prompts":
+            # the lastfirstdate app's free-text prompts, filled from five interests
+            t1, t2, t3, t4, t5 = (tags + tags)[:5]
+            bio = (
+                f"A perfect Sunday looks like… {t1} and {t2}. "
+                f"I'm looking for… someone into {t3}, {t4} or {t5}."
+            )
+        else:
+            a, b, c = tags[:3]
+            bio = str(rng.choice(BIO_TEMPLATES)).format(a=a, b=b, c=c)
+            bio = bio[0].upper() + bio[1:]
 
         values, accepts, dealbreakers = _values(rng, cfg.values, answer_probs, pop.dealbreaker_rate)
         big5 = tuple(float(x) for x in rng.beta(2.5, 2.5, size=5))

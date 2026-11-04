@@ -48,7 +48,7 @@ def _standardize(x: np.ndarray) -> np.ndarray:
     return np.where(off, (x - mean) / (std if std > 0 else 1.0), 0.0)
 
 
-def trait_fit(pop: Population, arr: MemberArrays) -> np.ndarray:
+def trait_fit(pop: Population, arr: MemberArrays, questions=None) -> np.ndarray:
     """(n, n) how well two profiles fit on interests, values and Big Five, equally weighted.
 
     Simulator-only code, written separately from the engine's personality score.
@@ -64,6 +64,10 @@ def trait_fit(pop: Population, arr: MemberArrays) -> np.ndarray:
     jaccard = inter / np.maximum(size[:, None] + size[None, :] - inter, 1.0)
     agree = np.zeros_like(jaccard)
     for q in range(arr.answer.shape[1]):
+        if questions is not None and questions[q].mode == "closeness":
+            a = arr.answer[:, q]
+            agree += 1.0 - np.abs(a[:, None] - a[None, :]) / (len(questions[q].options) - 1)
+            continue
         ok = ((arr.accepts[:, q][:, None] >> arr.answer[:, q][None, :]) & 1).astype(bool)
         agree += ok & ok.T
     agree /= arr.answer.shape[1]
@@ -82,7 +86,7 @@ class Behavior:
         chem = rng.normal(size=(n, n))
         chem = (chem + chem.T) / np.sqrt(2.0)
         s = sim.personality_signal
-        fit = s * _standardize(trait_fit(pop, arr)) + np.sqrt(1.0 - s * s) * chem
+        fit = s * _standardize(trait_fit(pop, arr, cfg.values)) + np.sqrt(1.0 - s * s) * chem
         lw = pop.truth.looks_weight[:, None]
         self.looks = looks  # true looks appeal, standardized per viewer
         self.utility = lw * looks + (1.0 - lw) * fit
@@ -126,6 +130,18 @@ class Behavior:
         n = self.looks.shape[0]
         u = np.random.default_rng([seed, int(i)]).random(n)
         return u < self._p(self.looks[i], self.cfg.swipe_threshold, self.pickiness[i])
+
+    def pair_outcome(self, i: int, a: int, b: int, seed: int) -> bool:
+        """Pair question: does i choose a over b? From true looks only, fixed per (i, a, b).
+
+        P(a over b) = sigmoid((looks_ia - looks_ib) / T). The random draw is seeded by
+        (seed, i, smaller id, larger id), so the same question always gets the same answer.
+        """
+        lo, hi = min(a, b), max(a, b)
+        u = np.random.default_rng([seed, int(i), int(lo), int(hi), 7]).random()
+        p_lo = sigmoid((self.looks[i, lo] - self.looks[i, hi]) / self.cfg.choice_temperature)
+        chose_lo = bool(u < p_lo)
+        return chose_lo if a == lo else not chose_lo
 
     def swipe(self, i: int, j: int, rng: np.random.Generator) -> bool:
         """Calibration swipe: does i like j's photos? Decided on true looks appeal only."""

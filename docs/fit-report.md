@@ -160,7 +160,8 @@ per month, or 13% to 27% of subscription revenue.
 
 1. Design the onboarding around section 5.
 2. Build the ratio gate and fulfilment forecast into the engine, so "male sales pause" happens
-   automatically (Sprint 6).
+   automatically (Sprint 6). *Done:* see `docs/sprints/sprint-6.md`; the app still has to call
+   it before each men's sale.
 3. Adapt the engine to the app's real rules in section 4: the data-model items in Sprint 6, the
    booking and billing items once the app has a database.
 4. Brief the lawyer with `docs/risk-plan.md`.

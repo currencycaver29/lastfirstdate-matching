@@ -15,6 +15,7 @@ person only weakly, so Sprint 5 retunes them from real date outcomes.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from typing import Protocol
 
@@ -22,7 +23,7 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 from lastfirstdate.arrays import MemberArrays
-from lastfirstdate.config import Config
+from lastfirstdate.config import Config, ValuesQuestion
 from lastfirstdate.models import Member
 
 
@@ -54,16 +55,105 @@ class TagEncoder:
         return x / np.where(norms == 0, 1.0, norms)
 
 
+STOPWORDS = frozenset(
+    [
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "been",
+        "but",
+        "by",
+        "for",
+        "from",
+        "has",
+        "have",
+        "i",
+        "i'm",
+        "in",
+        "is",
+        "it",
+        "it's",
+        "its",
+        "me",
+        "my",
+        "of",
+        "on",
+        "or",
+        "so",
+        "that",
+        "the",
+        "there's",
+        "this",
+        "to",
+        "was",
+        "we",
+        "what",
+        "when",
+        "with",
+        "you",
+        "your",
+    ]
+)
+
+
+class WordEncoder:
+    """Free-text prompts and bios as weighted word counts (TF-IDF), offline.
+
+    The lastfirstdate app collects free-text prompts ("A perfect Sunday looks like…"). This
+    is a simple stand-in that tests can run offline (R4): each member's text becomes a vector
+    of word counts times idf = log((1 + N) / (1 + df)) + 1, scaled to length 1. Sentence-BERT
+    (paper 8) replaces it in production through the same TextEncoder interface; it also
+    understands that "hiking" and "trail runs" mean similar things, which word counts cannot.
+    """
+
+    def encode(self, members: Sequence[Member]) -> np.ndarray:
+        docs = [self.tokens(m.bio) for m in members]
+        vocab = sorted({w for d in docs for w in d})
+        index = {w: k for k, w in enumerate(vocab)}
+        x = np.zeros((len(members), len(vocab)))
+        for row, words in enumerate(docs):
+            for w in words:
+                x[row, index[w]] += 1.0
+        df = (x > 0).sum(axis=0)
+        x *= np.log((1 + len(members)) / (1 + df)) + 1.0
+        norms = np.linalg.norm(x, axis=1, keepdims=True)
+        return x / np.where(norms == 0, 1.0, norms)
+
+    @staticmethod
+    def tokens(text: str) -> list[str]:
+        words = re.findall(r"[a-z][a-z'-]*", text.lower())
+        return [w for w in words if w not in STOPWORDS]
+
+
+ENCODERS = {"tags": TagEncoder, "words": WordEncoder}
+
+
 def interest_similarity(vectors: np.ndarray) -> np.ndarray:
     """(n, n) t_ij: cosine similarity of unit interest vectors, clipped to 0..1."""
     return np.clip(vectors @ vectors.T, 0.0, 1.0)
 
 
-def values_compatibility(arr: MemberArrays) -> np.ndarray:
-    """(n, n) A_ij: share of questions where each one's answer is accepted by the other."""
+def values_compatibility(
+    arr: MemberArrays, questions: Sequence[ValuesQuestion] | None = None
+) -> np.ndarray:
+    """(n, n) A_ij: average compatibility over the values questions, from 0 to 1.
+
+    "accepts" questions score 1 when each one's answer is accepted by the other, else 0.
+    "closeness" questions score 1 - |rank_i - rank_j| / (options - 1): the same answer gives
+    1, opposite ends give 0, neighbors something in between.
+    """
     n, nq = arr.answer.shape
     total = np.zeros((n, n))
     for q in range(nq):
+        question = questions[q] if questions is not None else None
+        if question is not None and question.mode == "closeness":
+            a = arr.answer[:, q]
+            total += 1.0 - np.abs(a[:, None] - a[None, :]) / (len(question.options) - 1)
+            continue
         accepted = ((arr.accepts[:, q][:, None] >> arr.answer[:, q][None, :]) & 1).astype(bool)
         total += accepted & accepted.T
     return total / nq
@@ -82,7 +172,8 @@ def personality_matrix(
 ) -> np.ndarray:
     """(n, n) P_i(j). Symmetric, between 0 and 1."""
     w = cfg.personality
-    t = interest_similarity((encoder or TagEncoder()).encode(members))
-    a = values_compatibility(arr)
+    encoder = encoder or ENCODERS[w.text_encoder]()
+    t = interest_similarity(encoder.encode(members))
+    a = values_compatibility(arr, cfg.values)
     p = big5_similarity(arr)
     return w.w_text * t + w.w_values * a + w.w_big5 * p

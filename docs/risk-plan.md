@@ -17,6 +17,9 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
 - [ ] **Enforce the gender ratio in software.** In each zone, men's sign-ups open only while active
   committed women are at least 3 per paying man and the forecast fulfilment is at least 90%.
   *Owner: Engine (Sprint 6) and Engineering.* Why: at 55% men only about 52% of men reach 3 dates.
+  *Engine part done in Sprint 6* (`gate_decision` in `src/lastfirstdate/forecast.py`; in
+  simulation it keeps admitted men at 92% to 96%). Still to do: Engineering calls it before
+  every men's sale and pauses the waitlist when it says stop.
 - [ ] **Reword the women's commitment** to "up to three dates a month". At 3:1 the average woman
   can have at most about 1 date a month. *Owner: Founder.*
 - [ ] **Budget for credits** from day one (13% to 27% of revenue in the city-wide simulations) and

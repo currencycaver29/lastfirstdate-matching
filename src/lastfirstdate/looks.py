@@ -254,6 +254,25 @@ class PersonalTaste:
         if refit:
             self.refit()
 
+    def add_pair(
+        self,
+        features_a: np.ndarray,
+        features_b: np.ndarray,
+        candidate_gender: int,
+        chose_a: bool,
+        weight: float = 1.0,
+        refit: bool = True,
+    ) -> None:
+        """Record a pair question ("Who are you more drawn to?").
+
+        Bradley-Terry: P(A over B) = sigmoid((w_0 + delta) . (x_A - x_B)). That is one more
+        labeled example whose features are the difference of the two photos (the intercept
+        cancels), so the same fit learns from singles and pairs together. Both photos must
+        come from the same orientation group.
+        """
+        diff = np.asarray(features_a, dtype=float) - np.asarray(features_b, dtype=float)
+        self.add_label(diff, candidate_gender, chose_a, weight, refit)
+
     def _pad_weights(self) -> None:
         # examples added without a weight (for example set directly) count as swipes
         self.weights.extend([1.0] * (len(self.liked) - len(self.weights)))
@@ -351,6 +370,40 @@ def select_varied(features: np.ndarray, k: int) -> list[int]:
     return chosen
 
 
+def select_pair(
+    taste: PersonalTaste,
+    remaining: np.ndarray,
+    features: np.ndarray,
+    genders: np.ndarray,
+    top: int = 30,
+) -> tuple[int, int] | None:
+    """The most informative pair question from the remaining profiles.
+
+    Among the `top` profiles the model is least sure about, every same-gender pair (A, B) is
+    scored by the expected information from asking it, log(1 + p(1 - p) s^2), where p is the
+    predicted chance of choosing A and s^2 the model's uncertainty about the difference
+    x_A - x_B. Pairs whose answer is a coin flip AND that the model knows little about win.
+    """
+    if remaining.size < 2:
+        return None
+    unc = taste.uncertainty(features[remaining])
+    cand = remaining[np.argsort(-unc, kind="stable")[:top]]
+    best, pick = -np.inf, None
+    logit = taste.logits(features[cand], genders[cand])
+    for a_pos in range(cand.size):
+        for b_pos in range(a_pos + 1, cand.size):
+            a, b = int(cand[a_pos]), int(cand[b_pos])
+            if genders[a] != genders[b]:
+                continue
+            diff = features[a] - features[b]
+            p = sigmoid(logit[a_pos] - logit[b_pos])
+            s2 = float(diff @ taste.cov @ diff)
+            info = np.log1p(p * (1 - p) * s2)
+            if info > best:
+                best, pick = info, (a, b)
+    return pick
+
+
 def calibrate(
     taste: PersonalTaste,
     pool_ids: np.ndarray,
@@ -360,13 +413,16 @@ def calibrate(
     cfg: Config,
     strategy: str = "calibrated",
     rng: np.random.Generator | None = None,
+    pair: Callable[[int, int], bool] | None = None,
 ) -> list[int]:
-    """Show up to `calibration.n_profiles` profiles from the pool and learn from each swipe.
+    """Show up to `calibration.n_profiles` photos from the pool and learn from each answer.
 
-    strategy "calibrated": `calibration.n_variety` varied profiles, then the most
-    informative ones. strategy "random": profiles drawn at random (the comparison
-    baseline). `features` and `genders` cover all members; `swipe(j)` returns whether the
-    member liked j. Returns the ids shown, in order.
+    strategy "calibrated": `calibration.n_variety` varied single photos; then, if
+    `calibration.n_pairs` > 0 and a `pair` callback is given, that many pair questions
+    (two photos each); then informative single photos for whatever is left. strategy
+    "random": single photos drawn at random (the comparison baseline). `features` and
+    `genders` cover all members; `swipe(j)` says whether the member liked j and
+    `pair(a, b)` whether they chose a over b. Returns the ids shown, in order.
     """
     pool_ids = np.asarray(pool_ids, dtype=int)
     k = min(cfg.calibration.n_profiles, pool_ids.size)
@@ -391,6 +447,17 @@ def calibrate(
     if shown:
         taste.refit()
     remaining = np.setdiff1d(pool_ids, shown)
+    n_pairs = cfg.calibration.n_pairs if pair is not None else 0
+    for _ in range(n_pairs):
+        if len(shown) + 2 > k:
+            break
+        chosen = select_pair(taste, remaining, features, genders)
+        if chosen is None:
+            break
+        a, b = chosen
+        taste.add_pair(features[a], features[b], genders[a], pair(a, b))
+        shown += [a, b]
+        remaining = remaining[(remaining != a) & (remaining != b)]
     while len(shown) < k and remaining.size:
         info = taste.information(features[remaining], genders[remaining])
         j = int(remaining[int(np.argmax(info))])

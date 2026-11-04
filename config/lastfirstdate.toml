@@ -11,6 +11,7 @@ min_shared_slots = 1          # free weekly time slots both people share
 w_text = 0.4
 w_values = 0.3
 w_big5 = 0.3
+text_encoder = "tags"        # "tags" (interest tags) or "words" (free-text prompts)
 
 [mix]                         # Stage 5: S = looks_weight * V + (1 - looks_weight) * P
 looks_weight = 0.5
@@ -19,6 +20,7 @@ chooser_weight = 0.5           # M's weight on the chooser's side; 0.5 = plain h
 [calibration]                 # Stages 2 and 3: the first 50 profiles and the taste model
 n_profiles = 50
 n_variety = 20                # profiles 1-20 picked for variety, the rest for uncertainty
+n_pairs = 0                    # pair questions ("Who are you more drawn to?"), 2 photos each
 pca_dim = 64                  # photo embeddings are shrunk to this many numbers
 l2_penalty = 1.0              # keeps the personal correction small until enough swipes
 w0_l2_penalty = 10.0          # the same, for fitting the starting taste w_0 on pooled swipes
@@ -47,6 +49,13 @@ lambda_prior_slope = 2.0      # starting belief: both percentiles matter equally
 lambda_prior_strength = 1.0   # how firmly the looks weight sticks to 0.5 until there is data
 lambda_min = 0.2              # learned looks weights are kept inside this range
 lambda_max = 0.8
+
+[gate]                        # Ratio gate and guarantee forecast (FR-LM-33, FR-LM-34)
+target = 0.90                 # admit men only while forecast fulfilment stays at or above this
+min_women_per_man = 3.0       # and active committed women per paying man stays at or above this
+min_pool = 10                 # defer applicants with fewer possible matches than this
+at_risk_threshold = 0.5       # mid-cycle alert below this chance of reaching the guarantee
+forecast_l2 = 1.0             # penalty that keeps the forecast regressions stable
 
 [fairness]                    # Exposure and fairness report (FR-LM-23)
 min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate
@@ -101,6 +110,9 @@ interests_max = 10
 slots_min = 4
 slots_max = 10
 dealbreaker_rate = 0.12       # chance a member marks a values question as a dealbreaker
+area_jitter_deg = 0.015       # spread of homes around each area center (about 1.5 km)
+prompt_style = "bio"          # "bio" (short bio) or "prompts" (the app's free-text prompts)
+exact_counts = false                 # true: exactly share_men x n men instead of random draws
 
 # Values and intent questions (Stage 4 A score and Stage 1 dealbreakers).
 # Each member gives an answer and the set of answers they accept from a partner.
@@ -128,3 +140,58 @@ options = ["high", "medium", "low"]
 [[values]]
 key = "timeline"
 options = ["within_2_years", "within_5_years", "no_rush"]
+
+# Where fake members live: area centers (lat, lon) and the share of members near each.
+[[population.areas]]
+name = "Midtown"
+lat = 40.754
+lon = -73.984
+share = 0.20
+
+[[population.areas]]
+name = "Lower Manhattan"
+lat = 40.715
+lon = -74.005
+share = 0.12
+
+[[population.areas]]
+name = "Upper Manhattan"
+lat = 40.785
+lon = -73.965
+share = 0.12
+
+[[population.areas]]
+name = "North Brooklyn"
+lat = 40.714
+lon = -73.955
+share = 0.14
+
+[[population.areas]]
+name = "Brownstone Brooklyn"
+lat = 40.672
+lon = -73.977
+share = 0.12
+
+[[population.areas]]
+name = "Astoria and LIC"
+lat = 40.760
+lon = -73.925
+share = 0.12
+
+[[population.areas]]
+name = "Bronx"
+lat = 40.840
+lon = -73.890
+share = 0.06
+
+[[population.areas]]
+name = "Jersey City"
+lat = 40.720
+lon = -74.050
+share = 0.07
+
+[[population.areas]]
+name = "Staten Island"
+lat = 40.580
+lon = -74.150
+share = 0.05

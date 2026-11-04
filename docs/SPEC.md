@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 5
+Current sprint: 6
 
 ## Goal
 
@@ -55,6 +55,8 @@ dates, and dates are scheduled into time both people have free.
 | D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
 | D11 | Test population | 1,000 synthetic NYC members, seed 7. Settings are tuned on a different fake city (seed 101) so tuning cannot flatter the results. | Fast and big enough to see effects |
 | D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's simulation found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
+| D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
+| D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 simulation |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
 ## Requirements by sprint
@@ -293,6 +295,72 @@ every measure. Acceptance, "learning raises the second-date rate" (by 2 points i
 and 3, over 3 replicates), was **not met** and is a strict expected failure. Every requirement
 has a test.
 
+### Sprint 6: lastfirstdate's real rules, the forecast and the ratio gate
+
+Sources: lastfirstdate's public website (home, product demo, business, investors, privacy),
+read 4 November 2026; see `docs/fit-report.md`.
+
+#### FR-LM-29 · Phase 1 settings profile
+Sprint: 6
+`config/phase1.toml` holds lastfirstdate's Phase 1 rules (D14). Areas, their spread, prompt
+style and exact head counts move into the settings file; with the default profile the fake
+population and every earlier result are unchanged.
+Test: the profile loads; the population has exactly 100 men and 300 women in one zone,
+man-woman only, every man paying and no woman paying, everyone verified; the default
+population is unchanged.
+
+#### FR-LM-30 · Single-answer intent questions
+Sprint: 6
+A values question can use mode "closeness": one answer per member, options in order,
+compatibility 1 - |rank_i - rank_j| / (options - 1), and listed answer pairs that rule a pair
+out for everyone (for example "Want them" with "Not for me").
+Test: closeness scores as defined; incompatible pairs removed in both the fast and the
+one-pair filter; "accepts" questions unchanged.
+
+#### FR-LM-31 · Free-text prompts
+Sprint: 6
+`WordEncoder` turns free-text prompts into TF-IDF word vectors offline (R4), selected by
+`personality.text_encoder`; Sentence-BERT replaces it in production through the same
+interface.
+Test: shared words raise similarity, stop words are ignored, rows have length 1; the setting
+selects the encoder.
+
+#### FR-LM-32 · Pair questions in calibration
+Sprint: 6
+"Who are you more drawn to?" pairs are learned as Bradley-Terry comparisons,
+P(A over B) = sigmoid((w_0 + delta) . (x_A - x_B)), in the same taste model as single swipes;
+each next pair is the most informative among the most uncertain profiles.
+`calibration.n_pairs` sets how many.
+Test: a pair adds one example on the photo difference; the simulator's pair answers follow
+true looks; per answer, pairs teach about as much as single swipes (within 0.01 AUC).
+
+#### FR-LM-33 · Guarantee forecast and at-risk alerts
+Sprint: 6
+Each paying man's chance of reaching his guarantee, from women per man, a shortfall term
+log(min(women per man, 1)), his possible matches and his share of women's attention (start of
+cycle), plus dates booked, yeses waiting and weeks left (mid-cycle at-risk alerts). Logistic
+regressions fitted on simulated markets from 0.5 to 5 women per man (`forecast_fit.py`, saved
+to `config/forecast_model.toml` with that range) and refitted on real cycles later.
+Test: features as defined; the model saves and loads; the committed model has sensible signs,
+and on markets it never saw it ranks men well (AUC above 0.85) and forecasts the share
+reaching 3 dates within 7 points.
+
+#### FR-LM-34 · Ratio gate
+Sprint: 6
+Admits waitlisted men in order while women per man stays at or above `gate.min_women_per_man`
+and inside the forecast's fitted range, and forecast fulfilment stays at or above
+`gate.target`; defers applicants whose pool is below `gate.min_pool`.
+Test: the gate stops at the ratio limit, at the end of the fitted range and at the forecast
+limit, defers small pools, keeps waitlist order; in simulation, with a waitlist longer than
+the women, the men it admits reach 3 dates within 5 points of the target and of the forecast,
+while admitting everyone fails most of them.
+
+#### Deferred to Sprint 7 (needs the app's database)
+A proposed date window shown with each profile and a 15-minute payment hold; per-member
+billing cycles, counting only confirmed and paid dates, refills after cancellations; the
+three rating dimensions and a behavior-only trust score in ranking; dates booked at events;
+neighborhood geography with venue midpoints.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -335,3 +403,19 @@ has a test.
   from month 1 to month 3 in every arm as the best pairs are used up. Date outcomes do not
   improve the looks model (a heavy weight made it worse), and exploration gave no consistent
   gain. These three claims are strict expected failures. Details: `docs/sprints/sprint-5.md`.
+- **Sprint 6.** Added after reading lastfirstdate's website (`docs/fit-report.md`): a second
+  settings profile with the real Phase 1 rules, and the forecast and ratio gate. Three
+  findings changed the plan. (1) At a fixed 30 photos, swapping 18 single swipes for 9 pairs
+  loses 0.019 AUC, but per answer pairs teach as much as singles (difference 0.000 at 21
+  answers), so calibration length is counted in answers (D15). (2) The first forecast, fitted
+  only on 1 to 5 women per man, said 83% where 7% of men actually reached 3 dates (0.64 women
+  per man): with fewer women than men their date caps run out. A shortfall term and training
+  down to 0.5 women per man fixed it on held-out markets (mean error 3.3 points), and the model
+  now records its fitted range so the gate never relies on it outside that range. It is still
+  too optimistic far below one woman per man in markets larger than any it was fitted on (a
+  strict expected failure); this does not affect the gate, which stops long before.
+  (3) The gate works: with a waitlist longer than the women, admitted men reach 3 dates 96%
+  of the time (gate as set) or 92% (forecast alone) against 12.5% for admitting everyone. In a
+  zone of about 290 women the 3:1 floor is cautious: the forecast alone admits about 1.8 times
+  as many men and still reaches 92%. Booking, billing, trust and geography items wait for the
+  app's database (Sprint 7). Details: `docs/sprints/sprint-6.md`.

@@ -18,6 +18,7 @@ belong in this repo.
 | 3 | 50/50 mutual score | Done (raises the chance the other person accepts; see notes) |
 | 4 | Fair daily lists | Done (guarantee about 82%; 95% needs a business decision, see notes) |
 | 5 | Learning from dates | Done (personal looks weights learned; no measurable gain in second dates yet) |
+| 6 | lastfirstdate's real rules, guarantee forecast and ratio gate | Done (gate keeps admitted men at 92% to 96% where admitting everyone gives 12.5%) |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 [`docs/research.md`](docs/research.md). Study notes per sprint:
@@ -36,6 +37,8 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.mutual_report  # compare list rankings in a simulated month
 .venv/bin/python -m lastfirstdate.fairness_report  # exposure, fairness audit, hold-back test
 .venv/bin/python -m lastfirstdate.learning_report  # three months with and without learning
+.venv/bin/python -m lastfirstdate.phase1_report    # Phase 1 rules: pair questions, ratio gate
+.venv/bin/python -m lastfirstdate.forecast_fit     # refit the guarantee forecast (~10 minutes)
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
@@ -46,7 +49,9 @@ Risks and the lawyer briefing: [`docs/risk-plan.md`](docs/risk-plan.md).
 ## Layout
 
 ```
-config/lastfirstdate.toml   every weight, cap and threshold
+config/lastfirstdate.toml   every weight, cap and threshold (research defaults)
+config/phase1.toml          lastfirstdate's real Phase 1 rules from its website
+config/forecast_model.toml  guarantee forecast coefficients (written by forecast_fit.py)
 src/lastfirstdate/
   config.py                 loads and validates the settings
   models.py                 the member profile
@@ -66,6 +71,9 @@ src/lastfirstdate/
   fairness_report.py        exposure spread, group audit and the hold-back experiment
   learning.py               Stage 8: learning from dates and list choices, exploration
   learning_report.py        three simulated months with and without learning
+  forecast.py               guarantee forecast, at-risk alerts and the ratio gate
+  forecast_fit.py           fits the forecast on simulated markets and tests it on others
+  phase1_report.py          Phase 1 rules: pair questions versus singles, the gate in action
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test
