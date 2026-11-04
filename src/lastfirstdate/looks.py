@@ -215,6 +215,7 @@ class PersonalTaste:
     features: list[np.ndarray] = field(default_factory=list)
     candidate_genders: list[int] = field(default_factory=list)
     liked: list[bool] = field(default_factory=list)
+    weights: list[float] = field(default_factory=list)  # 1.0 per swipe; more for date outcomes
     delta: np.ndarray | None = None
     cov: np.ndarray | None = None
     complete: bool = False  # set when calibration has finished
@@ -234,18 +235,41 @@ class PersonalTaste:
         self, features: np.ndarray, candidate_gender: int, liked: bool, refit: bool = True
     ) -> None:
         """Record one swipe and (by default) refit the personal correction."""
+        self.add_label(features, candidate_gender, liked, 1.0, refit)
+
+    def add_label(
+        self,
+        features: np.ndarray,
+        candidate_gender: int,
+        liked: bool,
+        weight: float,
+        refit: bool = True,
+    ) -> None:
+        """Record one labeled example with a weight (a date outcome counts more than a swipe)."""
+        self._pad_weights()
         self.features.append(np.asarray(features, dtype=float))
         self.candidate_genders.append(int(candidate_gender))
         self.liked.append(bool(liked))
+        self.weights.append(float(weight))
         if refit:
             self.refit()
 
+    def _pad_weights(self) -> None:
+        # examples added without a weight (for example set directly) count as swipes
+        self.weights.extend([1.0] * (len(self.liked) - len(self.weights)))
+
     def refit(self) -> None:
+        self._pad_weights()
         x = np.array(self.features)
         g = np.array(self.candidate_genders)
         offset = self.start.offsets(self.viewer_gender, x, g)
         self.delta, self.cov = fit_logistic(
-            x, np.array(self.liked), self.l2, offset=offset, start=self.delta
+            x,
+            np.array(self.liked),
+            self.l2,
+            offset=offset,
+            sample_weight=np.array(self.weights),
+            start=self.delta,
         )
 
     def logits(self, features: np.ndarray, candidate_genders: np.ndarray) -> np.ndarray:

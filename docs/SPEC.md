@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 4
+Current sprint: 5
 
 ## Goal
 
@@ -261,27 +261,37 @@ Test: experiment runs and reports the difference.
 
 #### FR-LM-25 · Learn from date outcomes (Stage 8)
 Sprint: 5
-Records show-up, "would meet again" and a private 1 to 5 rating; retrains delta_i counting
-"would meet again" more than a swipe.
-Test: taste accuracy improves after outcomes in simulation.
+Records show-up, "would meet again" and a private 1 to 5 rating, and adds each held date to
+both people's looks models as a weighted label (`learning.taste_date_weight`).
+Test: at the chosen weight, looks accuracy does not get worse (within 0.005 AUC). The original
+claim, that accuracy improves, was **not met** in simulation and is a strict expected failure:
+"would meet again" also depends on personality and chemistry, and only already-liked people
+get dated, so a heavy weight (3.0, as first planned) made accuracy worse. The weight is 0.5.
 
 #### FR-LM-26 · Personal looks weight (Stage 8)
 Sprint: 5
 lambda_i = beta_V / (beta_V + beta_P) from a two-feature logistic regression on member i's
-date outcomes, starting at 0.5.
-Test: recovers synthetic members' hidden looks weight direction.
+date outcomes and list picks and passes (with a prior that starts it at 0.5), kept between
+`learning.lambda_min` and `learning.lambda_max`. List choices were added because a member has
+at most about 12 dates in three months, too few to learn from alone.
+Test: learned lambda correlates with synthetic members' hidden looks weight.
 
 #### FR-LM-27 · Exploration (Stage 8)
 Sprint: 5
-`lists.exploration_share` of list slots go to profiles the model is least sure about.
-Paper 17.
-Test: share respected; learning improves versus no exploration.
+`lists.exploration_share` of the profiles actually shown are reserved, before the rest of the
+list is filled by score, for the candidates the member's looks model is least sure about,
+under the same daily exposure cap. Paper 17.
+Test: share respected (within 3 points) with no cap breaches. The claim that exploration
+raises second dates was **not met** in simulation and is a strict expected failure.
 
 #### FR-LM-28 · Three-month simulation
 Sprint: 5
 Three simulated months with learning against the same months without it: second-date rate,
-guarantee share and exposure spread.
-Test (acceptance): learning raises the second-date rate; every requirement has a test.
+guarantee share, match quality and exposure spread. Pairs who dated never meet again.
+Test: month 1 is identical with and without learning; pairs never repeat; the report shows
+every measure. Acceptance, "learning raises the second-date rate" (by 2 points in months 2
+and 3, over 3 replicates), was **not met** and is a strict expected failure. Every requirement
+has a test.
 
 ## Changes to this plan
 
@@ -318,3 +328,10 @@ Test (acceptance): learning raises the second-date rate; every requirement has a
   women whose dates paying men need). Offering the guarantee only to members with at least 50
   possible matches would reach about 96%. That is a business decision, so the 95% check stays a
   strict expected failure. Details: `docs/sprints/sprint-4.md`.
+- **Sprint 5.** Learning works mechanically but does not measurably raise second dates in a
+  1,000-member city over three months. Each member's own looks weight is learned well
+  (correlation about +0.3 to +0.4 with the hidden truth), but better ranking has little
+  leverage when members see nearly their whole pool, and second dates fall about 10 points
+  from month 1 to month 3 in every arm as the best pairs are used up. Date outcomes do not
+  improve the looks model (a heavy weight made it worse), and exploration gave no consistent
+  gain. These three claims are strict expected failures. Details: `docs/sprints/sprint-5.md`.

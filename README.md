@@ -17,7 +17,7 @@ belong in this repo.
 | 2 | Looks model: the 50 calibration profiles and personal photo taste | Done (AUC 0.844 against a ceiling of 0.875) |
 | 3 | 50/50 mutual score | Done (raises the chance the other person accepts; see notes) |
 | 4 | Fair daily lists | Done (guarantee about 82%; 95% needs a business decision, see notes) |
-| 5 | Learning from dates | Next |
+| 5 | Learning from dates | Done (personal looks weights learned; no measurable gain in second dates yet) |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 [`docs/research.md`](docs/research.md). Study notes per sprint:
@@ -35,6 +35,7 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.looks_report   # how well the looks model learns taste
 .venv/bin/python -m lastfirstdate.mutual_report  # compare list rankings in a simulated month
 .venv/bin/python -m lastfirstdate.fairness_report  # exposure, fairness audit, hold-back test
+.venv/bin/python -m lastfirstdate.learning_report  # three months with and without learning
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
@@ -59,6 +60,8 @@ src/lastfirstdate/
   mutual_report.py          compares list rankings in a simulated month
   fairness.py               Stage 6 fair version: caps, guarantee priority, Nash welfare
   fairness_report.py        exposure spread, group audit and the hold-back experiment
+  learning.py               Stage 8: learning from dates and list choices, exploration
+  learning_report.py        three simulated months with and without learning
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test

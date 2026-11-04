@@ -62,6 +62,18 @@ class ListsConfig:
 
 
 @dataclass(frozen=True)
+class LearningConfig:
+    months: int
+    taste_date_weight: float
+    lambda_date_weight: float
+    lambda_choice_weight: float
+    lambda_prior_slope: float
+    lambda_prior_strength: float
+    lambda_min: float
+    lambda_max: float
+
+
+@dataclass(frozen=True)
 class FairnessConfig:
     min_rate_ratio: float
 
@@ -92,6 +104,7 @@ class SimulationConfig:
     choice_temperature: float
     show_up_rate: float
     meeting_noise: float
+    rating_cutoffs: list[float]
     repeat_pick_factor: float
     swipe_threshold: float
     training_swipes: int
@@ -133,6 +146,7 @@ class Config:
     calibration: CalibrationConfig
     lists: ListsConfig
     fairness: FairnessConfig
+    learning: LearningConfig
     dates: DatesConfig
     simulation: SimulationConfig
     population: PopulationConfig
@@ -194,6 +208,21 @@ def validate(cfg: Config) -> None:
     if lists.guarantee_priority < 0 or lists.holdback_yeses < 0:
         raise ConfigError("lists.guarantee_priority and lists.holdback_yeses must not be negative")
     _check_share("fairness.min_rate_ratio", cfg.fairness.min_rate_ratio)
+    learn = cfg.learning
+    _check_positive("learning.months", learn.months)
+    for name in (
+        "taste_date_weight",
+        "lambda_date_weight",
+        "lambda_choice_weight",
+        "lambda_prior_strength",
+    ):
+        if getattr(learn, name) < 0:
+            raise ConfigError(f"learning.{name} must not be negative")
+    if not 0.0 <= learn.lambda_min <= 0.5 <= learn.lambda_max <= 1.0:
+        raise ConfigError("learning: need 0 <= lambda_min <= 0.5 <= lambda_max <= 1")
+    cuts = cfg.simulation.rating_cutoffs
+    if len(cuts) != 4 or sorted(cuts) != list(cuts):
+        raise ConfigError("simulation.rating_cutoffs needs 4 increasing numbers")
     _check_share("lists.exploration_share", lists.exploration_share)
 
     d = cfg.dates
@@ -285,6 +314,7 @@ def from_dict(raw: dict) -> Config:
         calibration=_section(raw, "calibration", CalibrationConfig),
         lists=_section(raw, "lists", ListsConfig),
         fairness=_section(raw, "fairness", FairnessConfig),
+        learning=_section(raw, "learning", LearningConfig),
         dates=_section(raw, "dates", DatesConfig),
         simulation=_section(raw, "simulation", SimulationConfig),
         population=_section(raw, "population", PopulationConfig),

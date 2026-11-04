@@ -61,6 +61,19 @@ def _ranked(available: np.ndarray, scores: np.ndarray, bonus: np.ndarray) -> np.
     return idx[np.lexsort((idx, -(scores[idx] + bonus[idx])))]
 
 
+def day_exposure_cap(
+    order: Sequence[int], available: Mapping[int, np.ndarray], size: int, multiple: float
+) -> int:
+    """Today's exposure cap, from today's list slots and candidates."""
+    candidates: set[int] = set()
+    n_slots = 0
+    for i in order:
+        idx = np.flatnonzero(available[i])
+        candidates.update(idx.tolist())
+        n_slots += min(size, idx.size)
+    return exposure_cap(n_slots, len(candidates), multiple)
+
+
 def fair_day_lists(
     order: Sequence[int],
     available: Mapping[int, np.ndarray],
@@ -68,22 +81,28 @@ def fair_day_lists(
     bonus: np.ndarray,
     size: int,
     multiple: float,
+    reserved: Mapping[int, Sequence[int]] | None = None,
 ) -> tuple[dict[int, np.ndarray], int]:
-    """Round-robin lists under an exposure cap. Returns the lists and the cap used."""
+    """Round-robin lists under an exposure cap. Returns the lists and the cap used.
+
+    `reserved` holds slots already given out today (exploration, Sprint 5): they come first in
+    each list and count toward the cap.
+    """
+    cap = day_exposure_cap(order, available, size, multiple)
     ranked = {i: _ranked(available[i], scores[i], bonus) for i in order}
-    candidates = set()
-    for r in ranked.values():
-        candidates.update(r.tolist())
-    n_slots = sum(min(size, len(r)) for r in ranked.values())
-    cap = exposure_cap(n_slots, len(candidates), multiple)
+    lists: dict[int, list[int]] = {i: list(reserved.get(i, [])) if reserved else [] for i in order}
     exposure: dict[int, int] = {}
+    for lst in lists.values():
+        for j in lst:
+            exposure[j] = exposure.get(j, 0) + 1
     pointer = dict.fromkeys(order, 0)
-    lists: dict[int, list[int]] = {i: [] for i in order}
     for _ in range(size):
         progressed = False
         for i in order:
+            if len(lists[i]) >= size:
+                continue
             r, p = ranked[i], pointer[i]
-            while p < len(r) and exposure.get(int(r[p]), 0) >= cap:
+            while p < len(r) and (exposure.get(int(r[p]), 0) >= cap or int(r[p]) in lists[i]):
                 p += 1
             if p < len(r):
                 j = int(r[p])

@@ -18,6 +18,7 @@ import numpy as np
 from lastfirstdate.arrays import GENDERS, MemberArrays
 from lastfirstdate.config import Config, load
 from lastfirstdate.fairness import (
+    day_exposure_cap,
     effectively_booked,
     fair_day_lists,
     guarantee_bonus,
@@ -25,6 +26,7 @@ from lastfirstdate.fairness import (
     nsw_day_lists,
 )
 from lastfirstdate.filter import eligibility_matrix, member_ok
+from lastfirstdate.learning import DateRecord, exploration_slots, explore_picks
 from lastfirstdate.lists import NEVER_SHOWN, available_row, daily_list, pick_rights
 from lastfirstdate.personality import personality_matrix
 from lastfirstdate.scheduler import schedule_week, urgency
@@ -67,6 +69,10 @@ class MonthReport:
     min_pool: int
     times_shown: np.ndarray  # (n,) appearances on anyone's list this month
     cap_breaches: int  # member-days above the exposure cap under the fair policy
+    explore_shown: int  # list slots that went to exploration
+    total_shown: int  # all list slots shown
+    choices: tuple[np.ndarray, np.ndarray, np.ndarray] | None  # (chooser, candidate, picked)
+    date_records: list[DateRecord]
     audience: np.ndarray  # (n,) choosers who were allowed to see each member
     pair_appeal: float  # average true appeal within booked pairs, both directions (simulation)
     both_keen: float  # share of booked pairs where each truly likes the other above average
@@ -151,8 +157,19 @@ def run_month(
     cfg: Config | None = None,
     seed: int | None = None,
     scores: np.ndarray | None = None,
+    month: int = 0,
+    excluded: np.ndarray | None = None,
+    explore: np.ndarray | None = None,
+    record: bool = False,
 ) -> MonthReport:
-    """Simulate one month. `scores` (n, n) ranks lists and weights dates; default is P."""
+    """Simulate one month. `scores` (n, n) ranks lists and weights dates; default is P.
+
+    For learning over several months (Sprint 5): `month` keeps the same simulated people
+    but draws fresh daily randomness; `excluded` marks pairs who already dated; `explore`
+    (n, n) is each chooser's uncertainty about each candidate, and turns on exploration
+    slots; `record` keeps every list choice and date outcome for the engine to learn from.
+    With the defaults, a month is exactly as in Sprints 1 to 4.
+    """
     cfg = cfg or load()
     seed = cfg.simulation.seed if seed is None else seed
     pop = pop or generate(cfg, seed=seed)
@@ -160,8 +177,13 @@ def run_month(
     n = len(members)
     arr = MemberArrays.from_members(members, cfg.values)
     behavior, rng = month_people(pop, arr, cfg, seed)
+    if month > 0:
+        rng = np.random.default_rng([seed, 1_000_003, month])
 
-    eligible = eligibility_matrix(arr, cfg)
+    eligible = eligibility_matrix(arr, cfg, excluded)
+    share = cfg.lists.exploration_share
+    n_explore = explore is not None and share > 0  # exploration on?
+    size = cfg.lists.daily_size
     if scores is None:
         scores = personality_matrix(members, arr, cfg)
     rights = pick_rights(arr)
@@ -188,6 +210,11 @@ def run_month(
     booked_pairs: list[tuple[int, int]] = []
     recent_yeses = np.zeros((DAYS_PER_WEEK, n), dtype=int)  # yeses per member, last 7 days
     cap_breaches = 0  # times anyone exceeded the daily exposure cap (should stay 0)
+    explore_shown = 0  # list slots that went to exploration
+    choice_who: list[np.ndarray] = []
+    choice_whom: list[np.ndarray] = []
+    choice_picked: list[np.ndarray] = []
+    date_records: list[DateRecord] = []
 
     for week in range(d.weeks_per_month):
         weeks_left = d.weeks_per_month - week
@@ -233,30 +260,76 @@ def run_month(
                     weeks_left,
                     cfg.lists.guarantee_priority,
                 )
+                reserved = None
+                length = dict.fromkeys(order, size)
+                if n_explore:
+                    # Pass 1 finds each list's real length, so exploration takes `share` of the
+                    # profiles actually shown, not of the nominal 30.
+                    if cfg.lists.policy == "fair":
+                        first, _ = fair_day_lists(
+                            order, avail, scores, bonus, size, cfg.lists.exposure_multiple
+                        )
+                        explore_cap = day_exposure_cap(
+                            order, avail, size, cfg.lists.exposure_multiple
+                        )
+                    else:
+                        first = nsw_day_lists(
+                            order, avail, scores, bonus, size, cfg.lists.nsw_epsilon
+                        )
+                        explore_cap = None
+                    length = {i: len(first[i]) for i in order}
+                    k_map = {i: exploration_slots(length[i], share) for i in order}
+                    reserved = explore_picks(order, avail, explore, k_map, explore_cap)
+                    explore_shown += sum(len(v) for v in reserved.values())
                 if cfg.lists.policy == "fair":
                     day_lists, day_cap = fair_day_lists(
                         order,
                         avail,
                         scores,
                         bonus,
-                        cfg.lists.daily_size,
+                        size,
                         cfg.lists.exposure_multiple,
+                        reserved,
                     )
                     shown_today = [v for v in day_lists.values() if v.size]
                     if shown_today:
                         counts = np.bincount(np.concatenate(shown_today), minlength=n)
                         cap_breaches += int((counts > day_cap).sum())
                 else:
+                    rest = avail
+                    if reserved:
+                        rest = {i: avail[i] & ~np.isin(np.arange(n), reserved[i]) for i in order}
                     day_lists = nsw_day_lists(
-                        order, avail, scores, bonus, cfg.lists.daily_size, cfg.lists.nsw_epsilon
+                        order, rest, scores, bonus, size, cfg.lists.nsw_epsilon
                     )
+                    if reserved:
+                        day_lists = {
+                            i: np.concatenate(
+                                [
+                                    np.array(reserved[i], dtype=int),
+                                    v[: length[i] - len(reserved[i])],
+                                ]
+                            )
+                            for i, v in day_lists.items()
+                        }
             today_yeses = np.zeros(n, dtype=int)
             for i in order:
                 if day_lists is None:
                     avail_i = avail_for(i)
                     if not avail_i.any():
                         continue
-                    todays = daily_list(scores[i], avail_i, cfg.lists.daily_size)
+                    todays = daily_list(scores[i], avail_i, size)
+                    if n_explore:
+                        k_i = exploration_slots(len(todays), share)
+                        first = explore_picks([i], {i: avail_i}, explore, k_i)[i]
+                        explore_shown += len(first)
+                        rest = avail_i & ~np.isin(np.arange(n), first)
+                        todays = np.concatenate(
+                            [
+                                np.array(first, dtype=int),
+                                daily_list(scores[i], rest, len(todays) - len(first)),
+                            ]
+                        )
                 else:
                     todays = day_lists[i]
                     if todays.size == 0:
@@ -266,6 +339,10 @@ def run_month(
                 sizes.append(len(todays))
                 chosen = behavior.choose(i, todays, rng, passes[i, todays])
                 passes[i, np.setdiff1d(todays, chosen)] += 1
+                if record:
+                    choice_who.append(np.full(len(todays), i))
+                    choice_whom.append(todays)
+                    choice_picked.append(np.isin(todays, chosen))
                 for j in chosen:
                     if closed[i, j]:
                         continue
@@ -297,10 +374,26 @@ def run_month(
             dates[[bk.a, bk.b]] += 1
             pending.discard((bk.a, bk.b))
             booked_total += 1
-            if behavior.shows_up(rng) and behavior.shows_up(rng):
+            if not record:
+                if behavior.shows_up(rng) and behavior.shows_up(rng):
+                    held += 1
+                    if behavior.wants_again(bk.a, bk.b, rng) and behavior.wants_again(
+                        bk.b, bk.a, rng
+                    ):
+                        second += 1
+                continue
+            showed = behavior.shows_up(rng), behavior.shows_up(rng)
+            if all(showed):
                 held += 1
-                if behavior.wants_again(bk.a, bk.b, rng) and behavior.wants_again(bk.b, bk.a, rng):
-                    second += 1
+                again_a, rating_a = behavior.date_outcome(bk.a, bk.b, rng)
+                again_b, rating_b = behavior.date_outcome(bk.b, bk.a, rng)
+                second += again_a and again_b
+            else:
+                again_a = again_b = False
+                rating_a = rating_b = 0
+            date_records.append(
+                DateRecord(bk.a, bk.b, week, all(showed), again_a, again_b, rating_a, rating_b)
+            )
         pending = {p for p in pending if dates[p[0]] < cap[p[0]] and dates[p[1]] < cap[p[1]]}
 
     paying = arr.paying & matchable
@@ -319,6 +412,18 @@ def run_month(
         list_size_by_day=list_sizes,
         times_shown=times_shown,
         cap_breaches=cap_breaches,
+        explore_shown=explore_shown,
+        total_shown=int(times_shown.sum()),
+        choices=(
+            (
+                np.concatenate(choice_who).astype(int),
+                np.concatenate(choice_whom).astype(int),
+                np.concatenate(choice_picked),
+            )
+            if record and choice_who
+            else None
+        ),
+        date_records=date_records,
         audience=(eligible & rights).sum(axis=0),
         picks=picks,
         accepts=accepts,

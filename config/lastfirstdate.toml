@@ -37,6 +37,17 @@ nsw_epsilon = 0.1             # Nash social welfare: smaller = stronger push to 
 holdback_yeses = 0            # paper 14 hold-back: hide after this many yeses in 7 days (0 = off)
 exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
 
+[learning]                    # Stage 8: learning from dates and list choices
+months = 3                    # length of the learning simulation
+taste_date_weight = 0.5       # a "would meet again" counts as this many swipes in the looks taste
+                              # (Sprint 5: 3.0 made looks accuracy worse; 0.5 is neutral)
+lambda_date_weight = 3.0      # weight of a date outcome when learning the looks weight
+lambda_choice_weight = 0.2    # weight of a list pick or pass when learning the looks weight
+lambda_prior_slope = 2.0      # starting belief: both percentiles matter equally, this strongly
+lambda_prior_strength = 1.0   # how firmly the looks weight sticks to 0.5 until there is data
+lambda_min = 0.2              # learned looks weights are kept inside this range
+lambda_max = 0.8
+
 [fairness]                    # Exposure and fairness report (FR-LM-23)
 min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate
 
@@ -66,6 +77,7 @@ again_threshold = 0.5         # the same, for wanting a second date after meetin
 choice_temperature = 0.5      # lower = more decisive choices
 show_up_rate = 0.92           # chance each person shows up to a booked date
 meeting_noise = 0.5           # how much meeting in person changes appeal (standard deviations)
+rating_cutoffs = [-1.0, -0.25, 0.5, 1.25]  # appeal after meeting where a 1-5 rating steps up
 repeat_pick_factor = 0.5      # each earlier pass halves the chance of picking that person later
 swipe_threshold = 0.5         # true looks appeal where a calibration swipe is 50/50
 training_swipes = 50          # random swipes per member used to fit the starting taste w_0

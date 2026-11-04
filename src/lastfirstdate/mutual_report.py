@@ -51,6 +51,8 @@ class Scores:
     directional: np.ndarray  # S
     mutual: np.ndarray  # M
     n_calibrated: int
+    tastes: dict[int, PersonalTaste] | None = None  # each member's looks model (Sprint 5 learns)
+    features: np.ndarray | None = None  # every member's photo features
 
     def ranking(self, name: str, cfg: Config) -> np.ndarray:
         if name == "personality":
@@ -106,7 +108,7 @@ def build_scores(pop: Population, cfg: Config, seed: int) -> Scores:
     v = looks_scores(tastes, feats, arr.gender, eligible)
     s = directional_score(v, p, eligible, cfg.mix.looks_weight)
     m = mutual_score(s, cfg.mix.chooser_weight)
-    return Scores(eligible, p, v, s, m, n_calibrated=len(tastes))
+    return Scores(eligible, p, v, s, m, len(tastes), tastes=tastes, features=feats)
 
 
 @dataclass(frozen=True)

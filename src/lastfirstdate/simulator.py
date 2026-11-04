@@ -140,6 +140,17 @@ class Behavior:
     def shows_up(self, rng: np.random.Generator) -> bool:
         return bool(rng.random() < self.cfg.show_up_rate)
 
+    def date_outcome(self, i: int, j: int, rng: np.random.Generator) -> tuple[bool, int]:
+        """After a date: does i want to meet j again, and i's private 1 to 5 rating of it.
+
+        Meeting adds new information (meeting_noise); the rating steps up at each of
+        simulation.rating_cutoffs on that same after-meeting appeal.
+        """
+        u = self.utility[i, j] + rng.normal(0.0, self.cfg.meeting_noise)
+        again = bool(rng.random() < self._p(u, self.cfg.again_threshold, 0.0))
+        rating = 1 + int(np.searchsorted(self.cfg.rating_cutoffs, u))
+        return again, rating
+
     def wants_again(self, i: int, j: int, rng: np.random.Generator) -> bool:
         """After meeting, does i want a second date with j? Meeting adds new information."""
         u = self.utility[i, j] + rng.normal(0.0, self.cfg.meeting_noise)
