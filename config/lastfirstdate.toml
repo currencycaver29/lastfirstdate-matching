@@ -114,6 +114,11 @@ flag_below = 0.55             # conduct below this, with enough ratings, flags f
 flag_min_ratings = 3          # ratings needed before anyone can be flagged
 ranking_weight = 0.5          # how strongly low trust lowers a member's list scores
 
+[refit]                       # Refitting the forecast on real cycles (FR-LM-51 to FR-LM-53)
+min_man_cycles = 150          # completed paid cycles needed before refitting at all
+holdout_share = 0.3           # latest share of cycles kept aside to test a refit on
+min_improvement = 0.002       # Brier score a refit must beat the current forecast by
+
 [cycle_simulation]            # Day-by-day simulation of the real booking flow (FR-LM-42)
 cycles = 3                    # billing cycles simulated per paying member
 stagger = true                # cycles start on different days (false: all on launch day)

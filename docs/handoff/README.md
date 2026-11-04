@@ -35,6 +35,7 @@ Everything below is tested on a database filled with fake members
 | **Cycle end** | `app.close_cycle` | bookings, subscriptions | delivered dates and the credit in dollars | writes `cycles.delivered` and `credit_cents`; credits him |
 | **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions | men to admit (in waitlist order), deferrals, the forecast and why it stopped | admits them; logs `gate_decisions` |
 | **An event connection** | `app.propose` with `source="event"` | venues | a `Booking` | saves it with the `event_id`; same hold and payments |
+| **Every month, once real cycles exist** | `refit.propose_refit` | members, subscriptions, bookings | whether to switch to a forecast recalibrated on the app's own cycles, and the new model | if it says switch, saves the model to `config/forecast_delivered.toml` |
 
 ### The photo exercise in practice
 
@@ -82,6 +83,27 @@ and shuffle that order every day so nobody always goes first. For Phase 1 the ca
 - he wasn't shown to her in the last 7 days;
 - they share a free window, which is the date shown with the profile.
 
+## Refitting on real cycles
+
+The guarantee forecast was fitted on simulated markets. Once Phase 1 has finished some
+cycles, `refit.propose_refit(con, market, scores.eligible, gate_model(cfg), cfg)` decides
+whether a forecast recalibrated on the app's own records is better:
+
+- **Too little data:** with fewer than `[refit] min_man_cycles` (150) completed paid cycles,
+  it says no.
+- **Otherwise:** it recalibrates on the earlier cycles, tests on the latest 30%, and
+  recommends switching only if the error (Brier score) drops by at least
+  `[refit] min_improvement`.
+- **Run it monthly.** Fulfilment drifts as a zone ages (people pass on the same profiles), so a
+  recalibration goes stale. Testing on the latest cycles before switching guards against
+  that.
+- **What recalibration changes:** two numbers, a level and a steepness, folded into the
+  coefficients. One zone can't teach the forecast how much women per man matters, but it can
+  correct how optimistic it is. The model file records what was done and on how many cycles.
+
+In a simulated test where people showed up less often than the forecast assumed (80% instead
+of 92%), the forecast said 83% while 76% got their dates; the recalibrated forecast said 76%.
+
 ## The data contract
 
 | Table | Read by | Written by the app when |
@@ -120,7 +142,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 **Engineering only: changes the data the app collects or how a model is fitted**
 
-`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`
+`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`, `refit.min_man_cycles`, `refit.holdout_share`, `refit.min_improvement`
 <!-- settings:end -->
 
 ## Assumptions the app must keep

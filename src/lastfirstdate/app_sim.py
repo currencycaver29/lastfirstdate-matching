@@ -11,7 +11,7 @@ Database ids start at 1000 so a mix-up between ids and row numbers shows up in t
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -47,7 +47,7 @@ class FilledDatabase:
 
 
 def db_id(row: int) -> int:
-    return FIRST_ID + row
+    return int(FIRST_ID + row)  # a plain int: SQLite can't store numpy integers
 
 
 def birth_date(age: int, today: date) -> date:
@@ -204,3 +204,85 @@ def _calibration(con, pop: Population, cfg: Config, seed: int) -> FilledDatabase
         ]
     con.executemany("INSERT INTO calibration_answers VALUES (?, ?, ?, ?, ?, ?)", answers)
     return filled
+
+
+def write_history(con, sim, epoch: date) -> None:
+    """Write a finished `CycleSimulation` into the database as the app's records (FR-LM-51).
+
+    Simulation day 0 is `epoch` (a Monday). Members get their join days, paying men their
+    subscriptions (signed up a trial before their first paid cycle), and every booking its
+    timestamps, payments and refunds, as the app would have stored them.
+    """
+    from lastfirstdate.billing import fee_refunds
+    from lastfirstdate.models import PARTS_OF_DAY
+
+    cfg = sim.cfg
+    hours = {"lunch": 12, "evening": 19, "late": 22}
+    con.executemany(
+        "UPDATE members SET joined_at = ? WHERE id = ?",
+        [
+            ((epoch + timedelta(days=int(min(d, 3650)) if d > 0 else -60)).isoformat(), db_id(k))
+            for k, d in enumerate(sim.join_day)
+        ],
+    )
+    con.execute("DELETE FROM waitlist")
+    con.execute("DELETE FROM subscriptions")
+    con.executemany(
+        "INSERT INTO subscriptions VALUES (?, ?, ?, ?, ?, 'active')",
+        [
+            (
+                db_id(m),
+                (epoch + timedelta(days=int(sim.signup(m)))).isoformat(),
+                cfg.billing.trial_days,
+                cfg.billing.cycle_days,
+                int(cfg.billing.price_per_cycle * 100),
+            )
+            for m in np.flatnonzero(sim.guaranteed)
+        ],
+    )
+    con.execute("INSERT INTO events VALUES (1, 'Members evening', 1, ?)", (epoch.isoformat(),))
+    venue_id = {name: vid for vid, name in con.execute("SELECT id, name FROM venues")}
+    for idx, bk in enumerate(sim.bookings):
+        day = epoch + timedelta(days=bk.day)
+        part = PARTS_OF_DAY[bk.part]
+        made = datetime.combine(epoch + timedelta(days=sim.booked_on[idx]), time(18))
+        cancelled_at = None
+        if bk.cancelled_by is not None:
+            start = datetime.combine(day, time(hours[part]))
+            cancelled_at = (start - timedelta(hours=bk.hours_before)).isoformat()
+        confirmed = bk.state != "expired"
+        con.execute(
+            "INSERT INTO bookings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                idx + 1,
+                db_id(bk.a),
+                db_id(bk.b),
+                bk.source,
+                1 if bk.source == "event" else None,
+                day.isoformat(),
+                part,
+                bk.state,
+                made.isoformat(),
+                made.isoformat(),
+                made.isoformat() if confirmed else None,
+                venue_id.get(bk.venue) if confirmed else None,
+                None if bk.cancelled_by is None else db_id(bk.cancelled_by),
+                cancelled_at,
+                None if not bk.showed else int(bk.showed[bk.a]),
+                None if not bk.showed else int(bk.showed[bk.b]),
+            ),
+        )
+        refunds = fee_refunds(bk, cfg)
+        for m in sorted(bk.paid):
+            con.execute(
+                "INSERT INTO payments (booking_id, member_id, amount_cents, paid_at, "
+                "refunded_cents) VALUES (?, ?, ?, ?, ?)",
+                (
+                    idx + 1,
+                    db_id(m),
+                    int(cfg.billing.date_fee * 100),
+                    made.isoformat(),
+                    int(round(refunds.get(m, 0.0) * 100)),
+                ),
+            )
+    con.commit()

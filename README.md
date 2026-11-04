@@ -250,7 +250,8 @@ These rules are never broken, and tests enforce them:
 | 8 | The forecast and the gate on delivered dates | Done |
 | 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
 | 10 | Step-by-step photo exercise and a nightly cache | Done |
-| 11 | To be chosen: the gate every cycle, or refitting on real Phase 1 data | Next |
+| 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | Done |
+| 12 | Wait for the app and real Phase 1 data, then recalibrate monthly (recommended) | Next |
 
 ## License
 

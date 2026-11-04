@@ -151,6 +151,13 @@ class TrustConfig:
 
 
 @dataclass(frozen=True)
+class RefitConfig:
+    min_man_cycles: int
+    holdout_share: float
+    min_improvement: float
+
+
+@dataclass(frozen=True)
 class Place:
     name: str
     lat: float
@@ -250,6 +257,7 @@ class Config:
     trust: TrustConfig
     geo: GeoConfig
     cycle_simulation: CycleSimulationConfig
+    refit: RefitConfig
 
 
 def _section(raw: dict, name: str, cls: type):
@@ -452,6 +460,12 @@ def validate(cfg: Config) -> None:
             raise ConfigError(f"geo.{kind} names must be unique")
         if any(not (-90 <= pl.lat <= 90 and -180 <= pl.lon <= 180) for pl in places):
             raise ConfigError(f"geo.{kind} coordinates are out of range")
+    rf = cfg.refit
+    _check_positive("refit.min_man_cycles", rf.min_man_cycles)
+    if not 0 < rf.holdout_share < 1:
+        raise ConfigError("refit.holdout_share must be between 0 and 1")
+    if rf.min_improvement < 0:
+        raise ConfigError("refit.min_improvement must not be negative")
     cs = cfg.cycle_simulation
     _check_positive("cycle_simulation.cycles", cs.cycles)
     if cs.new_women_per_cycle < 0:
@@ -535,6 +549,7 @@ def from_dict(raw: dict) -> Config:
         trust=_section(raw, "trust", TrustConfig),
         geo=_geo(raw),
         cycle_simulation=_section(raw, "cycle_simulation", CycleSimulationConfig),
+        refit=_section(raw, "refit", RefitConfig),
     )
     validate(cfg)
     return cfg
@@ -574,6 +589,7 @@ _SECTION_IMPACT = {
     "trust": SIMULATE,
     "geo": BUSINESS,
     "cycle_simulation": SIM_ONLY,
+    "refit": ENGINEERING,
 }
 _KEY_IMPACT = {
     "personality.w_big5": ENGINEERING,  # the database holds no Big Five scores

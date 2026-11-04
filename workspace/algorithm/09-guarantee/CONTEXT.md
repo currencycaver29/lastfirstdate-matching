@@ -36,6 +36,13 @@ men to admit, and counts what was delivered and what is owed.
   (`forecast.gate_model`). Phase 1 uses `delivered`; the gate's code and its Rust twin are
   unchanged.
 
+## On real cycles (Sprint 11)
+
+`refit.cycle_rows` rebuilds every completed paid cycle and its weekly progress from the app's
+records. `refit.propose_refit` recalibrates the forecast (logit' = a + b · logit, folded into
+the coefficients) and recommends switching only after testing on the latest cycles. Settings
+are in `[refit]`. Fulfilment drifts as a zone ages, so it should run monthly.
+
 ## Billing (Sprint 7)
 
 - **Cycles:** a 30-day free trial, then 28-day cycles per man (`billing.cycle_on`).

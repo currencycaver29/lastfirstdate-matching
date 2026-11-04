@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 10
+Current sprint: 11
 
 ## Goal
 
@@ -553,6 +553,40 @@ scores.
 Test: after new answers arrive, a refresh refits only those members and gives exactly the
 result of a full rebuild with the same starting taste; an unchanged refresh refits nobody.
 
+### Sprint 11: ready for real data
+
+There is no real data yet, and this repo never holds any (R3). This sprint builds and tests
+what turns Phase 1's first real cycles into better forecasts, so refitting is one tested call
+when they arrive. Tests use simulated histories written into the database as if they were
+real.
+
+#### FR-LM-51 · Outcomes from the app's records
+Sprint: 11
+`refit.py` rebuilds, from the app's tables, every completed paid cycle: the market at its start
+(women who had joined, men who had subscribed), whether it reached 3 delivered dates, and each
+week's progress (delivered so far, confirmed dates to come, days left).
+Test: on a simulated history written as app records, every cycle's outcome and every weekly
+count equals what the simulation recorded.
+
+#### FR-LM-52 · Recalibrating the forecast on real cycles
+Sprint: 11
+With one zone, real data cannot re-learn how women per man matters, but it can correct the
+forecast's level and steepness: logit(p) = a + b · logit(p_model), fitted on real cycles and
+folded into the coefficients (the gate and its Rust twin need no change). The model file
+records the recalibration and how many cycles it used.
+Test: a = 0, b = 1 leaves the model unchanged; folding gives exactly sigmoid(a + b · logit);
+when the "real" world shows up less often than the model assumed, recalibration cuts the
+forecast's error on held-out cycles.
+
+#### FR-LM-53 · When to switch to the refitted forecast
+Sprint: 11
+`refit.propose_refit` refuses with fewer than `refit.min_man_cycles` completed cycles; otherwise
+it recalibrates on earlier cycles, compares the candidate and the current model on the latest
+ones (Brier score), and recommends switching only if the candidate is better by at least
+`refit.min_improvement`.
+Test: too little data is refused; a worse-than-assumed world leads to a switch, recalibrated
+on all the cycles.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -662,3 +696,11 @@ result of a full rebuild with the same starting taste; an unchanged refresh refi
   changed: 0.07 s instead of 0.5 s for Phase 1. Memory grows with the square of a zone's size
   (132 MB at 2,000 members), so a city should run as zones of a few thousand. Details:
   `docs/sprints/sprint-10.md`.
+- **Sprint 11.** Option (b), "wait for real data", built as readiness: `refit.py` rebuilds every
+  completed cycle and its weekly progress from the app's records (identical to the simulation
+  on all 291 cycles and 838 snapshots), recalibrates the forecast with two numbers folded into
+  its coefficients (Platt scaling; one zone can't re-learn the ratio effect), and switches only
+  after testing on the latest cycles. In a simulated world with 80% show-ups instead of 92%,
+  the forecast said 83% against 76% actual; recalibrated, 76%. Finding: fulfilment drifts as a
+  zone ages, so a recalibration on first cycles alone did worse on later ones; recalibrate
+  monthly on recent cycles. Details: `docs/sprints/sprint-11.md`.

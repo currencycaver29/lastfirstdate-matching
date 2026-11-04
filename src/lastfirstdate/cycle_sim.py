@@ -193,6 +193,8 @@ class CycleSimulation:
         self.last_shown = np.full((n, n), NEVER_SHOWN, dtype=np.int64)
         self.passes = np.zeros((n, n), dtype=np.int16)
         self.bookings: list[Booking] = []
+        self.booked_on: list[int] = []  # day each booking was made (for app records)
+        self.cancelled_on: dict[int, int] = {}  # booking index -> day it was cancelled
         self.by_member: list[list[int]] = [[] for _ in range(n)]
         self.on_day: dict[int, list[int]] = {}
         self.cancel_plan: dict[int, tuple[int, int, float]] = {}
@@ -286,6 +288,7 @@ class CycleSimulation:
             if bk.state != "confirmed":
                 continue
             bk.cancel(who, hours)
+            self.cancelled_on[idx] = today
             self.occupy(bk, -1, keep_cap=tuple(m for m in bk.members if self.counts_for(bk, m)))
             if hours < late_hours:
                 self.count["late"] += 1
@@ -505,6 +508,7 @@ class CycleSimulation:
             ok = bk.pay(b, HE_PAYS_AT if on_time else late, hold, venue=venues[v].name)
         idx = len(self.bookings)
         self.bookings.append(bk)
+        self.booked_on.append(today)
         if not ok:
             self.count["expired"] += 1
             self.closed[a, b] = self.closed[b, a] = False  # they can find each other again

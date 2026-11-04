@@ -64,10 +64,10 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 11, not chosen yet: the gate every cycle, waiting for real Phase 1 data,
-  or what the app developer asks for. Ask the owner in process stage 01.
-- **Last finished:** Sprint 10: the step-by-step photo exercise (`CalibrationSession`) and the
-  nightly cache (`app.MarketCache`).
+- **Current sprint:** 12, not chosen yet. Recommended: wait for the app and real Phase 1 data,
+  then run `refit.propose_refit` monthly. Ask the owner in process stage 01.
+- **Last finished:** Sprint 11, ready for real data: `refit.py` rebuilds outcomes from the app's
+  records, recalibrates the forecast, and decides when to switch.
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;

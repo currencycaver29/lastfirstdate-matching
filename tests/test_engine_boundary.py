@@ -23,6 +23,7 @@ ENGINE = [
     "mutual",
     "native",
     "personality",
+    "refit",
     "scheduler",
     "trust",
 ]
