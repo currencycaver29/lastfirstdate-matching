@@ -52,14 +52,26 @@ class CalibrationConfig:
 class ListsConfig:
     daily_size: int
     reshow_after_days: int
-    max_appearances_per_day: int
+    policy: str
+    exposure_multiple: float
+    guarantee_priority: float
+    hide_booked: bool
+    nsw_epsilon: float
+    holdback_yeses: int
     exploration_share: float
+
+
+@dataclass(frozen=True)
+class FairnessConfig:
+    min_rate_ratio: float
 
 
 @dataclass(frozen=True)
 class DatesConfig:
     guaranteed_per_month_paying: int
     cap_per_month: int
+    cap_per_month_free: int
+    free_cap_genders: list[str]
     weeks_per_month: int
     max_per_week: int
     date_value: float
@@ -120,6 +132,7 @@ class Config:
     mix: MixConfig
     calibration: CalibrationConfig
     lists: ListsConfig
+    fairness: FairnessConfig
     dates: DatesConfig
     simulation: SimulationConfig
     population: PopulationConfig
@@ -174,12 +187,21 @@ def validate(cfg: Config) -> None:
     lists = cfg.lists
     _check_positive("lists.daily_size", lists.daily_size)
     _check_positive("lists.reshow_after_days", lists.reshow_after_days)
-    if lists.max_appearances_per_day < 0:
-        raise ConfigError("lists.max_appearances_per_day must be 0 (auto) or positive")
+    if lists.policy not in ("basic", "fair", "nsw"):
+        raise ConfigError("lists.policy must be basic, fair or nsw")
+    _check_positive("lists.exposure_multiple", lists.exposure_multiple)
+    _check_positive("lists.nsw_epsilon", lists.nsw_epsilon)
+    if lists.guarantee_priority < 0 or lists.holdback_yeses < 0:
+        raise ConfigError("lists.guarantee_priority and lists.holdback_yeses must not be negative")
+    _check_share("fairness.min_rate_ratio", cfg.fairness.min_rate_ratio)
     _check_share("lists.exploration_share", lists.exploration_share)
 
     d = cfg.dates
     _check_positive("dates.cap_per_month", d.cap_per_month)
+    if not 0 <= d.cap_per_month_free <= d.cap_per_month:
+        raise ConfigError("dates.cap_per_month_free must be between 0 and cap_per_month")
+    if not set(d.free_cap_genders) <= {"man", "woman", "nonbinary"}:
+        raise ConfigError("dates.free_cap_genders may only list man, woman, nonbinary")
     _check_positive("dates.weeks_per_month", d.weeks_per_month)
     if not 0 <= d.guaranteed_per_month_paying <= d.cap_per_month:
         raise ConfigError("dates.guaranteed_per_month_paying must be between 0 and cap_per_month")
@@ -262,6 +284,7 @@ def from_dict(raw: dict) -> Config:
         mix=_section(raw, "mix", MixConfig),
         calibration=_section(raw, "calibration", CalibrationConfig),
         lists=_section(raw, "lists", ListsConfig),
+        fairness=_section(raw, "fairness", FairnessConfig),
         dates=_section(raw, "dates", DatesConfig),
         simulation=_section(raw, "simulation", SimulationConfig),
         population=_section(raw, "population", PopulationConfig),

@@ -9,9 +9,8 @@ from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.lists import pick_rights
 from lastfirstdate.looks import CalibrationIncomplete, PersonalTaste, StartingTaste
 from lastfirstdate.mutual import directional_score, looks_scores, mutual_score, percentile_rows
-from lastfirstdate.mutual_report import RANKINGS, build_scores, top_quality
+from lastfirstdate.mutual_report import RANKINGS, top_quality
 from lastfirstdate.simulate import month_people
-from lastfirstdate.synthetic import generate
 
 # ---------------------------------------------------------------- FR-LM-18
 
@@ -102,9 +101,8 @@ def test_mutual_score_is_the_harmonic_mean():
 
 
 @pytest.fixture(scope="module")
-def city(cfg):
-    pop = generate(cfg, n=600)
-    return pop, build_scores(pop, cfg, cfg.simulation.seed)
+def city(city600):
+    return city600
 
 
 def test_scores_stay_inside_the_filtered_pool(city):

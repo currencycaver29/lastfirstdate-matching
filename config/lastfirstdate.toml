@@ -28,17 +28,28 @@ group_share_tolerance = 0.05  # looks audit flags a group whose top-30 share is 
 [lists]                       # Stage 6: the daily list
 daily_size = 30
 reshow_after_days = 7         # someone passed over can reappear after this many days
-max_appearances_per_day = 0   # 0 = automatic: twice a fair share of list slots
+policy = "fair"               # "basic" (Sprint 1), "fair" (round-robin with caps) or "nsw"
+exposure_multiple = 1.0       # nobody on more than this many times a fair share of lists a day
+guarantee_priority = 1.0      # list bonus per missing guaranteed date, divided by weeks left
+hide_booked = false           # hide members whose dates plus waiting yeses fill the month
+                              # (tested in Sprint 4: it removes options and hurts; off)
+nsw_epsilon = 0.1             # Nash social welfare: smaller = stronger push to spread attention
+holdback_yeses = 0            # paper 14 hold-back: hide after this many yeses in 7 days (0 = off)
 exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
+
+[fairness]                    # Exposure and fairness report (FR-LM-23)
+min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate
 
 [dates]                       # Stage 7: scheduling
 guaranteed_per_month_paying = 3
 cap_per_month = 4             # nobody gets more dates than this in a month
+cap_per_month_free = 4        # monthly cap for members who don't pay (business decision)
+free_cap_genders = ["man", "woman", "nonbinary"]  # who the free-member cap applies to
 weeks_per_month = 4
 max_per_week = 1              # one date per person per week (only 1 is supported for now)
 date_value = 1.0              # value of arranging any date, added to every pair's score,
                               # so the scheduler never skips a date it could book
-late_month_bonus = 0.2        # urgency: extra edge weight per missing guaranteed date,
+late_month_bonus = 1.0        # urgency: extra edge weight per missing guaranteed date,
                               # divided by the weeks left in the month
 
 [simulation]                  # Acceptance checks run on fake members only

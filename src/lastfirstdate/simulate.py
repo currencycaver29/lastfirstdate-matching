@@ -15,8 +15,15 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from lastfirstdate.arrays import MemberArrays
+from lastfirstdate.arrays import GENDERS, MemberArrays
 from lastfirstdate.config import Config, load
+from lastfirstdate.fairness import (
+    effectively_booked,
+    fair_day_lists,
+    guarantee_bonus,
+    held_back,
+    nsw_day_lists,
+)
 from lastfirstdate.filter import eligibility_matrix, member_ok
 from lastfirstdate.lists import NEVER_SHOWN, available_row, daily_list, pick_rights
 from lastfirstdate.personality import personality_matrix
@@ -58,6 +65,9 @@ class MonthReport:
     methods: list[str]
     guarantee: int
     min_pool: int
+    times_shown: np.ndarray  # (n,) appearances on anyone's list this month
+    cap_breaches: int  # member-days above the exposure cap under the fair policy
+    audience: np.ndarray  # (n,) choosers who were allowed to see each member
     pair_appeal: float  # average true appeal within booked pairs, both directions (simulation)
     both_keen: float  # share of booked pairs where each truly likes the other above average
     misses: list[Miss] = field(default_factory=list)
@@ -160,6 +170,8 @@ def run_month(
 
     d = cfg.dates
     sim = cfg.simulation
+    capped_free = ~arr.paying & np.isin(arr.gender, [GENDERS.index(g) for g in d.free_cap_genders])
+    cap = np.where(capped_free, d.cap_per_month_free, d.cap_per_month)  # (n,) monthly caps
     dates = np.zeros(n, dtype=int)
     last_shown = np.full((n, n), NEVER_SHOWN, dtype=np.int64)
     passes = np.zeros((n, n), dtype=np.int16)
@@ -174,14 +186,20 @@ def run_month(
     methods: list[str] = []
     booked_total = 0
     booked_pairs: list[tuple[int, int]] = []
+    recent_yeses = np.zeros((DAYS_PER_WEEK, n), dtype=int)  # yeses per member, last 7 days
+    cap_breaches = 0  # times anyone exceeded the daily exposure cap (should stay 0)
 
     for week in range(d.weeks_per_month):
+        weeks_left = d.weeks_per_month - week
         for _ in range(DAYS_PER_WEEK):
-            full = dates >= d.cap_per_month
+            full = dates >= cap
             opened = (rng.random(n) < sim.open_app_rate) & matchable
             sizes = []
-            for i in np.flatnonzero(opened):
-                avail = available_row(
+
+            def avail_for(
+                i: int, hidden: np.ndarray | None = None, full=full, today=today
+            ) -> np.ndarray:
+                a = available_row(
                     i,
                     eligible,
                     rights,
@@ -191,9 +209,58 @@ def run_month(
                     full,
                     closed,
                 )
-                if not avail.any():
-                    continue
-                todays = daily_list(scores[i], avail, cfg.lists.daily_size)
+                return a if hidden is None else a & ~hidden
+
+            if cfg.lists.policy == "basic":
+                # Sprint 1: each chooser takes her own top list, one after another
+                day_lists = None
+                order = [int(i) for i in np.flatnonzero(opened)]
+            else:
+                pend = np.zeros(n, dtype=int)
+                for a, b in pending:
+                    pend[a] += 1
+                    pend[b] += 1
+                hidden = held_back(recent_yeses.sum(axis=0), cfg.lists.holdback_yeses)
+                if cfg.lists.hide_booked:
+                    hidden = hidden | effectively_booked(dates, pend, cap)
+                order = [int(i) for i in rng.permutation(np.flatnonzero(opened & ~full))]
+                avail = {i: avail_for(i, hidden) for i in order}
+                order = [i for i in order if avail[i].any()]
+                bonus = guarantee_bonus(
+                    dates,
+                    arr.paying,
+                    d.guaranteed_per_month_paying,
+                    weeks_left,
+                    cfg.lists.guarantee_priority,
+                )
+                if cfg.lists.policy == "fair":
+                    day_lists, day_cap = fair_day_lists(
+                        order,
+                        avail,
+                        scores,
+                        bonus,
+                        cfg.lists.daily_size,
+                        cfg.lists.exposure_multiple,
+                    )
+                    shown_today = [v for v in day_lists.values() if v.size]
+                    if shown_today:
+                        counts = np.bincount(np.concatenate(shown_today), minlength=n)
+                        cap_breaches += int((counts > day_cap).sum())
+                else:
+                    day_lists = nsw_day_lists(
+                        order, avail, scores, bonus, cfg.lists.daily_size, cfg.lists.nsw_epsilon
+                    )
+            today_yeses = np.zeros(n, dtype=int)
+            for i in order:
+                if day_lists is None:
+                    avail_i = avail_for(i)
+                    if not avail_i.any():
+                        continue
+                    todays = daily_list(scores[i], avail_i, cfg.lists.daily_size)
+                else:
+                    todays = day_lists[i]
+                    if todays.size == 0:
+                        continue
                 last_shown[i, todays] = today
                 times_shown[todays] += 1
                 sizes.append(len(todays))
@@ -208,20 +275,17 @@ def run_month(
                     if behavior.accepts(j, i, rng):
                         accepts += 1
                         yeses[[i, j]] += 1
+                        today_yeses[[i, j]] += 1
                         pending.add((min(i, j), max(i, j)))
             list_sizes.append(float(np.mean(sizes)) if sizes else 0.0)
+            recent_yeses = np.vstack([recent_yeses[1:], today_yeses])
             today += 1
 
-        weeks_left = d.weeks_per_month - week
         urg = urgency(
             dates, arr.paying, d.guaranteed_per_month_paying, weeks_left, d.late_month_bonus
         )
-        pairs = sorted(
-            p for p in pending if dates[p[0]] < d.cap_per_month and dates[p[1]] < d.cap_per_month
-        )
-        capacity = {
-            v: min(d.max_per_week, d.cap_per_month - int(dates[v])) for p in pairs for v in p
-        }
+        pairs = sorted(p for p in pending if dates[p[0]] < cap[p[0]] and dates[p[1]] < cap[p[1]])
+        capacity = {v: min(d.max_per_week, int(cap[v] - dates[v])) for p in pairs for v in p}
         weights = [
             d.date_value + (scores[a, b] + scores[b, a]) / 2 + urg[a] + urg[b] for a, b in pairs
         ]
@@ -237,9 +301,7 @@ def run_month(
                 held += 1
                 if behavior.wants_again(bk.a, bk.b, rng) and behavior.wants_again(bk.b, bk.a, rng):
                     second += 1
-        pending = {
-            p for p in pending if dates[p[0]] < d.cap_per_month and dates[p[1]] < d.cap_per_month
-        }
+        pending = {p for p in pending if dates[p[0]] < cap[p[0]] and dates[p[1]] < cap[p[1]]}
 
     paying = arr.paying & matchable
     u = behavior.utility
@@ -255,6 +317,9 @@ def run_month(
         gender=[m.gender for m in members],
         dates=dates,
         list_size_by_day=list_sizes,
+        times_shown=times_shown,
+        cap_breaches=cap_breaches,
+        audience=(eligible & rights).sum(axis=0),
         picks=picks,
         accepts=accepts,
         booked=booked_total,

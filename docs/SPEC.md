@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 3
+Current sprint: 4
 
 ## Goal
 
@@ -49,7 +49,7 @@ dates, and dates are scheduled into time both people have free.
 | D4 | Dates per month | 3 guaranteed for paying members; nobody gets more than 4 | Your brief |
 | D5 | Calibration set | 50 profiles: 20 picked for variety, 30 for uncertainty | Papers 1 and 2 |
 | D6 | Personality split | 0.4 interests text, 0.3 values, 0.3 Big Five | Starting guess; paper 9 says retune from outcomes |
-| D7 | Exposure cap | Automatic: no one on more than twice a fair share of lists per day | Paper 12 |
+| D7 | Exposure cap | Automatic: no one on more lists per day than a fair share (`lists.exposure_multiple` = 1.0) | Paper 12; Sprint 4 found 1x spreads attention most at no clear cost |
 | D8 | Guarantee target | 95% of paying members with at least 10 possible matches reach 3 dates in the simulated month. Checked from Sprint 4 (FR-LM-21). | Measurable version of the promise |
 | D9 | Distance | Straight-line km within both people's max distance. Replaced by the original SQL query's route rule once that query is added to `db/`. | The SQL query is not in this repo yet |
 | D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
@@ -221,29 +221,41 @@ one-sided S.
 
 #### FR-LM-21 · Fair greedy lists (Stage 6)
 Sprint: 4
-Lists filled by M with an exposure cap per profile per day (D7), priority for paying members
-still below their guarantee, booked members removed. Papers 12 and 16.
-Test (acceptance): no one exceeds the cap; at least `simulation.guarantee_target` of paying
-members with at least `simulation.min_pool_for_guarantee` possible matches reach their
-guarantee (D8). Until then this check is an expected failure in `tests/test_month.py`.
+Lists filled round-robin by M (plus a bonus for paying members still below their guarantee)
+under an exposure cap per profile per day (D7); members with no dates left are removed.
+Papers 12 and 16. The scheduler's urgency bonus also rises to 1.0 (`dates.late_month_bonus`).
+Optional switches, off by default after testing: hide members whose waiting yeses fill their
+month (`lists.hide_booked`), and a monthly cap for free members (`dates.cap_per_month_free`).
+Test (acceptance): no one exceeds the cap; on the default city the fair policy beats Sprint 3
+on the guarantee share and on exposure spread; at least `simulation.guarantee_target` of
+paying members with at least `simulation.min_pool_for_guarantee` possible matches reach
+their guarantee (D8). The last check is not met (about 82%) and is tracked as a strict
+expected failure in `tests/test_fairness.py`.
 
 #### FR-LM-22 · Nash social welfare allocation (Stage 6)
 Sprint: 4
-Alternative allocation that maximizes the sum of log expected matches (paper 11), compared
-in simulation against the greedy lists and against paper 13's welfare view.
-Test: exposure is spread more evenly than greedy at a small cost in total matches.
+Alternative allocation (`lists.policy = "nsw"`) that greedily maximizes the sum of
+log(epsilon + expected matches) over choosers and candidates (paper 11). Paper 13's point,
+that a candidate's capacity limits the value of showing them, is covered by the guarantee
+bonus and tested via `lists.hide_booked`.
+Test: on a day with a few very popular candidates, exposure is spread more evenly than top-k
+lists while keeping at least 85% of the total score; the fast lazy greedy matches a plain
+greedy.
 
 #### FR-LM-23 · Exposure and fairness report
 Sprint: 4
 Reports how often each profile is shown, spread measures (Gini, minimum, median), and
-shown and dated rates by audit group and age band.
-Test: report flags a deliberately biased allocation.
+shown and dated rates by audit group and age band. The shown rate is adjusted for audience
+(times shown per chooser allowed to see the member), so members' own settings are not
+blamed on the engine. A group below `fairness.min_rate_ratio` (0.8) of the overall rate is
+flagged. Gender is not audited this way, because D1 gives the sexes different roles.
+Test: report flags a deliberately biased allocation and not a fair one.
 
 #### FR-LM-24 · Hold-back experiment (Stage 6)
 Sprint: 4
-Optional experiment from paper 14: hold back likely matches from members who just matched
-a lot. Report only; switched off by default.
-Test: experiment runs and reports the match-rate difference.
+Optional experiment from paper 14 (`lists.holdback_yeses`): hide members who received many
+mutual yeses in the last 7 days. Report only; switched off by default.
+Test: experiment runs and reports the difference.
 
 ### Sprint 5: learning from dates
 
@@ -297,3 +309,12 @@ Test (acceptance): learning raises the second-date rate; every requirement has a
   1,000-member city, members see almost everyone in their pool each month, so the ranking
   method barely changes monthly outcomes; it matters with shorter lists or bigger pools.
   Details: `docs/sprints/sprint-3.md`.
+- **Sprint 4.** Fair lists spread attention much more evenly (exposure Gini 0.39 to 0.31) and,
+  with a stronger scheduler urgency, raise the guarantee from about 78% to 82%, but not to 95%.
+  Nearly every remaining miss is a paying member who gets fewer than 3 mutual yeses in a
+  month; in a 1,000-member city members already see their whole pool, so no list rule can
+  create those yeses. Two intuitive rules made things worse and are off: hiding members whose
+  waiting yeses fill their month, and capping free members' dates (most free members are the
+  women whose dates paying men need). Offering the guarantee only to members with at least 50
+  possible matches would reach about 96%. That is a business decision, so the 95% check stays a
+  strict expected failure. Details: `docs/sprints/sprint-4.md`.

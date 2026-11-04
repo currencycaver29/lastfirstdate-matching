@@ -16,8 +16,8 @@ belong in this repo.
 | 1 | Working matcher on personality only: filter, personality score, daily list, weekly scheduler, simulated month | Done (about 80% of paying members reach 3 dates) |
 | 2 | Looks model: the 50 calibration profiles and personal photo taste | Done (AUC 0.844 against a ceiling of 0.875) |
 | 3 | 50/50 mutual score | Done (raises the chance the other person accepts; see notes) |
-| 4 | Fair daily lists | Next |
-| 5 | Learning from dates | Planned |
+| 4 | Fair daily lists | Done (guarantee about 82%; 95% needs a business decision, see notes) |
+| 5 | Learning from dates | Next |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 [`docs/research.md`](docs/research.md). Study notes per sprint:
@@ -34,6 +34,7 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.simulate   # one simulated month and its report
 .venv/bin/python -m lastfirstdate.looks_report   # how well the looks model learns taste
 .venv/bin/python -m lastfirstdate.mutual_report  # compare list rankings in a simulated month
+.venv/bin/python -m lastfirstdate.fairness_report  # exposure, fairness audit, hold-back test
 ./scripts/check.sh                     # lint, format, tests, traceability
 ```
 
@@ -56,6 +57,8 @@ src/lastfirstdate/
   looks_report.py           how well the looks model learns taste, with a group audit
   mutual.py                 Stage 5: percentiles, the 50/50 mix and the mutual score
   mutual_report.py          compares list rankings in a simulated month
+  fairness.py               Stage 6 fair version: caps, guarantee priority, Nash welfare
+  fairness_report.py        exposure spread, group audit and the hold-back experiment
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test

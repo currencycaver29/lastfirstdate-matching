@@ -6,8 +6,9 @@ import pytest
 from lastfirstdate.simulate import DAYS_PER_WEEK, run_month
 from lastfirstdate.synthetic import generate
 
-# Sprint 1 baseline on the default population (seed 7) is about 0.82. This floor only
-# catches a later change that makes things clearly worse; the real target is below.
+# Personality-only baseline on the default population (seed 7) is about 0.8. This floor only
+# catches a later change that makes things clearly worse. The 95% target is checked with
+# the full engine in tests/test_fairness.py (FR-LM-21).
 BASELINE_FLOOR = 0.75
 
 
@@ -51,16 +52,3 @@ def test_same_seed_gives_the_same_month(cfg, month):
     """FR-LM-12 / R7: rerunning with the same seed reproduces every date."""
     again = run_month(generate(cfg), cfg)
     np.testing.assert_array_equal(again.dates, month.dates)
-
-
-@pytest.mark.xfail(
-    strict=True,
-    reason="FR-LM-21: the 95% guarantee needs Sprint 4's fair lists; Sprint 1 reaches about 82%",
-)
-def test_guarantee_target_is_met(cfg, month):
-    """FR-LM-21 (Sprint 4 target, D8): at least 95% of workable paying members get 3 dates.
-
-    Expected to fail until Sprint 4. `strict=True` makes the suite fail the day it starts
-    passing, so the marker cannot be forgotten.
-    """
-    assert month.guarantee_share() >= cfg.simulation.guarantee_target
