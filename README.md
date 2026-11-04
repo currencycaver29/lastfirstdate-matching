@@ -236,22 +236,53 @@ These rules are never broken, and tests enforce them:
 
 ## Roadmap
 
-| Sprint | Focus | Status |
-|:-:|---|---|
-| 0 | Foundation: settings, member model, synthetic city, checks | Done |
-| 1 | A working matcher on personality alone | Done |
-| 2 | The looks model and the photo exercise | Done |
-| 3 | The 50/50 mutual score | Done |
-| 4 | Fair daily lists | Done |
-| 5 | Learning from dates | Done |
-| 6 | lastfirstdate's real rules, the guarantee forecast and the ratio gate | Done |
-| – | The Rust core for the hot loops | Done |
-| 7 | Booking, billing, trust, geography and the app's database | Done |
-| 8 | The forecast and the gate on delivered dates | Done |
-| 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
-| 10 | Step-by-step photo exercise and a nightly cache | Done |
-| 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | Done |
-| 12 | Wait for the app and real Phase 1 data, then recalibrate monthly (recommended) | Next |
+Built one sprint at a time. Every sprint ships with passing tests and a study note that explains
+its math in plain words, so you can read the engine in the order it was built.
+
+```mermaid
+%%{init: {'theme': 'base', 'gitGraph': {'mainBranchName': 'engine', 'mainBranchOrder': 2, 'rotateCommitLabel': false}, 'themeVariables': {'git0': '#2f855a', 'git1': '#2b6cb0', 'git2': '#c05621', 'gitBranchLabel0': '#ffffff', 'gitBranchLabel1': '#ffffff', 'gitBranchLabel2': '#ffffff', 'commitLabelColor': '#ffffff', 'commitLabelBackground': '#4a5568', 'tagLabelColor': '#ffffff', 'tagLabelBackground': '#2f855a', 'tagLabelBorder': '#1c5a3c', 'fontSize': '14px'}}}%%
+gitGraph TB:
+    commit id: "0 · foundation"
+    commit id: "1 · personality matcher"
+    commit id: "2 · looks model"
+    commit id: "3 · mutual score"
+    commit id: "4 · fair daily lists"
+    commit id: "5 · learning from dates" tag: "matching"
+    commit id: "6 · guarantee forecast"
+    branch rust order: 3
+    checkout rust
+    commit id: "Rust core · up to 81x"
+    checkout engine
+    merge rust
+    commit id: "7 · booking and billing"
+    commit id: "8 · gate on delivered dates" tag: "business"
+    commit id: "9 · handoff to the app"
+    commit id: "10 · nightly cache"
+    commit id: "11 · ready for real data" tag: "launch-ready"
+    branch phase-1 order: 1
+    checkout phase-1
+    commit id: "12 · real cycles" type: HIGHLIGHT
+```
+
+### What's inside each chapter
+
+| Chapter | Sprints | Ideas you'll find |
+|---|---|---|
+| **Matching** | [0](docs/sprints/sprint-0.md) · [1](docs/sprints/sprint-1.md) · [2](docs/sprints/sprint-2.md) · [3](docs/sprints/sprint-3.md) · [4](docs/sprints/sprint-4.md) · [5](docs/sprints/sprint-5.md) | Active preference learning · a determinantal point process for a varied start · reciprocal scores joined by a harmonic mean · fairness of exposure · Nash social welfare · exploration from competing bandits |
+| **Business** | [6](docs/sprints/sprint-6.md) · [Rust](docs/sprints/rust-core.md) · [7](docs/sprints/sprint-7.md) · [8](docs/sprints/sprint-8.md) | A logistic forecast of each man's dates · a ratio gate that pauses sales · a booking state machine with 15-minute payment holds · minimax venue choice · Bayesian trust · Rust twins through PyO3 |
+| **Launch-ready** | [9](docs/sprints/sprint-9.md) · [10](docs/sprints/sprint-10.md) · [11](docs/sprints/sprint-11.md) | The engine on the app's database · a resumable photo exercise · an incremental nightly cache · Platt-scaling recalibration · a time-split switch rule |
+| **Phase 1** | 12, next | Real cycles from one New York zone, recalibrated monthly |
+
+### Open problems
+
+What's left is tracked as issues. Each known limit is pinned by a strict expected-failure test,
+so the day a change fixes one, the test suite says so.
+
+| Label | What it holds |
+|---|---|
+| [launch-blocker](https://github.com/currencycaver29/lastfirstdate-matching/issues?q=is%3Aissue+is%3Aopen+label%3Alaunch-blocker) | The guarantee rate and the legal wording, settled before sales |
+| [known-limit](https://github.com/currencycaver29/lastfirstdate-matching/issues?q=is%3Aissue+is%3Aopen+label%3Aknown-limit) | Measured limits in learning, forecasting and scale: good problems for an ML or systems developer |
+| [needs-real-data](https://github.com/currencycaver29/lastfirstdate-matching/issues?q=is%3Aissue+is%3Aopen+label%3Aneeds-real-data) | Questions only Phase 1 can answer |
 
 ## License
 
