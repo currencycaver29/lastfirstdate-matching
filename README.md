@@ -34,7 +34,65 @@ stored in this repository.
 
 ## How it works
 
-Matching runs in eight stages:
+```mermaid
+flowchart TD
+    P(["Member profiles"]) --> F
+
+    subgraph meet ["Who could meet"]
+        F["<b>1 · Filter</b><br/>orientation · age · distance<br/>dealbreakers · verification"]
+    end
+
+    subgraph like ["What each member likes"]
+        C["<b>2 · Calibration</b><br/>about 30 photos<br/>singles and pairs"] --> L["<b>3 · Looks taste</b><br/>a personal model<br/>for every member"]
+        T["<b>4 · Personality</b><br/>prompts · intent answers<br/>interests"]
+    end
+
+    subgraph see ["Who sees whom"]
+        M["<b>5 · Mutual score</b><br/>50% looks<br/>50% personality<br/>both must want it"] --> D["<b>6 · Daily lists</b><br/>up to 30 a day<br/>attention shared fairly"]
+    end
+
+    subgraph date ["The date"]
+        B["<b>7 · Booking</b><br/>a window both can make<br/>15-minute payment hold<br/>a venue fair to both"]
+    end
+
+    subgraph after ["After every date"]
+        LE["<b>8 · Learning</b><br/>sharpens each<br/>member's taste"]
+        TR["<b>Trust</b><br/>behaviour only, never looks<br/>lowers low-trust profiles"]
+        G["<b>Guarantee</b><br/>boosts men owed dates<br/>admits men only when<br/>they can be served"]
+    end
+
+    F --> C
+    F --> T
+    L --> M
+    T --> M
+    D -- "she picks, he accepts" --> B
+    B -- "how it went" --> LE
+    B -- "private ratings" --> TR
+    B -- "delivered dates" --> G
+
+    classDef input fill:#4a5568,stroke:#2d3748,color:#ffffff
+    classDef stage fill:#2b6cb0,stroke:#1a4971,color:#ffffff
+    classDef loop fill:#2f855a,stroke:#1c5a3c,color:#ffffff
+    classDef business fill:#c05621,stroke:#8a3c14,color:#ffffff
+    class P input
+    class F,C,L,T,M,D,B stage
+    class LE,TR loop
+    class G business
+    style meet fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style like fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style see fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style date fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style after fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+```
+
+Blue boxes are the matching stages a profile passes through every day. After each date, the
+green boxes learn from what happened and the orange box keeps the promise of three dates a
+month; all three shape the next day's lists.
+
+<details>
+<summary><b>What each stage does</b></summary>
+
+<br/>
 
 | # | Stage | What it does |
 |:-:|---|---|
@@ -43,16 +101,13 @@ Matching runs in eight stages:
 | 3 | **Looks taste** | Learns each member's personal photo taste as a small Bayesian model on top of a shared starting point |
 | 4 | **Personality** | Scores free-text prompts, intent answers (timeline, exclusivity, kids) and interests |
 | 5 | **Mutual score** | Mixes looks and personality 50/50 in each direction, then combines both directions so both people must want it |
-| 6 | **Fair lists** | Builds each woman's daily list under an exposure cap, with a boost for men still owed dates |
+| 6 | **Daily lists** | Builds each woman's daily list under an exposure cap, with a boost for men still owed dates |
 | 7 | **Booking** | Proposes the earliest window both are free, holds it for 15 minutes while both $10 payments arrive, picks a venue fair to both |
 | 8 | **Learning** | Learns from picks, dates and private ratings, and keeps exploring a little |
+| – | **Trust** | Builds a private score from respectfulness, profile accuracy and showing up; lowers low-trust profiles and flags them for review |
+| – | **Guarantee** | Forecasts each man's chance of three dates, admits men from the waitlist only while that holds, counts delivered dates and credits shortfalls |
 
-Around the stages sit the business rules from lastfirstdate's website:
-
-- the **ratio gate**, which admits men from the waitlist only while the forecast says they'll
-  get their dates;
-- **billing cycles** that count only delivered dates and refill cancelled ones;
-- a private **trust score** built from behaviour only, never looks.
+</details>
 
 ## Results in simulation
 
