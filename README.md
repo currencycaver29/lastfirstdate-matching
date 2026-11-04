@@ -31,56 +31,14 @@ can't serve more of them.
 
 ## How it works
 
-```mermaid
-flowchart TD
-    P(["Member profiles"]) --> F
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/pipeline-dark.svg">
+  <img alt="Matching pipeline: filter, calibration, looks taste, personality, mutual score, daily lists, booking, then learning, trust and the guarantee after every date" src="docs/pipeline-light.svg">
+</picture>
 
-    subgraph meet ["Who could meet"]
-        F["<b>1 · Filter</b><br/>orientation · age · distance<br/>dealbreakers · verification"]
-    end
-
-    subgraph like ["What each member likes"]
-        C["<b>2 · Calibration</b><br/>about 30 photos<br/>singles and pairs"] --> L["<b>3 · Looks taste</b><br/>a personal model<br/>for every member"]
-        T["<b>4 · Personality</b><br/>prompts · intent answers<br/>interests"]
-    end
-
-    subgraph see ["Who sees whom"]
-        M["<b>5 · Mutual score</b><br/>50% looks<br/>50% personality<br/>both must want it"] --> D["<b>6 · Daily lists</b><br/>up to 30 a day<br/>attention shared fairly"]
-    end
-
-    subgraph date ["The date"]
-        B["<b>7 · Booking</b><br/>a window both can make<br/>15-minute payment hold<br/>a venue fair to both"]
-    end
-
-    subgraph after ["After every date"]
-        LE["<b>8 · Learning</b><br/>sharpens each<br/>member's taste"]
-        TR["<b>Trust</b><br/>behaviour only, never looks<br/>lowers low-trust profiles"]
-        G["<b>Guarantee</b><br/>boosts men owed dates<br/>admits men only when<br/>they can be served"]
-    end
-
-    F --> C
-    F --> T
-    L --> M
-    T --> M
-    D -- "she picks, he accepts" --> B
-    B -- "how it went" --> LE
-    B -- "private ratings" --> TR
-    B -- "delivered dates" --> G
-
-    classDef input fill:#4a5568,stroke:#2d3748,color:#ffffff
-    classDef stage fill:#2b6cb0,stroke:#1a4971,color:#ffffff
-    classDef loop fill:#2f855a,stroke:#1c5a3c,color:#ffffff
-    classDef business fill:#c05621,stroke:#8a3c14,color:#ffffff
-    class P input
-    class F,C,L,T,M,D,B stage
-    class LE,TR loop
-    class G business
-    style meet fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
-    style like fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
-    style see fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
-    style date fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
-    style after fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
-```
+<!-- Source: docs/pipeline.mmd. Re-render both SVGs after editing it:
+     npx -p @mermaid-js/mermaid-cli mmdc -i docs/pipeline.mmd -o docs/pipeline-dark.svg -t dark -b transparent
+     npx -p @mermaid-js/mermaid-cli mmdc -i docs/pipeline.mmd -o docs/pipeline-light.svg -t default -b transparent -->
 
 Blue boxes are the matching stages a profile passes through every day. After each date, the
 green boxes learn from what happened and the orange box keeps the promise of three dates a
