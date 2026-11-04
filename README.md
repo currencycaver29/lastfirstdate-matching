@@ -20,6 +20,7 @@ belong in this repo.
 | 5 | Learning from dates | Done (personal looks weights learned; no measurable gain in second dates yet) |
 | 6 | lastfirstdate's real rules, guarantee forecast and ratio gate | Done (gate keeps admitted men at 92% to 96% where admitting everyone gives 12.5%) |
 | 6 + | Rust core for the hot loops | Done (looks taste 3.6x faster, daily lists 10x, gate 28x to 81x; identical results) |
+| 7 | Booking, billing, trust and geography; the app's database design | Done (real flow: about 68% of men get 3 delivered dates a cycle; see notes) |
 
 Plan and requirements: [`docs/SPEC.md`](docs/SPEC.md). Papers:
 [`docs/research.md`](docs/research.md). Study notes per sprint:
@@ -43,6 +44,7 @@ python -m venv .venv
 .venv/bin/python -m lastfirstdate.learning_report  # three months with and without learning
 .venv/bin/python -m lastfirstdate.phase1_report    # Phase 1 rules: pair questions, ratio gate
 .venv/bin/python -m lastfirstdate.forecast_fit     # refit the guarantee forecast (~10 minutes)
+.venv/bin/python -m lastfirstdate.cycle_sim        # the real booking flow over 3 billing cycles
 ./scripts/check.sh                     # Rust and Python lint, format, tests, traceability
 .venv/bin/maturin develop --release --skip-install   # rebuild the Rust core after editing rust/
 ```
@@ -83,9 +85,15 @@ src/lastfirstdate/
   forecast_fit.py           fits the forecast on simulated markets and tests it on others
   phase1_report.py          Phase 1 rules: pair questions versus singles, the gate in action
   native.py                 when the engine calls the Rust core (and how to turn it off)
+  booking.py                proposed date windows and the life of a booking
+  billing.py                billing cycles, delivered dates, refills, credits, date fees
+  trust.py                  private ratings and the behaviour-only trust score
+  geo.py                    neighbourhoods and the fair venue midpoint
+  cycle_sim.py              the real booking flow, day by day, over billing cycles
 tests/                      one or more tests per requirement id
 scripts/check.sh            the gates
 scripts/trace.py            fails if a requirement has no test
 docs/                       spec, research map, sprint study notes
+db/schema.sql               the database the app should keep (tables, checks)
 db/                         SQL queries (the original pre-filter goes here)
 ```

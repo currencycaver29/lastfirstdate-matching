@@ -97,6 +97,126 @@ repeat_pick_factor = 0.5      # each earlier pass halves the chance of picking t
 swipe_threshold = 0.5         # true looks appeal where a calibration swipe is 50/50
 training_swipes = 50          # random swipes per member used to fit the starting taste w_0
 
+[booking]                     # Proposed date windows and the payment hold (FR-LM-37)
+lead_days = 1                 # earliest window: this many days ahead (no same-day dates)
+horizon_days = 14             # windows are looked for this many days ahead (at most 21)
+hold_minutes = 15             # both $10 payments must arrive within this many minutes
+
+[billing]                     # Cycles, delivered dates, credits and date fees (FR-LM-38)
+price_per_cycle = 200.0       # dollars per billing cycle for a paying member
+trial_days = 30               # free trial before the first paid cycle
+cycle_days = 28               # length of one billing cycle
+date_fee = 10.0               # each person pays this at booking
+full_refund_hours = 24        # cancelling at least this many hours ahead refunds the fee in full
+late_refund_share = 0.5       # share refunded for a later cancellation; nothing for a no-show
+own_absence_counts = true     # his own late cancellation or no-show counts as delivered (D17)
+
+[trust]                       # Private ratings and the trust score (FR-LM-39)
+prior_mean = 0.8              # trust of a member with no ratings yet (0 to 1)
+prior_strength = 5.0          # the prior counts as this many ratings
+reliability_weight = 0.3      # share of trust from showing up and not cancelling late
+flag_below = 0.55             # conduct below this, with enough ratings, flags for review
+flag_min_ratings = 3          # ratings needed before anyone can be flagged
+ranking_weight = 0.5          # how strongly low trust lowers a member's list scores
+
+[cycle_simulation]            # Day-by-day simulation of the real booking flow (FR-LM-42)
+cycles = 3                    # billing cycles simulated per paying member
+stagger = true                # cycles start on different days (false: all on launch day)
+pay_in_time_chooser = 0.97    # chance she pays within the hold after choosing
+pay_in_time_chosen = 0.90     # chance he pays within the hold
+cancel_rate = 0.05            # chance each person cancels a confirmed date
+late_cancel_share = 0.4       # share of cancellations made less than 24 hours ahead
+event_rate = 0.10             # event connections per paying member per cycle
+new_women_per_cycle = 0.15    # new women joining each cycle, as a share of those at launch
+bad_actor_share = 0.05        # members whose conduct on dates is poor
+bad_actor_conduct = -3.5      # their conduct, in standard deviations
+rating_center = 4.2           # average conduct rating for an average member (1 to 5)
+conduct_effect = 0.6          # rating points per standard deviation of conduct
+rating_noise = 0.7            # rating points of noise per rating
+rating_halo = 0.1             # rating points per standard deviation of attraction (rater bias)
+
+# Geography (FR-LM-41): members give a neighbourhood, never an address. Venues are
+# made up for the simulation; the real list comes from the app.
+[[geo.neighbourhoods]]
+name = "Greenwich Village"
+lat = 40.7335
+lon = -74.0027
+
+[[geo.neighbourhoods]]
+name = "East Village"
+lat = 40.7265
+lon = -73.9815
+
+[[geo.neighbourhoods]]
+name = "SoHo"
+lat = 40.7233
+lon = -74.003
+
+[[geo.neighbourhoods]]
+name = "NoHo"
+lat = 40.7289
+lon = -73.9925
+
+[[geo.neighbourhoods]]
+name = "Union Square"
+lat = 40.7359
+lon = -73.9906
+
+[[geo.neighbourhoods]]
+name = "Chelsea"
+lat = 40.7465
+lon = -74.0014
+
+[[geo.neighbourhoods]]
+name = "Lower East Side"
+lat = 40.715
+lon = -73.9843
+
+[[geo.neighbourhoods]]
+name = "Flatiron"
+lat = 40.7411
+lon = -73.9897
+
+[[geo.venues]]
+name = "Venue A"
+lat = 40.731
+lon = -73.997
+
+[[geo.venues]]
+name = "Venue B"
+lat = 40.727
+lon = -73.987
+
+[[geo.venues]]
+name = "Venue C"
+lat = 40.724
+lon = -74.001
+
+[[geo.venues]]
+name = "Venue D"
+lat = 40.736
+lon = -73.992
+
+[[geo.venues]]
+name = "Venue E"
+lat = 40.742
+lon = -73.999
+
+[[geo.venues]]
+name = "Venue F"
+lat = 40.719
+lon = -73.988
+
+[[geo.venues]]
+name = "Venue G"
+lat = 40.733
+lon = -74.005
+
+[[geo.venues]]
+name = "Venue H"
+lat = 40.729
+lon = -73.992
+
 [population]                  # Synthetic member generator (FR-LM-03)
 n_members = 400
 share_men = 0.25              # 100 men, 300 women (3:1)

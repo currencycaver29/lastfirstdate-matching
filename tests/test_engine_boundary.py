@@ -8,10 +8,13 @@ import lastfirstdate
 PKG = Path(lastfirstdate.__file__).parent
 ENGINE = [
     "arrays",
+    "billing",
+    "booking",
     "config",
     "fairness",
     "filter",
     "forecast",
+    "geo",
     "learning",
     "lists",
     "looks",
@@ -20,6 +23,7 @@ ENGINE = [
     "native",
     "personality",
     "scheduler",
+    "trust",
 ]
 SIM_ONLY = {
     "lastfirstdate.synthetic",
@@ -31,6 +35,7 @@ SIM_ONLY = {
     "lastfirstdate.learning_report",
     "lastfirstdate.forecast_fit",
     "lastfirstdate.phase1_report",
+    "lastfirstdate.cycle_sim",
 }
 
 

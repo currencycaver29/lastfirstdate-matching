@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 6
+Current sprint: 7
 
 ## Goal
 
@@ -57,6 +57,7 @@ dates, and dates are scheduled into time both people have free.
 | D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's simulation found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
 | D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
 | D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 simulation |
+| D17 | His own absence | His own late cancellation (under 24 hours) or no-show counts as one of his 3 delivered dates: no credit, no refill. Her cancellation or no-show never counts against him and his slot is refilled. In either case the person who wasn't at fault gets the $10 fee back (`billing.own_absence_counts`) | The site says "no-shows and cancellations don't count"; counting his own absences as delivered stops credits being gamed. To confirm with the lawyer (risk plan) |
 | D16 | Languages | Python for the engine, the simulator and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the simulator in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
@@ -366,11 +367,85 @@ covariance to 1e-9, uncertainty, pair choice, daily lists and exposure cap, gate
 for every stopping rule); members see the same calibration photos and a simulated month
 books the same dates with either backend; the Rust crate passes its own tests and Clippy.
 
-#### Deferred to Sprint 7 (needs the app's database)
-A proposed date window shown with each profile and a 15-minute payment hold; per-member
-billing cycles, counting only confirmed and paid dates, refills after cancellations; the
-three rating dimensions and a behavior-only trust score in ranking; dates booked at events;
-neighborhood geography with venue midpoints.
+### Sprint 7: booking, billing, trust and geography
+
+Sources: lastfirstdate's public website (see `docs/fit-report.md`, sections 1 and 4). No app
+repo or database exists yet, so this sprint also defines the data the app must keep
+(FR-LM-36) and builds the engine side of each rule against it.
+
+#### FR-LM-36 · App data model
+Sprint: 7
+`db/schema.sql` holds the tables the app needs for matching, booking, billing, ratings,
+events and geography, in SQL that runs on PostgreSQL and SQLite. Photo embeddings sit in
+their own table so they can be encrypted and deleted alone (R3).
+Test: the schema loads; it accepts valid rows and its checks reject invalid ones (a rating
+outside 1 to 5, an unknown booking state, a member rating themselves); its booking states
+and sources match the engine's.
+
+#### FR-LM-37 · Proposed date windows and the payment hold
+Sprint: 7
+Each profile on her list comes with a proposed window: the earliest evening slot, from
+`booking.lead_days` to `booking.horizon_days` ahead, that is free for both, not on a day
+either already has a date, inside both people's weekly and monthly caps. Members with no
+common window are not shown that day. A booking moves through proposed, held (both $10
+payments must arrive within `booking.hold_minutes`), confirmed (venue revealed), then
+completed, cancelled, no-show or expired; any other move is refused.
+Test: the earliest common window is found, blocked days and lead time respected, none when
+there is no overlap; legal state moves work, illegal ones and late payments are refused, an
+unpaid hold expires and frees the slot.
+
+#### FR-LM-38 · Billing cycles, delivered dates, refills and credits
+Sprint: 7
+Each paying man has his own cycle of `billing.cycle_days` starting when his trial ends. A
+date counts toward his 3 only if both confirmed and paid, it is scheduled inside his cycle,
+and it took place. Her cancellation or no-show does not count and his missing count goes back
+up, so the list bonus refills the slot. His own late cancellation or no-show counts as
+delivered when `billing.own_absence_counts` is on (D17). At cycle end he is credited
+`price * missing / 3`. Date fees are refunded in full for cancellations at least
+`billing.full_refund_hours` ahead, `billing.late_refund_share` later, nothing for a no-show.
+Test: cycle boundaries; each counting rule; refill raises his bonus; credits and refunds as
+defined.
+
+#### FR-LM-39 · Ratings and the trust score
+Sprint: 7
+After a date each person privately rates the other on respectfulness, profile accuracy and
+conversation (1 to 5), plus "would meet again". The trust score uses behaviour only:
+respectfulness, profile accuracy and reliability (showing up, not cancelling late), each
+shrunk toward `trust.prior_mean` so a few ratings cannot sink anyone. Conversation and
+"would meet again" are preferences, not conduct, and go to learning (Stage 8), never to trust
+(R2). Low trust lowers a member's list scores; trust below `trust.flag_below` with at least
+`trust.flag_min_ratings` ratings flags the member for review and pauses their profile.
+Members with no ratings get the prior, never a penalty.
+Test: shrinkage and reliability as defined; conversation and "again" do not move trust; the
+ranking factor is 1 at or above the prior and lower below it; flags need enough ratings.
+
+#### FR-LM-40 · Event dates
+Sprint: 7
+A connection made at a members-only event can be booked as a date (`source = "event"`). It
+follows the same confirm-and-pay rules, counts toward his guarantee and both people's caps,
+and the pair is then never shown to each other on lists.
+Test: an event date counts like a list date, respects caps and closes the pair.
+
+#### FR-LM-41 · Neighbourhoods and venue midpoints
+Sprint: 7
+Members give a neighbourhood, not an address; distances use neighbourhood centres. The venue
+for a date is the one that keeps the longer of the two trips shortest, ties broken by the
+total trip. Neighbourhoods and venues live in the settings file.
+Test: nearest neighbourhood; the venue minimises the longer trip; ties go to the shorter
+total; one-neighbourhood couples get a venue in or next to it.
+
+#### FR-LM-42 · Phase 1 cycle simulation
+Sprint: 7
+A day-by-day simulation of the real flow on the Phase 1 market: daily lists with proposed
+windows, picks, payment holds, cancellations, no-shows, refills, event dates, ratings, trust
+and credits, over `cycle_simulation.cycles` billing cycles per man, with cycle starts all on
+launch day or spread out.
+Test: the books balance (every past booking ends in a final state; nobody passes a cap;
+delivered dates never exceed 3 a cycle; credits match missing dates; refunds never exceed
+fees); with no friction at least 10 points more men reach 3 delivered dates; trust flags at
+least 80% of simulated bad actors with 6 or more ratings, at least 80% of flags are bad
+actors, and trust does not track looks. Reaching `gate.target` in the real flow is tracked as
+a strict expected failure (Sprint 7 finding).
 
 ## Changes to this plan
 
@@ -438,3 +513,18 @@ neighborhood geography with venue midpoints.
   overshoot and diverge on hard fitting problems (never in the simulation's 9,444
   calibration fits). Both now halve a step that makes the fit worse. Details:
   `docs/sprints/rust-core.md`.
+- **Sprint 7.** No app exists yet, so the sprint defined the database the app should keep
+  (`db/schema.sql`) and built proposed date windows, the 15-minute payment hold, per-member
+  billing cycles with refills and credits, a behaviour-only trust score, event dates and venue
+  midpoints, then simulated the real flow day by day over three cycles. The headline changed
+  the business picture: in three simulated Phase 1 markets, **about 68% of men get 3 delivered
+  dates a cycle**, not the 87% to 96% of the earlier batch simulations. The earlier figure
+  counted booked dates, ignored payment holds, cancellations and no-shows (about one booked
+  date in three falls through), and forgot passes each month. Without new women joining it is
+  58% and falls every cycle, because each woman sees every man in her pool about weekly and
+  passes pile up. Show-ups are the biggest single lever (97% instead of 92%: +8 points);
+  showing men less often or allowing two dates a week did not help. Credits cost about 17% of
+  subscription revenue. The original acceptance check, "near the batch simulation", failed and
+  is kept as a strict expected failure. Writing the books-balance test also caught a
+  simulation bug: his own late cancellation was counted as delivered and also gave his slot
+  back. Details: `docs/sprints/sprint-7.md`.

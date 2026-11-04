@@ -122,6 +122,65 @@ class SimulationConfig:
 
 
 @dataclass(frozen=True)
+class BookingConfig:
+    lead_days: int
+    horizon_days: int
+    hold_minutes: int
+
+
+@dataclass(frozen=True)
+class BillingConfig:
+    price_per_cycle: float
+    trial_days: int
+    cycle_days: int
+    date_fee: float
+    full_refund_hours: int
+    late_refund_share: float
+    own_absence_counts: bool
+
+
+@dataclass(frozen=True)
+class TrustConfig:
+    prior_mean: float
+    prior_strength: float
+    reliability_weight: float
+    flag_below: float
+    flag_min_ratings: int
+    ranking_weight: float
+
+
+@dataclass(frozen=True)
+class Place:
+    name: str
+    lat: float
+    lon: float
+
+
+@dataclass(frozen=True)
+class GeoConfig:
+    neighbourhoods: tuple[Place, ...]
+    venues: tuple[Place, ...]
+
+
+@dataclass(frozen=True)
+class CycleSimulationConfig:
+    cycles: int
+    stagger: bool
+    pay_in_time_chooser: float
+    pay_in_time_chosen: float
+    cancel_rate: float
+    late_cancel_share: float
+    event_rate: float
+    new_women_per_cycle: float
+    bad_actor_share: float
+    bad_actor_conduct: float
+    rating_center: float
+    conduct_effect: float
+    rating_noise: float
+    rating_halo: float
+
+
+@dataclass(frozen=True)
 class ValuesQuestion:
     """One values or intent question.
 
@@ -185,6 +244,11 @@ class Config:
     simulation: SimulationConfig
     population: PopulationConfig
     values: tuple[ValuesQuestion, ...]
+    booking: BookingConfig
+    billing: BillingConfig
+    trust: TrustConfig
+    geo: GeoConfig
+    cycle_simulation: CycleSimulationConfig
 
 
 def _section(raw: dict, name: str, cls: type):
@@ -357,6 +421,54 @@ def validate(cfg: Config) -> None:
         if q.incompatible and q.mode != "closeness":
             raise ConfigError(f"values question {q.key!r}: incompatible needs mode closeness")
 
+    bk = cfg.booking
+    if not 0 <= bk.lead_days < bk.horizon_days <= 21:
+        raise ConfigError("booking needs 0 <= lead_days < horizon_days <= 21")
+    _check_positive("booking.hold_minutes", bk.hold_minutes)
+    bl = cfg.billing
+    for name in ("price_per_cycle", "cycle_days", "date_fee", "full_refund_hours"):
+        _check_positive(f"billing.{name}", getattr(bl, name))
+    if bl.trial_days < 0:
+        raise ConfigError("billing.trial_days must not be negative")
+    _check_share("billing.late_refund_share", bl.late_refund_share)
+    tr = cfg.trust
+    if not 0 < tr.prior_mean <= 1:
+        raise ConfigError("trust.prior_mean must be in (0, 1]")
+    _check_positive("trust.prior_strength", tr.prior_strength)
+    _check_share("trust.reliability_weight", tr.reliability_weight)
+    _check_share("trust.ranking_weight", tr.ranking_weight)
+    if not 0 <= tr.flag_below < tr.prior_mean:
+        raise ConfigError("trust.flag_below must be at least 0 and below trust.prior_mean")
+    if tr.flag_min_ratings < 1:
+        raise ConfigError("trust.flag_min_ratings must be at least 1")
+    for kind in ("neighbourhoods", "venues"):
+        places = getattr(cfg.geo, kind)
+        if not places:
+            raise ConfigError(f"geo needs at least one [[geo.{kind}]] entry")
+        if len({pl.name for pl in places}) != len(places):
+            raise ConfigError(f"geo.{kind} names must be unique")
+        if any(not (-90 <= pl.lat <= 90 and -180 <= pl.lon <= 180) for pl in places):
+            raise ConfigError(f"geo.{kind} coordinates are out of range")
+    cs = cfg.cycle_simulation
+    _check_positive("cycle_simulation.cycles", cs.cycles)
+    if cs.new_women_per_cycle < 0:
+        raise ConfigError("cycle_simulation.new_women_per_cycle must not be negative")
+    for name in (
+        "pay_in_time_chooser",
+        "pay_in_time_chosen",
+        "cancel_rate",
+        "late_cancel_share",
+        "event_rate",
+        "bad_actor_share",
+    ):
+        _check_share(f"cycle_simulation.{name}", getattr(cs, name))
+    if cs.rating_noise < 0 or cs.rating_halo < 0 or cs.conduct_effect < 0:
+        raise ConfigError(
+            "cycle_simulation.rating_noise, rating_halo and conduct_effect must not be negative"
+        )
+    if not 1 <= cs.rating_center <= 5:
+        raise ConfigError("cycle_simulation.rating_center must be between 1 and 5")
+
 
 def _population(raw: dict) -> PopulationConfig:
     if "population" not in raw:
@@ -369,6 +481,22 @@ def _population(raw: dict) -> PopulationConfig:
             f"[[population.areas]] entries need name, lat, lon, share: {exc}"
         ) from exc
     return _section({"population": data}, "population", PopulationConfig)
+
+
+def _geo(raw: dict) -> GeoConfig:
+    if "geo" not in raw:
+        raise ConfigError("missing section [geo]")
+    data = raw["geo"]
+    unknown = [k for k in data if k not in ("neighbourhoods", "venues")]
+    if unknown:
+        raise ConfigError(f"[geo] has unknown keys: {', '.join(unknown)}")
+    try:
+        return GeoConfig(
+            neighbourhoods=tuple(Place(**pl) for pl in data.get("neighbourhoods", [])),
+            venues=tuple(Place(**pl) for pl in data.get("venues", [])),
+        )
+    except TypeError as exc:
+        raise ConfigError(f"[[geo.*]] entries need name, lat, lon: {exc}") from exc
 
 
 def from_dict(raw: dict) -> Config:
@@ -399,6 +527,11 @@ def from_dict(raw: dict) -> Config:
         simulation=_section(raw, "simulation", SimulationConfig),
         population=_population(raw),
         values=values,
+        booking=_section(raw, "booking", BookingConfig),
+        billing=_section(raw, "billing", BillingConfig),
+        trust=_section(raw, "trust", TrustConfig),
+        geo=_geo(raw),
+        cycle_simulation=_section(raw, "cycle_simulation", CycleSimulationConfig),
     )
     validate(cfg)
     return cfg

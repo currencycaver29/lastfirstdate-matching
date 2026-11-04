@@ -22,9 +22,11 @@ arithmetic; they are not predictions of real behavior.
 1. **The core design fits.** AI ranking before her daily list, "she chooses", two-way
    matches, a photo exercise that learns each member's type, no attractiveness scores, and
    learning from private post-date ratings are all built and tested.
-2. **The Phase 1 plan works in simulation.** In one NYC zone with 100 paying men, about **87%**
-   of men reach 3 dates with 300 women (3:1) and about **94%** with 500 women (5:1), close to and
-   above the 90% north star.
+2. **The Phase 1 plan works, but below the 90% north star once real friction is counted.** The
+   batch simulations gave about **87%** of men 3 *booked* dates at 3:1 and **94%** at 5:1. Sprint 7
+   simulated the real flow (payment holds, cancellations, no-shows, refills, billing cycles):
+   about **68%** of men get 3 *delivered* dates a cycle, and credits cost about 17% of
+   subscription revenue (section 8).
 3. **The women's promise needs rewording.** At 3:1 the average woman can get at most about 1 date
    a month (100 men × 3 dates = 300 dates for 300 women), and in simulation 34% get none. "Commit
    to three dates a month" should read "up to three".
@@ -166,3 +168,21 @@ per month, or 13% to 27% of subscription revenue.
    booking and billing items once the app has a database.
 4. Brief the lawyer with `docs/risk-plan.md`.
 5. When the app has a repo, check its real fields against section 5.
+
+## 8. The real booking flow (Sprint 7)
+
+Sprint 7 built the site's booking and billing rules and simulated them day by day over three
+billing cycles, in three simulated Phase 1 markets (100 paying men, 300 women, 15% new women per
+cycle):
+
+| Version | Men with 3 delivered dates | Credits (share of subscriptions) |
+|---|---:|---:|
+| Real flow | **68% ± 1** | 17% |
+| Real flow, no new women | 58% ± 2 | 26% |
+| Show-ups 97% instead of 92% | 76% ± 2 | 14% |
+| Everyone pays within the 15 minutes | 69% ± 3 | 16% |
+| No friction at all | 90% ± 3 | 7% |
+
+About one booked date in three falls through (hold not paid in time, cancellation or no-show),
+and a man's cycle often ends before the slot is refilled. Show-ups are the biggest lever; new
+women joining every cycle keep the market from wearing out. Details: `docs/sprints/sprint-7.md`.

@@ -22,8 +22,16 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   every men's sale and pauses the waitlist when it says stop.
 - [ ] **Reword the women's commitment** to "up to three dates a month". At 3:1 the average woman
   can have at most about 1 date a month. *Owner: Founder.*
-- [ ] **Budget for credits** from day one (13% to 27% of revenue in the city-wide simulations) and
-  track fulfilment weekly. *Owner: Founder.*
+- [ ] **Budget for credits** from day one and track fulfilment weekly. *Owner: Founder.* Sprint 7
+  simulated the real booking flow (payment holds, cancellations, no-shows, refills): in Phase 1
+  about **68% of men get 3 delivered dates a cycle** and credits cost about **17% of
+  subscription revenue**. The earlier 87% to 96% counted booked dates only.
+- [ ] **Keep recruiting women after launch,** about 15% of the launch number every cycle. Without
+  new women, fulfilment falls each cycle (66%, 60%, 49% in simulation) because the same people
+  keep passing on each other. *Owner: Founder.*
+- [ ] **Raise show-ups.** Each no-show or cancellation needs a refill. Show-ups of 97% instead of
+  92% add about 8 points of fulfilment, the biggest single lever found. Reminders, the $10 fee and
+  reliability in the trust score all help. *Owner: Founder and Engineering.*
 - [ ] **Decide who the guarantee is offered to.** In simulation, offering it only to men with 50 or
   more possible matches reaches about 96%. Pool size depends only on a member's own settings and
   location, so it is fair to use. Never use how often someone is picked: that would be a
@@ -125,6 +133,13 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
 >     (including alcohol and ID checks at the door)?
 > 12. **Privacy policy and terms.** Please draft or review both, including members' rights to access
 >     and delete their data and our breach-notification duties.
+> 13. **When he is the one who misses the date.** We plan to count a man's own late cancellation
+>     (under 24 hours) or no-show as one of his three delivered dates, so no credit is owed, while
+>     a woman's cancellation or no-show is refilled. The person who wasn't at fault gets the $10 fee
+>     back. Is that fair and enforceable, and how must the terms say it?
+> 14. **Dates he declines.** If a woman chooses a man and he declines (or doesn't pay within the 15
+>     minutes), may that offer count toward the guarantee, or must we still credit him if he ends
+>     the cycle short?
 >
 > Thank you. We can share product screens, data-flow diagrams and the matching engine's
 > documentation.

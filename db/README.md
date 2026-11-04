@@ -1,4 +1,10 @@
-# Database queries
+# Database
+
+`schema.sql` is the data the app should keep for matching, booking, billing, ratings, events
+and geography (requirement FR-LM-36 in `docs/SPEC.md`). It runs on PostgreSQL and SQLite; the
+tests load it into SQLite and check that its states match the engine's.
+
+## Queries
 
 The original lastfirstdate pre-filter SQL query (Stage 1) belongs here as
 `lastfirstdate_prefilter.sql`. It is not in this repo yet.
