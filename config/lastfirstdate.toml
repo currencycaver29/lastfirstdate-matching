@@ -96,6 +96,8 @@ training_swipes = 50          # random swipes per member used to fit the startin
 lead_days = 1                 # earliest window: this many days ahead (no same-day dates)
 horizon_days = 14             # windows are looked for this many days ahead (at most 21)
 hold_minutes = 15             # both $10 payments must arrive within this many minutes
+timezone = "America/New_York" # the zone's clock: date windows and dates are local (D19)
+part_starts = [12, 19, 22]    # hour lunch, evening and late dates begin, local time
 
 [billing]                     # Cycles, delivered dates, credits and date fees (FR-LM-38)
 price_per_cycle = 200.0       # dollars per billing cycle for a paying member

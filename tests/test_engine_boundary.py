@@ -40,6 +40,7 @@ SIM_ONLY = {
     "lastfirstdate.cycle_sim",
     "lastfirstdate.gate_report",
     "lastfirstdate.app_sim",
+    "lastfirstdate.fixes_report",
 }
 
 

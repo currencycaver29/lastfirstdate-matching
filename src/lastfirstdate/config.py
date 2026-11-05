@@ -10,6 +10,7 @@ import math
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 DEFAULT_PATH = Path(__file__).resolve().parents[2] / "config" / "lastfirstdate.toml"
 
@@ -127,6 +128,8 @@ class BookingConfig:
     lead_days: int
     horizon_days: int
     hold_minutes: int
+    timezone: str  # the zone's clock: date windows are local times (D19)
+    part_starts: list[int]  # hour each part of the day begins: lunch, evening, late
 
 
 @dataclass(frozen=True)
@@ -436,6 +439,13 @@ def validate(cfg: Config) -> None:
     if not 0 <= bk.lead_days < bk.horizon_days <= 21:
         raise ConfigError("booking needs 0 <= lead_days < horizon_days <= 21")
     _check_positive("booking.hold_minutes", bk.hold_minutes)
+    try:
+        ZoneInfo(bk.timezone)
+    except (ZoneInfoNotFoundError, ValueError) as exc:
+        raise ConfigError(f"booking.timezone {bk.timezone!r} is not a known time zone") from exc
+    starts = list(bk.part_starts)
+    if len(starts) != 3 or starts != sorted(set(starts)) or not 0 <= starts[0] <= starts[-1] <= 23:
+        raise ConfigError("booking.part_starts needs 3 increasing hours between 0 and 23")
     bl = cfg.billing
     for name in ("price_per_cycle", "cycle_days", "date_fee", "full_refund_hours"):
         _check_positive(f"billing.{name}", getattr(bl, name))
@@ -604,6 +614,8 @@ _KEY_IMPACT = {
     "dates.date_value": ENGINEERING,
     "dates.late_month_bonus": ENGINEERING,
     "billing.cycle_days": REFIT,  # the forecast is fitted on 28-day cycles
+    "booking.timezone": ENGINEERING,  # the zone's clock
+    "booking.part_starts": BUSINESS,  # the times members see
     "trust.flag_below": BUSINESS,  # safety policy
     "trust.flag_min_ratings": BUSINESS,
 }

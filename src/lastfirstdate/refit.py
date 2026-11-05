@@ -25,7 +25,6 @@ better by a margin. Then recalibrate on every cycle.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
-from datetime import date, datetime
 
 import numpy as np
 
@@ -90,9 +89,10 @@ class CycleRows:
 
 
 def _day_of(stamp: str | None, market: app.Market) -> int | None:
+    """The day of a timestamp in the zone's own time (D19)."""
     if stamp is None:
         return None
-    return market.calendar.day(datetime.fromisoformat(stamp).date())
+    return market.calendar.day(app.local_date(stamp, market.tz))
 
 
 def cycle_rows(con, market: app.Market, eligible: np.ndarray, cfg: Config) -> CycleRows:
@@ -111,7 +111,7 @@ def cycle_rows(con, market: app.Market, eligible: np.ndarray, cfg: Config) -> Cy
     signups = app.signup_days(con, market, cfg)
     joined = np.array([0] * len(market.members))
     for r in app.read(con, "members"):
-        joined[market.row[r["id"]]] = market.calendar.day(date.fromisoformat(r["joined_at"][:10]))
+        joined[market.row[r["id"]]] = _day_of(r["joined_at"], market)
     women_all = np.flatnonzero((market.arr.gender == app.WOMAN) & market.arr.verified)
     subscribers = np.flatnonzero(signups != app.NO_SIGNUP)
     g, c = cfg.dates.guaranteed_per_month_paying, cfg.billing.cycle_days

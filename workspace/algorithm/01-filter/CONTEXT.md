@@ -23,6 +23,8 @@ stage works on its output, so a mistake here silently removes or adds matches ev
 - **Dealbreakers:** hard filters, never penalties (R6), including incompatible intent answers
   such as "Want kids" with "Not for me".
 - **Verification and activity.**
+- **Blocks (Sprint 12):** a pair where either blocked the other is never eligible
+  (`market.blocked`, passed as `excluded`); forgotten members are never eligible.
 
 ## Settings
 
@@ -30,7 +32,8 @@ stage works on its output, so a mistake here silently removes or adds matches ev
 
 ## Tests
 
-FR-LM-04 (`tests/test_filter.py`), FR-LM-30 (`tests/test_phase1.py`).
+FR-LM-04 (`tests/test_filter.py`), FR-LM-30 (`tests/test_phase1.py`), FR-LM-56 and FR-LM-57
+(`tests/test_sprint12.py`).
 
 ## Decisions
 

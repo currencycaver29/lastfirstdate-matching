@@ -18,6 +18,10 @@ Everything below is tested on a database filled with fake members
   changed, and what a change requires, is listed under [Settings](#settings).
 - **Calendar:** `cal = app.Calendar(epoch)`, where `epoch` is any Monday before launch. Every
   day number is counted from it, because weekly free slots are numbered from Monday.
+- **Times (D19):** store timestamps (the `_at` columns) in UTC, best with an offset, for
+  example `2026-11-05T23:30:00+00:00`; a timestamp without one is read as UTC. Dates and date
+  windows are New York time (`[booking] timezone`). The engine converts before comparing, so a
+  cancellation 26 hours ahead counts as early whatever the clocks do.
 
 ## The call sequence
 
@@ -26,15 +30,17 @@ Everything below is tested on a database filled with fake members
 | **Sign-up** | `app.nearest_neighbourhood_id` | neighbourhoods | a neighbourhood id | stores only the neighbourhood, never the address |
 | **Photo exercise** | `app.start_calibration` (or `app.resume_calibration` after an interruption), then `CalibrationSession.next_question` and `CalibrationSession.answer`, one question at a time | calibration_answers (to resume) | the next photo or pair (`app.question_photo_ids`), until done | shows it; saves each answer with `app.answer_row` |
 | **Every night** | `MarketCache.refresh`: it calls `app.load_market`, `app.calibration_answers`, `app.fit_tastes` and `app.nightly_scores`, refitting only members whose answers changed | members, free_slots, intent_answers, prompts, neighbourhoods, calibration_answers | today's `NightlyScores` (also kept in the cache) | passes the decrypted photo embeddings; once a week passes `refit_start=True` |
-| **Every morning** | `app.day_lists`, once, for all the day's choosers | bookings, payments, list_shows, subscriptions, ratings, waitlist, venues | each woman's list: up to 30 `ListEntry` (profile id, date, part of day) | when she opens the app, shows her list; inserts a `list_shows` row for each profile |
-| **She picks** | `app.propose` | venues | a `Booking` and the fair venue's id | sets `list_shows.picked = 1`; asks him |
-| **He accepts** | `Booking.hold`, then `Booking.pay` for each $10 payment | (in memory) | confirmed, or expired after 15 minutes | saves `app.booking_row` and the `payments`; reveals the venue |
+| **Every morning** | `app.day_lists`, once, for all the day's choosers | bookings, payments, list_shows, subscriptions, ratings, waitlist, venues | each woman's list: up to 30 `ListEntry` (profile id, date, part of day) | when she opens the app, shows her list; inserts a `list_shows` row for each profile with `app.list_show_row` (it records the position and match value) |
+| **She picks** | `app.recheck_pick`, then `app.propose` with the entry it returns, in one transaction | bookings, payments, subscriptions, blocks, venues | the window (unchanged, or the next one both can make, or None), then a `Booking` and the fair venue's id | if None, tells her he is no longer available; if the window moved, shows the new one; saves the booking with `app.booking_row`; sets `list_shows.picked = 1`; asks him |
+| **He accepts** | `app.recheck_pick` with the booking's id, then `Booking.hold`, then `Booking.pay` for each $10 payment, in one transaction | bookings, payments, subscriptions, blocks | the window still free (or not), then confirmed, or expired after 15 minutes | saves `app.booking_row` and the `payments`; reveals the venue |
 | **A cancellation or the date itself** | `Booking.cancel`, `Booking.finish`, `billing.fee_refunds` | (in memory) | the new state; refunds per person | updates the booking and payments |
 | **After a date** | `app.trust_from_db`, then `TrustBook.flagged` and `TrustBook.ranking_factor` | ratings, bookings | who to review | sets `paused_for_review`; adds a `trust_reviews` row |
 | **Every week** | `app.weekly_alerts` | bookings, subscriptions | men likely to miss their 3 dates, and every man's chance | gives them priority, an event invite or a message |
 | **Cycle end** | `app.close_cycle` | bookings, subscriptions | delivered dates and the credit in dollars | writes `cycles.delivered` and `credit_cents`; credits him |
 | **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions | men to admit (in waitlist order), deferrals, the forecast and why it stopped | admits them; logs `gate_decisions` |
-| **An event connection** | `app.propose` with `source="event"` | venues | a `Booking` | saves it with the `event_id`; same hold and payments |
+| **An event connection** | `app.recheck_pick`, then `app.propose` with `source="event"` | bookings, blocks, venues | a `Booking` | saves it with the `event_id`; same hold and payments |
+| **A member blocks someone** | `app.upcoming_between` | bookings | bookings still ahead between them | inserts a `blocks` row; cancels those bookings. The block counts at once: lists, the photo exercise and `recheck_pick` read it immediately |
+| **A member deletes their account** | `app.forget_statements` | (none) | the SQL that forgets them (decision D18) | deletes their photo files from storage; runs the statements in one transaction; from then on passes a zero embedding for them each night |
 | **Every month, once real cycles exist** | `refit.propose_refit` | members, subscriptions, bookings | whether to switch to a forecast recalibrated on the app's own cycles, and the new model | if it says switch, saves the model to `config/forecast_delivered.toml` |
 
 ### The photo exercise in practice
@@ -80,8 +86,28 @@ and shuffle that order every day so nobody always goes first. For Phase 1 the ca
 - both people are eligible (orientation, age, distance, dealbreakers, verification);
 - he isn't paused or still on the waitlist;
 - they haven't already picked or dated each other;
+- neither has blocked the other;
 - he wasn't shown to her in the last 7 days;
 - they share a free window, which is the date shown with the profile.
+
+### Picks, blocks and leaving
+
+- **Check a pick again before writing it.** Several women can be shown the same man for the
+  same evening on one day. `app.recheck_pick` reads the bookings at that moment: it returns the
+  window if it is still free for both and both are under their caps, else the earliest window
+  both can still make, else None. A pending pick holds its day for both people. Run the check
+  and the insert in **one transaction** (on PostgreSQL, `SERIALIZABLE` or a row lock on the
+  two members), so two picks at the same instant can't both win. Check again, with the
+  booking's id, when he accepts.
+- **Blocks** take effect at once. Insert the `blocks` row, then cancel what
+  `app.upcoming_between` returns.
+- **Leaving.** `app.forget_statements` deletes what describes the member and keeps an
+  anonymous record (decision D18; the lawyer should confirm it). Because it also deletes other
+  members' answers about their photo, number new photo-exercise answers from the highest
+  stored `position` plus one, not from a count. Those members' taste models refit that night.
+- **List logs.** Save each shown profile with `app.list_show_row`: its position and match value let
+  a later version learn without bias and be tested on past lists. They can't be added later
+  for lists already shown.
 
 ## Refitting on real cycles
 
@@ -109,10 +135,11 @@ of 92%), the forecast said 83% while 76% got their dates; the recalibrated forec
 | Table | Read by | Written by the app when |
 |---|---|---|
 | `neighbourhoods`, `venues` | `load_market`, `propose` | the zone is set up |
-| `members`, `free_slots`, `intent_answers`, `prompts` | `load_market` | sign-up and profile edits |
+| `members`, `free_slots`, `intent_answers`, `prompts` | `load_market` | sign-up and profile edits; `forget_statements` when a member deletes their account |
 | `photo_embeddings` | (the app decrypts them and passes the matrix to `photo_feature_matrix`) | photos are added |
 | `calibration_answers` | `calibration_answers` | the photo exercise |
-| `list_shows` | `day_lists` | lists are shown and picks are made |
+| `list_shows` | `day_lists` | lists are shown (`list_show_row`) and picks are made |
+| `blocks` | `load_market`, `day_lists`, `recheck_pick` | a member blocks someone |
 | `bookings`, `payments` | `day_lists`, `weekly_alerts`, `close_cycle`, `trust_from_db` | picks, payments, cancellations, dates |
 | `ratings`, `trust_reviews` | `trust_from_db` | after each date; reviews |
 | `subscriptions`, `cycles` | `day_lists`, `weekly_alerts`, `close_cycle`, `gate_for_sale` | sales; cycle ends |
@@ -126,7 +153,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 <!-- settings:start -->
 **Business terms: change any time (with legal review where money is involved)**
 
-`calibration.group_share_tolerance`, `fairness.min_rate_ratio`, `gate.target`, `gate.min_women_per_man`, `gate.min_pool`, `gate.at_risk_threshold`, `billing.price_per_cycle`, `billing.trial_days`, `billing.date_fee`, `billing.full_refund_hours`, `billing.late_refund_share`, `billing.own_absence_counts`, `trust.flag_below`, `trust.flag_min_ratings`, `geo.neighbourhoods`, `geo.venues`
+`calibration.group_share_tolerance`, `fairness.min_rate_ratio`, `gate.target`, `gate.min_women_per_man`, `gate.min_pool`, `gate.at_risk_threshold`, `booking.part_starts`, `billing.price_per_cycle`, `billing.trial_days`, `billing.date_fee`, `billing.full_refund_hours`, `billing.late_refund_share`, `billing.own_absence_counts`, `trust.flag_below`, `trust.flag_min_ratings`, `geo.neighbourhoods`, `geo.venues`
 
 **Simulate first: rerun the reports and check fulfilment before changing**
 
@@ -142,7 +169,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 **Engineering only: changes the data the app collects or how a model is fitted**
 
-`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`, `refit.min_man_cycles`, `refit.holdout_share`, `refit.min_improvement`
+`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`, `booking.timezone`, `refit.min_man_cycles`, `refit.holdout_share`, `refit.min_improvement`
 <!-- settings:end -->
 
 ## Assumptions the app must keep

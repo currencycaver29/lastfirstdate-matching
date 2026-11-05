@@ -54,6 +54,10 @@ photos).
 - Per answer, pairs teach as much as singles. At a fixed 30 photos, 9 pairs cost 0.019 AUC
   (0.818 against 0.838), because a pair uses two photos for one answer.
 - Pairs' real advantage, being immune to a member's mood or threshold, isn't modelled.
+- In the app, `app.photo_pool` is the pool: never someone either person blocked (Sprint 12).
+  When a member is forgotten, everyone's answers about their photo are deleted, so those
+  members' models refit with fewer answers; the photo compression is fitted only on members
+  who still have a photo.
 
 ## If you change it
 

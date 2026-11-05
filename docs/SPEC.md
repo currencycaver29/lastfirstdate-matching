@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 11
+Current sprint: 12
 
 ## Goal
 
@@ -58,6 +58,8 @@ dates, and dates are scheduled into time both people have free.
 | D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
 | D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 simulation |
 | D17 | His own absence | His own late cancellation (under 24 hours) or no-show counts as one of his 3 delivered dates: no credit, no refill. Her cancellation or no-show never counts against him and his slot is refilled. In either case the person who wasn't at fault gets the $10 fee back (`billing.own_absence_counts`) | The site says "no-shows and cancellations don't count"; counting his own absences as delivered stops credits being gamed. To confirm with the lawyer (risk plan) |
+| D18 | Forgetting a member | When a member deletes their account, delete what describes them (photos, photo embeddings, prompts, intent answers, free slots, their photo-exercise answers and others' answers about their photo) and keep only the birth year; keep bookings, payments, ratings, blocks and list history under the same anonymous id, for accounting, other members' trust scores and safety. The member row stays, marked forgotten, and never matches again | Chosen by the owner (Sprint 12); the lawyer should confirm |
+| D19 | Times | Timestamps are stored in UTC, with an offset (`Z` or `+00:00`) or without one (then read as UTC); a value with no time of day is a date in the zone's own time. Date windows (`date_on` and the part of the day) are the zone's local time (`booking.timezone`). The engine converts before comparing | One rule removes the 4 to 5 hour error behind issue #9 |
 | D16 | Languages | Python for the engine, the simulator and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the simulator in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
@@ -587,6 +589,59 @@ ones (Brier score), and recommends switching only if the candidate is better by 
 Test: too little data is refused; a worse-than-assumed world leads to a switch, recalibrated
 on all the cycles.
 
+### Sprint 12: bug fixes before Phase 1
+
+The full review after Sprint 11 found four problems a real app would hit on day one (issues
+#9 to #12) and one piece of data that can't be added after launch. This sprint fixes them;
+earlier results must not move.
+
+#### FR-LM-54 · Times in the zone's own clock
+Sprint: 12
+Every timestamp is read under D19 and converted to the zone's time (`booking.timezone`) before
+the engine compares it with a date window or takes its date. The hour each part of the day
+begins moves into the settings (`booking.part_starts`, R5). Hours before a date are measured
+between true instants, so they stay right across a daylight-saving change.
+Test: a cancellation 26 hours ahead, stored in UTC, counts as early and one 23 hours ahead as
+late; `Z`, `+00:00` and no offset all parse; the hours are right in the week the clocks change;
+a member's last-active and join dates use New York's date, not UTC's.
+
+#### FR-LM-55 · A pick is checked again before it's booked
+Sprint: 12
+`app.recheck_pick` reads the current bookings when she picks, and again when he accepts. If
+the window shown is still free for both and both are under their caps, it returns it; if not,
+it returns the earliest window both can still make, or nothing. A pending pick holds its day
+for both people. The app runs the check and the insert in one transaction.
+Test: after one woman books a man's window, a second woman's pick of the same window is moved
+or refused; a man at his cycle cap is refused; the booking being accepted doesn't block itself.
+
+#### FR-LM-56 · Blocks
+Sprint: 12
+A `blocks` table records who blocked whom. A blocked pair, in either direction, never appears
+on each other's lists, never sees each other's photo in the photo exercise, and can't be
+booked together; the block takes effect at once, before the next nightly refresh.
+`app.upcoming_between` lists bookings between them for the app to cancel.
+Test: a blocked pair is never eligible, never listed and never in each other's photo pool;
+`recheck_pick` refuses them; a block changes the cached scores; with no blocks, every earlier
+result is unchanged.
+
+#### FR-LM-57 · Forgetting a member
+Sprint: 12
+`app.forget_statements` returns the portable SQL that applies D18. The engine then loads a
+forgotten member as permanently inactive, so past bookings still resolve, and fits the photo
+compression only on members who still have a photo.
+Test: a member with history can be forgotten; their profile data and others' answers about
+their photo are gone, the birth year remains, bookings and payments remain; the market still
+loads, and the forgotten member is never eligible, listed or shown in the photo exercise.
+
+#### FR-LM-58 · What each list showed, where and why
+Sprint: 12
+Each list entry carries its position on the list and its match value (the mutual score times
+the trust factor, which ordered it), and
+`app.list_show_row` gives the `list_shows` row with the engine's version. Without this, Phase
+1's data couldn't be used later to learn without bias or to test a new version offline.
+Test: positions run 1, 2, 3 in list order with match values from the ranking; the row fits the
+schema and carries the version.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -704,3 +759,12 @@ on all the cycles.
   the forecast said 83% against 76% actual; recalibrated, 76%. Finding: fulfilment drifts as a
   zone ages, so a recalibration on first cycles alone did worse on later ones; recalibrate
   monthly on recent cycles. Details: `docs/sprints/sprint-11.md`.
+- **Sprint 12.** Bug fixes found by the full review (issues #9 to #12), plus list logging.
+  Times now follow one rule (D19): a cancellation stored in UTC no longer looks 4 to 5 hours
+  later than it was, which had made every cancellation 24 to 28 hours ahead count as late,
+  and a `Z` no longer crashes the engine. Picks are re-checked before booking: when every
+  woman in a test zone picked her top profile at once, 160 picks would have landed on a taken
+  window; with the check none double-booked. Blocks, forgetting a member (D18, chosen by the
+  owner) and each list entry's position and match value were added to the schema and the engine.
+  The test history written for Sprint 11 now uses UTC timestamps and still rebuilds every
+  cycle identically. Details: `docs/sprints/sprint-12.md`.

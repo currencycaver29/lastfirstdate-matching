@@ -36,7 +36,8 @@ Weekly b-matching: min-cost flow when the graph splits into two sides, an intege
 
 ## Tests
 
-FR-LM-10 (`tests/test_scheduler.py`), FR-LM-37, FR-LM-40, FR-LM-41 (`tests/test_sprint7.py`).
+FR-LM-10 (`tests/test_scheduler.py`), FR-LM-37, FR-LM-40, FR-LM-41 (`tests/test_sprint7.py`),
+FR-LM-54 and FR-LM-55 (`tests/test_sprint12.py`).
 
 ## Papers
 
@@ -45,7 +46,7 @@ FR-LM-10 (`tests/test_scheduler.py`), FR-LM-37, FR-LM-40, FR-LM-41 (`tests/test_
 ## Decisions
 
 D4 (dates per month and caps), D17 (his own late cancellation or no-show counts as
-delivered).
+delivered), D19 (timestamps in UTC, date windows in the zone's own time).
 
 ## What we know
 
@@ -55,6 +56,13 @@ delivered).
   Sprint 7 missed this, which understated delivered dates (corrected in Sprint 8).
 - Allowing 2 dates a week instead of 1 didn't help.
 - Venue trips averaged under 1 km in Phase 1.
+- **Times (Sprint 12):** hours before a date are measured between true instants
+  (`app.hours_between`), so a UTC timestamp no longer makes a 24 to 28 hour cancellation look
+  late. `booking.timezone` and `booking.part_starts` are settings.
+- **Picks (Sprint 12):** `app.recheck_pick` re-reads bookings at pick and at acceptance; a
+  pending pick holds its day for both. When every woman in a test zone picked her top profile
+  at once, 160 picks would have landed on a taken window; with the check, none double-booked
+  (90 kept, 135 moved, 61 refused).
 
 ## If you change it
 

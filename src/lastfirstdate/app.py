@@ -13,6 +13,9 @@ slots and date windows are numbered from Monday.
 Locations: members give a neighbourhood, never an address, so the engine places each member at
 their neighbourhood's centre.
 
+Times (D19): timestamps are UTC, with or without an offset; a value with no time of day is a
+date in the zone's own time (`booking.timezone`), as are date windows. `local_time` converts.
+
 What the database doesn't hold, and so isn't used:
 - Big Five scores and interest tags (Phase 1 has neither; `w_big5` must be 0 and the text
   encoder "words");
@@ -23,13 +26,16 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import astuple, dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 import numpy as np
 
+from lastfirstdate import __version__
 from lastfirstdate.arrays import GENDERS, MemberArrays
 from lastfirstdate.billing import counts_toward_guarantee, credit, cycle_on, delivered, refill_bonus
 from lastfirstdate.booking import (
+    N_PARTS,
     Booking,
     dated_pairs,
     earliest_common,
@@ -65,11 +71,11 @@ from lastfirstdate.mutual import directional_score, looks_scores, mutual_score
 from lastfirstdate.personality import personality_matrix
 from lastfirstdate.trust import Rating, TrustBook, with_trust
 
-PART_STARTS = {"lunch": 12, "evening": 19, "late": 22}  # hour each part of the day begins
 WOMAN = GENDERS.index("woman")
 NOT_ADMITTED = ("waiting", "deferred_small_pool", "withdrawn")  # waitlist states
 NEUTRAL_BIG5 = (0.5, 0.5, 0.5, 0.5, 0.5)
 NO_SIGNUP = np.iinfo(np.int64).min  # signup day of members without a subscription
+PENDING = ("proposed", "held", "confirmed")  # bookings that still lie ahead
 
 
 class HandoffError(ValueError):
@@ -106,6 +112,30 @@ def age_on(birth: date, today: date) -> int:
     return today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
 
 
+def local_time(stamp: str | datetime, tz: ZoneInfo) -> datetime:
+    """An instant in the zone's own time (D19). With an offset (`Z`, `+00:00`, ...) it is
+    converted; with none it is read as UTC; a date with no time of day is midnight there."""
+    if isinstance(stamp, str):
+        text = stamp.strip()
+        when = datetime.fromisoformat(text)
+        if len(text) == 10:  # a date, already in the zone's own time
+            return when.replace(tzinfo=tz)
+    else:
+        when = stamp
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return when.astimezone(tz)
+
+
+def local_date(stamp: str | datetime, tz: ZoneInfo) -> date:
+    return local_time(stamp, tz).date()
+
+
+def hours_between(later: datetime, earlier: datetime) -> float:
+    """True hours between two aware instants (right across a daylight-saving change)."""
+    return (later.astimezone(UTC) - earlier.astimezone(UTC)).total_seconds() / 3600
+
+
 # ---------------------------------------------------------------- the market
 
 
@@ -121,19 +151,27 @@ class Market:
     neighbourhood: list[Place]  # each member's neighbourhood
     calendar: Calendar
     today: int  # day index
+    tz: ZoneInfo  # the zone's clock (booking.timezone)
+    part_starts: tuple[int, ...]  # hour lunch, evening and late begin, local time
+    blocked: np.ndarray  # (n, n) pairs where either blocked the other (FR-LM-56)
+    forgotten: np.ndarray  # (n,) members who deleted their account (FR-LM-57)
 
     def rows(self, ids) -> list[int]:
         return [self.row[int(i)] for i in ids]
 
 
 def load_market(con, cfg: Config, calendar: Calendar, today: date) -> Market:
-    """Members, free slots, intent answers and prompts, as the engine's profiles."""
+    """Members, free slots, intent answers, prompts and blocks, as the engine's profiles.
+
+    A forgotten member (D18) loads as permanently inactive, so past bookings still resolve.
+    """
     if cfg.personality.w_big5 > 0:
         raise HandoffError("the database holds no Big Five scores: set personality.w_big5 = 0")
     if cfg.personality.text_encoder != "words":
         raise HandoffError("the database holds prompts, not tags: use text_encoder = 'words'")
     if any(q.mode != "closeness" for q in cfg.values):
         raise HandoffError("the database holds one answer per question: use closeness questions")
+    tz = ZoneInfo(cfg.booking.timezone)
     hoods = {r["id"]: Place(r["name"], r["lat"], r["lon"]) for r in read(con, "neighbourhoods")}
     slots: dict[int, set[int]] = defaultdict(set)
     for r in read(con, "free_slots"):
@@ -144,11 +182,12 @@ def load_market(con, cfg: Config, calendar: Calendar, today: date) -> Market:
     prompts: dict[int, list[tuple[str, str]]] = defaultdict(list)
     for r in read(con, "prompts"):
         prompts[r["member_id"]].append((r["prompt"], r["answer"]))
-    members, ids, places, paused = [], [], [], []
+    members, ids, places, paused, forgotten = [], [], [], [], []
     for k, r in enumerate(sorted(read(con, "members"), key=lambda r: r["id"])):
         mid = r["id"]
+        gone = r.get("forgotten_at") is not None
         missing = [q.key for q in cfg.values if q.key not in answers[mid]]
-        if missing:
+        if missing and not gone:
             raise HandoffError(f"member {mid} has not answered: {', '.join(missing)}")
         hood = hoods[r["neighbourhood_id"]]
         seeking = {
@@ -171,13 +210,13 @@ def load_market(con, cfg: Config, calendar: Calendar, today: date) -> Market:
                 lat=hood.lat,
                 lon=hood.lon,
                 max_km=r["max_km"],
-                verified=bool(r["verified"]),
-                last_active_days=(today - date.fromisoformat(r["last_active_at"][:10])).days,
-                paying=bool(r["paying"]),
-                free_slots=frozenset(slots[mid]),
+                verified=bool(r["verified"]) and not gone,
+                last_active_days=(today - local_date(r["last_active_at"], tz)).days,
+                paying=bool(r["paying"]) and not gone,
+                free_slots=frozenset() if gone else frozenset(slots[mid]),
                 interests=(),
                 bio=" ".join(text for _, text in sorted(prompts[mid])),
-                values={q.key: answers[mid][q.key] for q in cfg.values},
+                values={q.key: answers[mid].get(q.key, q.options[0]) for q in cfg.values},
                 accepts={q.key: frozenset(q.options) for q in cfg.values},
                 dealbreakers=frozenset(),
                 big5=NEUTRAL_BIG5,
@@ -186,18 +225,39 @@ def load_market(con, cfg: Config, calendar: Calendar, today: date) -> Market:
         )
         ids.append(mid)
         places.append(hood)
-        paused.append(bool(r["paused_for_review"]))
+        paused.append(bool(r["paused_for_review"]) or gone)
+        forgotten.append(gone)
     ids_arr = np.array(ids, dtype=np.int64)
+    row = {int(m): k for k, m in enumerate(ids_arr)}
     return Market(
         members=members,
         ids=ids_arr,
-        row={int(m): k for k, m in enumerate(ids_arr)},
+        row=row,
         arr=MemberArrays.from_members(members, cfg.values),
         paused=np.array(paused, dtype=bool),
         neighbourhood=places,
         calendar=calendar,
         today=calendar.day(today),
+        tz=tz,
+        part_starts=tuple(cfg.booking.part_starts),
+        blocked=_blocked(con, row, len(members)),
+        forgotten=np.array(forgotten, dtype=bool),
     )
+
+
+def _blocked(con, row: dict[int, int], n: int) -> np.ndarray:
+    out = np.zeros((n, n), dtype=bool)
+    for r in read(con, "blocks"):
+        a, b = row.get(r["blocker_id"]), row.get(r["blocked_id"])
+        if a is not None and b is not None:
+            out[a, b] = out[b, a] = True
+    return out
+
+
+def blocked_pairs(con, market: Market) -> np.ndarray:
+    """(n, n) pairs where either member blocked the other, read now (FR-LM-56): a block
+    counts at once, before the next nightly refresh."""
+    return _blocked(con, market.row, len(market.members))
 
 
 # ---------------------------------------------------------------- nightly: tastes and scores
@@ -215,8 +275,22 @@ def calibration_answers(con, market: Market) -> dict[int, list[tuple[int, int | 
 
 
 def photo_feature_matrix(embeddings: np.ndarray, cfg: Config) -> np.ndarray:
-    """Photo features from the decrypted embeddings, one row per market row."""
-    return photo_features(ArrayPhotoEncoder(np.asarray(embeddings)), len(embeddings), cfg)[1]
+    """Photo features from the decrypted embeddings, one row per market row (a forgotten
+    member's row is all zeros and is left out of the compression's fit)."""
+    raw = np.asarray(embeddings)
+    if _has_photo(raw).all():
+        return photo_features(ArrayPhotoEncoder(raw), len(raw), cfg)[1]
+    return with_intercept(_fit_pca(raw, cfg).transform(raw))
+
+
+def _has_photo(raw: np.ndarray) -> np.ndarray:
+    return np.linalg.norm(raw, axis=1) > 0
+
+
+def _fit_pca(raw: np.ndarray, cfg: Config) -> PCA:
+    """The photo compression, fitted on members who still have a photo (FR-LM-57)."""
+    has = _has_photo(raw)
+    return PCA.fit(raw[has] if has.any() else raw, cfg.calibration.pca_dim)
 
 
 def starting_taste(
@@ -265,7 +339,7 @@ def fit_tastes(
                 taste.add_pair(features[a], features[b], g[a], choice, refit=False)
                 seen |= {a, b}
         taste.refit()
-        pool = calibration_pool(market.arr, cfg, v)
+        pool = photo_pool(market, cfg, v)
         taste.complete = len(rows) >= c.n_profiles - c.n_pairs or seen >= set(pool.tolist())
         if taste.complete:
             tastes[v] = taste
@@ -286,7 +360,7 @@ def nightly_scores(
 ) -> NightlyScores:
     """Stages 1, 4 and 5 for everyone, with the looks tastes from `fit_tastes`."""
     arr = market.arr
-    eligible = eligibility_matrix(arr, cfg)
+    eligible = eligibility_matrix(arr, cfg, excluded=market.blocked)
     p = personality_matrix(market.members, arr, cfg)
     v = looks_scores(tastes, features, arr.gender, eligible)
     s = directional_score(v, p, eligible, cfg.mix.looks_weight)
@@ -296,6 +370,13 @@ def nightly_scores(
 # ---------------------------------------------------------------- the photo exercise, step by step
 
 
+def photo_pool(market: Market, cfg: Config, v: int) -> np.ndarray:
+    """Rows whose photos member v may be shown (decision D12), never someone either of them
+    blocked (FR-LM-56)."""
+    pool = calibration_pool(market.arr, cfg, v)
+    return pool[~market.blocked[v, pool]]
+
+
 def start_calibration(
     market: Market, features: np.ndarray, member_id: int, start: StartingTaste, cfg: Config
 ) -> CalibrationSession:
@@ -303,7 +384,7 @@ def start_calibration(
     v = market.row[member_id]
     c = cfg.calibration
     taste = PersonalTaste(int(market.arr.gender[v]), start, c.l2_penalty, c.n_profiles)
-    pool = calibration_pool(market.arr, cfg, v)
+    pool = photo_pool(market, cfg, v)
     return CalibrationSession(taste, pool, features, market.arr.gender, cfg, pairs=c.n_pairs > 0)
 
 
@@ -370,7 +451,7 @@ class MarketCache:
         market = load_market(con, cfg, self.calendar, today)
         raw = np.asarray(embeddings)
         if self.pca is None or refit_start:
-            self.pca = PCA.fit(raw, cfg.calibration.pca_dim)
+            self.pca = _fit_pca(raw, cfg)
         features = with_intercept(self.pca.transform(raw))
         answers = calibration_answers(con, market)
         if self.start is None or refit_start:
@@ -388,6 +469,7 @@ class MarketCache:
                 astuple(a) == astuple(b)
                 for a, b in zip(market.members, self.market.members, strict=True)
             )
+            and np.array_equal(market.blocked, self.market.blocked)
         )
         if not changed and same_members and not refit_start and self.scores is not None:
             self.market, self.last_refitted = market, []
@@ -436,16 +518,22 @@ def load_bookings(con, market: Market) -> Bookings:
         bk.venue = venues.get(r["venue_id"])
         if r["cancelled_by"] is not None:
             bk.cancelled_by = market.row[r["cancelled_by"]]
-            starts = datetime.combine(date.fromisoformat(r["date_on"]), datetime.min.time())
-            starts += timedelta(hours=PART_STARTS[r["part"]])
-            bk.hours_before = (
-                starts - datetime.fromisoformat(r["cancelled_at"])
-            ).total_seconds() / 3600
+            bk.hours_before = hours_between(
+                date_start(market, r["date_on"], r["part"]),
+                local_time(r["cancelled_at"], market.tz),
+            )
         if r["showed_a"] is not None:
             bk.showed = {a: bool(r["showed_a"]), b: bool(r["showed_b"])}
         items.append(bk)
         ids.append(r["id"])
     return Bookings(items, ids)
+
+
+def date_start(market: Market, day: date | str, part: str) -> datetime:
+    """When a date window begins, in the zone's own time."""
+    on = date.fromisoformat(day) if isinstance(day, str) else day
+    hour = market.part_starts[PARTS_OF_DAY.index(part)]
+    return datetime.combine(on, time(hour), tzinfo=market.tz)
 
 
 def list_history(con, market: Market, bookings: Bookings) -> tuple[np.ndarray, np.ndarray]:
@@ -552,6 +640,8 @@ class ListEntry:
     member_id: int  # database id of the profile shown
     day: date  # the proposed date
     part: str  # lunch, evening or late
+    position: int = 0  # place on her list, from 1 (FR-LM-58)
+    match_value: float = 0.0  # what ordered it: the pair's mutual score times the trust factor
 
 
 def trust_from_db(con, market: Market, bookings: Bookings, cfg: Config) -> TrustBook:
@@ -616,6 +706,7 @@ def day_lists(
     cap = capacity(bookings, market, signups, cfg)
     trust = trust_from_db(con, market, bookings, cfg)
     bits = free_windows(market, cap, signups, cfg)
+    blocked = blocked_pairs(con, market)
     n = len(market.members)
     full = market.paused.copy()
     for m in range(n):
@@ -639,6 +730,7 @@ def day_lists(
             full,
             closed,
         )
+        a &= ~blocked[i]
         cand = np.flatnonzero(a)
         if cand.size:
             a[cand[earliest_common(bits[i], bits[cand]) < 0]] = False
@@ -656,13 +748,33 @@ def day_lists(
     out = {}
     for i, js in lists.items():
         entries = []
-        for j in js:
+        for position, j in enumerate(js, start=1):
             day, part = window_day_part(int(earliest_common(bits[i], bits[int(j)])), market.today)
             entries.append(
-                ListEntry(int(market.ids[j]), market.calendar.date(day), PARTS_OF_DAY[part])
+                ListEntry(
+                    int(market.ids[j]),
+                    market.calendar.date(day),
+                    PARTS_OF_DAY[part],
+                    position,
+                    float(ranked[i, int(j)]),
+                )
             )
         out[int(market.ids[i])] = entries
     return out
+
+
+def list_show_row(chooser_id: int, entry: ListEntry, shown_on: date, picked: bool = False) -> dict:
+    """Column values for `list_shows`, with where the profile was shown and its match value
+    (FR-LM-58)."""
+    return {
+        "chooser_id": chooser_id,
+        "candidate_id": entry.member_id,
+        "shown_on": shown_on.isoformat(),
+        "picked": int(picked),
+        "position": entry.position,
+        "match_value": entry.match_value,
+        "engine_version": __version__,
+    }
 
 
 # ---------------------------------------------------------------- picks and bookings
@@ -672,6 +784,102 @@ def venues_from_db(con) -> tuple[list[Place], list[int]]:
     rows = sorted(read(con, "venues"), key=lambda r: r["id"])
     rows = [r for r in rows if r["active"]]
     return [Place(r["name"], r["lat"], r["lon"]) for r in rows], [r["id"] for r in rows]
+
+
+def recheck_pick(
+    con,
+    market: Market,
+    chooser_id: int,
+    chosen_id: int,
+    entry: ListEntry,
+    cfg: Config,
+    booking_id: int | None = None,
+) -> ListEntry | None:
+    """Is the window still free? (FR-LM-55) Call it when she picks and again, with the
+    booking's id, when he accepts, in the same transaction as the write that follows.
+
+    Reads the bookings now. Returns `entry` if its window is still free for both and both are
+    under their caps; otherwise the earliest window both can still make; or None (no window,
+    a block, they already have a date together, or either can't be matched).
+    """
+    a, b = market.row[chooser_id], market.row[chosen_id]
+    ok = member_ok(market.arr, cfg) & ~market.paused
+    if not (ok[a] and ok[b]) or blocked_pairs(con, market)[a, b]:
+        return None
+    every = load_bookings(con, market)
+    others = Bookings(
+        [bk for bid, bk in zip(every.ids, every.items, strict=True) if bid != booking_id],
+        [bid for bid in every.ids if bid != booking_id],
+    )
+    if (min(a, b), max(a, b)) in dated_pairs(others.items):
+        return None
+    signups = signup_days(con, market, cfg)
+    cap = capacity(others, market, signups, cfg)
+    for bk in others.items:  # a pending pick holds its day for both people
+        if bk.state == "proposed":
+            for m in bk.members:
+                cap.busy[m].add(bk.day)
+    bits = free_windows(market, cap, signups, cfg, members=[a, b])
+    common = int(bits[0]) & int(bits[1])
+    k = (market.calendar.day(entry.day) - market.today) * N_PARTS + PARTS_OF_DAY.index(entry.part)
+    if 0 <= k < 64 and (common >> k) & 1:
+        return entry
+    w = int(earliest_common(bits[0], bits[1]))
+    if w < 0:
+        return None
+    day, part = window_day_part(w, market.today)
+    return ListEntry(
+        chosen_id, market.calendar.date(day), PARTS_OF_DAY[part], entry.position, entry.match_value
+    )
+
+
+def upcoming_between(con, market: Market, member_a: int, member_b: int) -> list[int]:
+    """Database ids of bookings still ahead between two members, for the app to cancel when
+    one blocks the other (FR-LM-56)."""
+    pair = {market.row[member_a], market.row[member_b]}
+    every = load_bookings(con, market)
+    return [
+        bid
+        for bid, bk in zip(every.ids, every.items, strict=True)
+        if set(bk.members) == pair and bk.state in PENDING and bk.day >= market.today
+    ]
+
+
+def forget_statements(member_id: int, when: datetime) -> list[tuple[str, tuple]]:
+    """The SQL that forgets a member under D18 (FR-LM-57), as (statement, parameters) for the
+    app to run in one transaction. Delete their photo files from storage first (the `photos`
+    rows give the keys); then pass a zero embedding for them each night.
+
+    Deleted: photos, photo embeddings, prompts, intent answers, free slots, their photo-exercise
+    answers and everyone's answers about their photo. Kept, under the same id: the member row
+    (birth year only, marked forgotten), bookings, payments, ratings, blocks, list history.
+    """
+    stamp = (when if when.tzinfo else when.replace(tzinfo=UTC)).astimezone(UTC)
+    at = stamp.isoformat(timespec="seconds")
+    m = (member_id,)
+    return [
+        ("DELETE FROM photo_embeddings WHERE member_id = ?", m),
+        ("DELETE FROM photos WHERE member_id = ?", m),
+        ("DELETE FROM prompts WHERE member_id = ?", m),
+        ("DELETE FROM intent_answers WHERE member_id = ?", m),
+        ("DELETE FROM free_slots WHERE member_id = ?", m),
+        (
+            "DELETE FROM calibration_answers WHERE member_id = ? OR shown_a = ? OR shown_b = ?",
+            m * 3,
+        ),
+        (
+            "UPDATE subscriptions SET status = 'cancelled' "
+            "WHERE member_id = ? AND status IN ('trial', 'active', 'paused')",
+            m,
+        ),
+        ("UPDATE waitlist SET status = 'withdrawn' WHERE member_id = ? AND status = 'waiting'", m),
+        (
+            "UPDATE members SET birth_date = substr(birth_date, 1, 4) || '-01-01', verified = 0, "
+            "income_verified = 0, paying = 0, paused_for_review = 1, forgotten_at = ? "
+            "WHERE id = ?",
+            (at, member_id),
+        ),
+    ]
 
 
 def propose(

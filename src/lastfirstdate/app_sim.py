@@ -11,7 +11,7 @@ Database ids start at 1000 so a mix-up between ids and row numbers shows up in t
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -211,13 +211,20 @@ def write_history(con, sim, epoch: date) -> None:
 
     Simulation day 0 is `epoch` (a Monday). Members get their join days, paying men their
     subscriptions (signed up a trial before their first paid cycle), and every booking its
-    timestamps, payments and refunds, as the app would have stored them.
+    timestamps, payments and refunds, as the app would have stored them: timestamps in UTC
+    with an offset, dates in the zone's own time (D19).
     """
+    from zoneinfo import ZoneInfo
+
     from lastfirstdate.billing import fee_refunds
     from lastfirstdate.models import PARTS_OF_DAY
 
     cfg = sim.cfg
-    hours = {"lunch": 12, "evening": 19, "late": 22}
+    tz = ZoneInfo(cfg.booking.timezone)
+
+    def utc(local: datetime) -> str:
+        return local.replace(tzinfo=tz).astimezone(UTC).isoformat(timespec="seconds")
+
     con.executemany(
         "UPDATE members SET joined_at = ? WHERE id = ?",
         [
@@ -245,11 +252,12 @@ def write_history(con, sim, epoch: date) -> None:
     for idx, bk in enumerate(sim.bookings):
         day = epoch + timedelta(days=bk.day)
         part = PARTS_OF_DAY[bk.part]
-        made = datetime.combine(epoch + timedelta(days=sim.booked_on[idx]), time(18))
+        made = utc(datetime.combine(epoch + timedelta(days=sim.booked_on[idx]), time(18)))
         cancelled_at = None
-        if bk.cancelled_by is not None:
-            start = datetime.combine(day, time(hours[part]))
-            cancelled_at = (start - timedelta(hours=bk.hours_before)).isoformat()
+        if bk.cancelled_by is not None:  # true hours before the start, across clock changes
+            start = datetime.combine(day, time(cfg.booking.part_starts[bk.part]), tzinfo=tz)
+            when = start.astimezone(UTC) - timedelta(hours=bk.hours_before)
+            cancelled_at = when.isoformat(timespec="seconds")
         confirmed = bk.state != "expired"
         con.execute(
             "INSERT INTO bookings VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -262,9 +270,9 @@ def write_history(con, sim, epoch: date) -> None:
                 day.isoformat(),
                 part,
                 bk.state,
-                made.isoformat(),
-                made.isoformat(),
-                made.isoformat() if confirmed else None,
+                made,
+                made,
+                made if confirmed else None,
                 venue_id.get(bk.venue) if confirmed else None,
                 None if bk.cancelled_by is None else db_id(bk.cancelled_by),
                 cancelled_at,
@@ -281,7 +289,7 @@ def write_history(con, sim, epoch: date) -> None:
                     idx + 1,
                     db_id(m),
                     int(cfg.billing.date_fee * 100),
-                    made.isoformat(),
+                    made,
                     int(round(refunds.get(m, 0.0) * 100)),
                 ),
             )

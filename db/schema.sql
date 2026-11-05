@@ -1,14 +1,19 @@
 -- lastfirstdate: the data the app keeps for matching, booking, billing, ratings, events and
 -- geography (FR-LM-36). The engine's rules in src/lastfirstdate/ read and write these.
 --
--- Portable SQL: runs on PostgreSQL and SQLite (the tests load it into SQLite). Times are
--- ISO-8601 text in UTC; money is in cents. On PostgreSQL, production can tighten the types
--- (timestamptz, identity columns, enum types) without changing any column.
+-- Portable SQL: runs on PostgreSQL and SQLite (the tests load it into SQLite). Money is in
+-- cents. On PostgreSQL, production can tighten the types (timestamptz, identity columns, enum
+-- types) without changing any column.
+--
+-- Times (D19): timestamps (columns ending in _at) are ISO-8601 text in UTC, best with an
+-- offset ("2026-11-05T23:30:00+00:00"; without one they are read as UTC). Dates (birth_date,
+-- date_on, shown_on, signup_date, starts_on, ends_on) and date windows are the zone's own
+-- local time (booking.timezone).
 --
 -- Rules this schema keeps:
 --   R2  no column anywhere holds an attractiveness score, rank or rating of looks.
---   R3  photo embeddings are biometric data: their own table, encrypted, deleted with the
---       member. Identity and income checks store the result only, never the documents.
+--   R3  photo embeddings are biometric data: their own table, encrypted, deleted when the
+--       member is forgotten (app.forget_statements). Identity and income checks store the result only, never the documents.
 --   R6  dealbreakers are answers here; the engine turns them into hard filters.
 
 -- ---------------------------------------------------------------- geography (FR-LM-41)
@@ -48,6 +53,7 @@ CREATE TABLE members (
     paused_for_review INTEGER NOT NULL DEFAULT 0 CHECK (paused_for_review IN (0, 1)),
     joined_at         TEXT NOT NULL,
     last_active_at    TEXT NOT NULL,
+    forgotten_at      TEXT,  -- set when the member deleted their account (D18, FR-LM-57)
     CHECK (age_min_pref <= age_max_pref)
 );
 
@@ -106,13 +112,29 @@ CREATE TABLE calibration_answers (
 
 -- Daily list history (FR-LM-47): who was shown to whom, and whether they were picked. The
 -- engine needs it for the 7-day rest, for pairs already picked and for learning (Stage 8).
+-- Where each profile was shown and the pair's match value that ordered it (FR-LM-58; the mutual
+-- score times the trust factor, never a score of looks) let later versions learn without bias
+-- and be tested on past lists; app.list_show_row fills them.
 CREATE TABLE list_shows (
-    chooser_id   INTEGER NOT NULL REFERENCES members (id),
-    candidate_id INTEGER NOT NULL REFERENCES members (id),
-    shown_on     TEXT NOT NULL,
-    picked       INTEGER NOT NULL DEFAULT 0 CHECK (picked IN (0, 1)),
+    chooser_id     INTEGER NOT NULL REFERENCES members (id),
+    candidate_id   INTEGER NOT NULL REFERENCES members (id),
+    shown_on       TEXT NOT NULL,
+    picked         INTEGER NOT NULL DEFAULT 0 CHECK (picked IN (0, 1)),
+    position       INTEGER CHECK (position IS NULL OR position >= 1),
+    match_value    REAL,
+    engine_version TEXT,
     PRIMARY KEY (chooser_id, candidate_id, shown_on),
     CHECK (chooser_id <> candidate_id)
+);
+
+-- Blocks (FR-LM-56): either way round, the pair is never shown to each other again, in lists
+-- or the photo exercise, and can't be booked together. Kept when either member is forgotten.
+CREATE TABLE blocks (
+    blocker_id INTEGER NOT NULL REFERENCES members (id),
+    blocked_id INTEGER NOT NULL REFERENCES members (id),
+    blocked_at TEXT NOT NULL,
+    PRIMARY KEY (blocker_id, blocked_id),
+    CHECK (blocker_id <> blocked_id)
 );
 
 -- ---------------------------------------------------------------- the men's waitlist and gate

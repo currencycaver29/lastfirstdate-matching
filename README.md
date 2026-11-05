@@ -243,7 +243,8 @@ These rules are never broken, and tests enforce them:
 | 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
 | 10 | Step-by-step photo exercise and a nightly cache | Done |
 | 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | Done |
-| 12 | Wait for the app and real Phase 1 data, then recalibrate monthly (recommended) | Next |
+| 12 | Bug fixes before Phase 1: New York time, picks checked again, blocks, forgetting a member, list positions | Done |
+| 13 | The real photo and text models, once chosen; then real Phase 1 data and monthly recalibration | Next |
 
 ## License
 
@@ -255,5 +256,5 @@ builds on (NumPy, SciPy, OR-Tools, PyO3, rust-numpy) keep their own permissive l
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.11.0** (Sprint 11, ready for real data); v1.0.0 is planned for the Phase 1
-launch.
+release is **v0.12.0** (Sprint 12, bug fixes before Phase 1); v1.0.0 is planned for the
+Phase 1 launch.
