@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 12
+Current sprint: 13
 
 ## Goal
 
@@ -60,6 +60,7 @@ dates, and dates are scheduled into time both people have free.
 | D17 | His own absence | His own late cancellation (under 24 hours) or no-show counts as one of his 3 delivered dates: no credit, no refill. Her cancellation or no-show never counts against him and his slot is refilled. In either case the person who wasn't at fault gets the $10 fee back (`billing.own_absence_counts`) | The site says "no-shows and cancellations don't count"; counting his own absences as delivered stops credits being gamed. To confirm with the lawyer (risk plan) |
 | D18 | Forgetting a member | When a member deletes their account, delete what describes them (photos, photo embeddings, prompts, intent answers, free slots, their photo-exercise answers and others' answers about their photo) and keep only the birth year; keep bookings, payments, ratings, blocks and list history under the same anonymous id, for accounting, other members' trust scores and safety. The member row stays, marked forgotten, and never matches again | Chosen by the owner (Sprint 12); the lawyer should confirm |
 | D19 | Times | Timestamps are stored in UTC, with an offset (`Z` or `+00:00`) or without one (then read as UTC); a value with no time of day is a date in the zone's own time. Date windows (`date_on` and the part of the day) are the zone's local time (`booking.timezone`). The engine converts before comparing | One rule removes the 4 to 5 hour error behind issue #9 |
+| D20 | Production models | Photos: Google SigLIP base (`google/siglip-base-patch16-224`, Apache 2.0), from a pinned ONNX export; text: `sentence-transformers/all-MiniLM-L6-v2` (Apache 2.0, English), ONNX. Both run with ONNX Runtime on a normal server's CPU, with every file pinned by revision and sha256 (`[models]`). Tests keep offline stand-ins (R4) | Chosen by the owner (Sprint 13). Licences allow commercial use (OpenAI CLIP's model card puts deployed use out of scope); small installs, no graphics card |
 | D16 | Languages | Python for the engine, the simulator and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the simulator in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
@@ -642,6 +643,46 @@ the trust factor, which ordered it), and
 Test: positions run 1, 2, 3 in list order with match values from the ranking; the row fits the
 schema and carries the version.
 
+### Sprint 13: the real photo and text models
+
+The owner chose the production models (D20). This sprint plugs them in behind the interfaces
+the engine already had, keeps the tests offline (R4), and checks the real models once outside
+the tests. No real photos or member text enter the repo (R3).
+
+#### FR-LM-59 · Pinned, checked model files
+Sprint: 13
+`[models]` names each model, its exact revision and each file's sha256.
+`python -m lastfirstdate.encoders download` fetches them into `models.cache_dir` and refuses
+any file whose fingerprint differs; files already in place are kept.
+Test: a file with the wrong fingerprint is refused and not kept; a file already in place is
+not fetched again (with a stand-in for the network).
+
+#### FR-LM-60 · Photo embeddings from SigLIP
+Sprint: 13
+`encoders.PhotoModel.embed` turns one photo into numbers the way SigLIP expects: resize to
+224 by 224 (bicubic), scale each colour from 0..255 to -1..1, run the vision model, and scale
+its pooled output to length 1. The app stores the vector, encrypted, with
+`encoders.photo_model_id` in `photo_embeddings.model`.
+Test (offline, a stand-in model): the pixels follow the recipe, the vector has length 1, and
+the same photo gives the same vector.
+
+#### FR-LM-61 · Prompts read by MiniLM
+Sprint: 13
+With `personality.text_encoder = "sentence"`, prompts go through `encoders.SentenceEncoder`:
+split into word pieces (at most `models.text_max_tokens`), run the model, average the token
+vectors over the real tokens only, and scale to length 1; an empty text gives zeros, as the
+word encoder does. The engine on the app's database accepts it.
+Test (offline, stand-ins): padding never changes a text's vector, rows have length 1, and the
+personality score uses the encoder; with "words" every earlier result is unchanged.
+
+#### FR-LM-62 · One photo model at a time
+Sprint: 13
+The nightly refresh refuses to run when a stored photo embedding was made by a different model
+than the settings name, so a model change means re-embedding every photo first (and refitting
+the starting taste).
+Test: a mismatched `photo_embeddings.model` stops the refresh with a clear error; a matching
+one passes.
+
 ## Changes to this plan
 
 - **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
@@ -768,3 +809,11 @@ schema and carries the version.
   owner) and each list entry's position and match value were added to the schema and the engine.
   The test history written for Sprint 11 now uses UTC timestamps and still rebuilds every
   cycle identically. Details: `docs/sprints/sprint-12.md`.
+- **Sprint 13.** Option (a): the owner chose Google SigLIP for photos and MiniLM for prompts
+  (D20), both Apache 2.0, run with ONNX Runtime on a CPU and pinned by revision and sha256.
+  The tests stay offline with stand-ins; the real models were checked once on made-up texts
+  and generated images. MiniLM scores "rock climbing" and "bouldering" at 0.67 where word
+  counts scored 0, and changes about 2 of each member's top 10. On the synthetic prompts it
+  separates shared lifestyles only slightly better (AUC 0.888 against 0.869), because those
+  prompts reuse a small vocabulary. The photo settings, tuned on synthetic embeddings, still
+  need a consented pilot. Details: `docs/sprints/sprint-13.md`.

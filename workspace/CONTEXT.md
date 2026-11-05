@@ -64,17 +64,17 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 13, not chosen yet. Recommended: plug in the real photo and text models
-  once the owner picks them (issue #13). Ask the owner in process stage 01.
-- **Last finished:** Sprint 12 (v0.12.0), bug fixes before Phase 1: times read in New York's
-  clock, picks re-checked before booking, blocks, forgetting a member, list positions logged.
+- **Current sprint:** 14, not chosen yet. Recommended: wait for the app and real Phase 1 data,
+  or a small consented pilot to recheck the photo settings. Ask the owner in process stage 01.
+- **Last finished:** Sprint 13 (v0.13.0), the real models: Google SigLIP for photos and MiniLM
+  for prompts (D20), pinned and checked, run with ONNX Runtime on a CPU.
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;
   - the zone's size matters more than the ratio (about 500 women for a 90% promise);
   - the Phase 1 gate uses the delivered forecast;
   - the app calls the engine through `src/lastfirstdate/app.py` (see `docs/handoff/`);
-  - open problems are GitHub issues; #1, #2, #13, #14 and #17 block the launch.
+  - open problems are GitHub issues; #1, #2, #14 and #17 block the launch.
 
 ## Rules that matter everywhere
 
@@ -88,7 +88,7 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Decisions already made (don't reopen without the owner)
 
-D1 to D19 in `docs/SPEC.md`. The most relevant now:
+D1 to D20 in `docs/SPEC.md`. The most relevant now:
 - women choose (D1);
 - 50/50 looks and personality (D2);
 - the Phase 1 settings profile (D14);
@@ -96,7 +96,8 @@ D1 to D19 in `docs/SPEC.md`. The most relevant now:
 - Rust twins for the hot loops (D16);
 - his own absence counts as delivered (D17, pending the lawyer);
 - forgetting a member keeps an anonymous record (D18, pending the lawyer);
-- timestamps in UTC, dates in the zone's own time (D19).
+- timestamps in UTC, dates in the zone's own time (D19);
+- SigLIP and MiniLM as the production models (D20).
 
 ## Questions the owner hasn't answered yet (ask, don't assume)
 

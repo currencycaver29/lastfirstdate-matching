@@ -7,6 +7,7 @@ engine hard-codes a tunable number.
 from __future__ import annotations
 
 import math
+import re
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
@@ -174,6 +175,25 @@ class GeoConfig:
 
 
 @dataclass(frozen=True)
+class ModelsConfig:
+    """The production photo and text models, pinned (decision D20, FR-LM-59)."""
+
+    cache_dir: str  # where downloaded model files live ("~" allowed)
+    photo_model: str  # the model's name, recorded with each photo embedding
+    photo_repo: str  # where the ONNX export is downloaded from
+    photo_revision: str  # exact revision (commit) of that repository
+    photo_file: str
+    photo_sha256: str
+    photo_size: int  # photos are resized to this many pixels square
+    text_model: str
+    text_revision: str
+    text_file: str
+    text_sha256: str
+    tokenizer_sha256: str
+    text_max_tokens: int  # longer texts are cut to this many word pieces
+
+
+@dataclass(frozen=True)
 class CycleSimulationConfig:
     cycles: int
     stagger: bool
@@ -261,6 +281,7 @@ class Config:
     geo: GeoConfig
     cycle_simulation: CycleSimulationConfig
     refit: RefitConfig
+    models: ModelsConfig
 
 
 def _section(raw: dict, name: str, cls: type):
@@ -294,8 +315,8 @@ def validate(cfg: Config) -> None:
         _check_share(f"personality.{name}", w)
     if not math.isclose(p.w_text + p.w_values + p.w_big5, 1.0, abs_tol=1e-9):
         raise ConfigError("personality weights must add up to 1")
-    if p.text_encoder not in ("tags", "words"):
-        raise ConfigError("personality.text_encoder must be tags or words")
+    if p.text_encoder not in ("tags", "words", "sentence"):
+        raise ConfigError("personality.text_encoder must be tags, words or sentence")
 
     _check_share("mix.looks_weight", cfg.mix.looks_weight)
     if not 0.0 < cfg.mix.chooser_weight < 1.0:
@@ -476,6 +497,15 @@ def validate(cfg: Config) -> None:
         raise ConfigError("refit.holdout_share must be between 0 and 1")
     if rf.min_improvement < 0:
         raise ConfigError("refit.min_improvement must not be negative")
+    md = cfg.models
+    for name in ("photo_revision", "text_revision"):
+        if not re.fullmatch(r"[0-9a-f]{40}", getattr(md, name)):
+            raise ConfigError(f"models.{name} must be a full 40-character commit hash")
+    for name in ("photo_sha256", "text_sha256", "tokenizer_sha256"):
+        if not re.fullmatch(r"[0-9a-f]{64}", getattr(md, name)):
+            raise ConfigError(f"models.{name} must be a 64-character sha256")
+    _check_positive("models.photo_size", md.photo_size)
+    _check_positive("models.text_max_tokens", md.text_max_tokens)
     cs = cfg.cycle_simulation
     _check_positive("cycle_simulation.cycles", cs.cycles)
     if cs.new_women_per_cycle < 0:
@@ -560,6 +590,7 @@ def from_dict(raw: dict) -> Config:
         geo=_geo(raw),
         cycle_simulation=_section(raw, "cycle_simulation", CycleSimulationConfig),
         refit=_section(raw, "refit", RefitConfig),
+        models=_section(raw, "models", ModelsConfig),
     )
     validate(cfg)
     return cfg
@@ -600,6 +631,7 @@ _SECTION_IMPACT = {
     "geo": BUSINESS,
     "cycle_simulation": SIM_ONLY,
     "refit": ENGINEERING,
+    "models": ENGINEERING,
 }
 _KEY_IMPACT = {
     "personality.w_big5": ENGINEERING,  # the database holds no Big Five scores

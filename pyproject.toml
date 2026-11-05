@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "lastfirstdate-matching"
-version = "0.12.0"
+version = "0.13.0"
 description = "Matching engine for lastfirstdate: mutual 50/50 looks and personality matching with fair daily lists and date scheduling."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -20,7 +20,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.5", "maturin>=1.9,<2.0"]
+dev = ["pytest>=8", "ruff>=0.5", "maturin>=1.9,<2.0", "pillow>=10"]
+# The production photo and text models (decision D20): python -m lastfirstdate.encoders download
+models = ["onnxruntime>=1.18", "tokenizers>=0.19", "pillow>=10"]
 
 # The Python package lives in src/; the Rust core (rust/) is compiled into
 # lastfirstdate._core when the package is installed (D16).

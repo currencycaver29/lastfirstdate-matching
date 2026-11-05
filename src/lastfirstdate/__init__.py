@@ -4,4 +4,4 @@ Stages (see docs/SPEC.md): filter, calibration profiles, photo taste, personalit
 score, mutual 50/50 mix, fair daily lists, date scheduling, learning from dates.
 """
 
-__version__ = "0.12.0"
+__version__ = "0.13.0"

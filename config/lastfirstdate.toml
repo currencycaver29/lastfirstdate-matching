@@ -121,6 +121,21 @@ min_man_cycles = 150          # completed paid cycles needed before refitting at
 holdout_share = 0.3           # latest share of cycles kept aside to test a refit on
 min_improvement = 0.002       # Brier score a refit must beat the current forecast by
 
+[models]                      # Production photo and text models, pinned (decision D20, FR-LM-59)
+cache_dir = "~/.cache/lastfirstdate/models"  # python -m lastfirstdate.encoders download puts them here
+photo_model = "google/siglip-base-patch16-224"  # Apache 2.0; recorded with every photo embedding
+photo_repo = "Xenova/siglip-base-patch16-224"   # ONNX export of that model
+photo_revision = "4649052661e53c7000355844105f8a1792088239"
+photo_file = "onnx/vision_model.onnx"
+photo_sha256 = "f89d41bac7f4d4b87e010a467d93f98689d708916ed22f5a07f96fdfa26f475f"
+photo_size = 224              # photos are resized to 224 x 224 pixels, as SigLIP was trained
+text_model = "sentence-transformers/all-MiniLM-L6-v2"  # Apache 2.0, English
+text_revision = "1110a243fdf4706b3f48f1d95db1a4f5529b4d41"
+text_file = "onnx/model.onnx"
+text_sha256 = "6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452"
+tokenizer_sha256 = "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037"
+text_max_tokens = 256         # longer prompts are cut to this many word pieces
+
 [cycle_simulation]            # Day-by-day simulation of the real booking flow (FR-LM-42)
 cycles = 3                    # billing cycles simulated per paying member
 stagger = true                # cycles start on different days (false: all on launch day)

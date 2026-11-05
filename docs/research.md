@@ -4,7 +4,7 @@ These 17 papers come from the research doc
 [lastfirstdate: Matching Algorithm Research](https://claude.ai/artifact/Ky5sZrFrAbrUPyYsm8Kn68)
 (31 Oct 2026). Each requirement in `docs/SPEC.md` names the papers it draws on. The links
 below are the ones from that doc, except papers 9 and 14: that doc linked press releases about
-them, so they now link to the papers themselves. Two methods used later are listed after the
+them, so they now link to the papers themselves. Four methods used later are listed after the
 17, under [Methods added since](#methods-added-since).
 
 ## Papers by stage
@@ -31,13 +31,16 @@ them, so they now link to the papers themselves. Two methods used later are list
 
 ## Methods added since
 
-Not in the research doc; used from Sprint 11, when the guarantee forecast was made ready for
-real data.
+Not in the research doc. Platt scaling and the Brier score are used from Sprint 11, when the
+guarantee forecast was made ready for real data; SigLIP and MiniLM from Sprint 13, as the
+production models.
 
 | Method | Stage | Requirements | Sprint | What we take from it |
 |---|---|---|---|---|
 | Platt scaling: *Probabilistic Outputs for Support Vector Machines and Comparisons to Regularized Likelihood Methods*, Platt, in *Advances in Large Margin Classifiers*, MIT Press, 1999 (a book chapter with no DOI). The fitting method we use follows [*A Note on Platt's Probabilistic Outputs for Support Vector Machines*](https://doi.org/10.1007/s10994-007-5018-6), Lin, Lin, Weng, Machine Learning 68(3), 2007 | 9 | FR-LM-52, FR-LM-53 | 11 | Correct a model's probabilities on new data with two numbers, a level and a steepness, fitted by Newton's method with step halving |
 | Brier score: [*Verification of Forecasts Expressed in Terms of Probability*](https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2), Brier, Monthly Weather Review 78(1), 1950 | 9 | FR-LM-53 | 11 | Judge a probability forecast by the mean squared gap between forecast and outcome (the modern 0-to-1 form; Brier's original ran 0 to 2) |
+| SigLIP: [*Sigmoid Loss for Language Image Pre-Training*](https://arxiv.org/abs/2303.15343), Zhai, Mustafa, Kolesnikov, Beyer, ICCV 2023 | 3 | FR-LM-60 | 13 | The production photo model (decision D20): photo embeddings for each member's own looks taste |
+| MiniLM: [*MiniLM: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers*](https://arxiv.org/abs/2002.10957), Wang et al., NeurIPS 2020 | 4 | FR-LM-61 | 13 | The production text model (all-MiniLM-L6-v2, trained as a Sentence-BERT model, paper 8): prompts that mean similar things score as similar |
 
 ## Reading order by sprint
 
@@ -51,3 +54,4 @@ real data.
 - **Sprint 4:** papers 12, 11, 13, then 14.
 - **Sprint 5:** paper 17.
 - **Sprint 11:** Platt scaling and the Brier score (under [Methods added since](#methods-added-since)).
+- **Sprint 13:** SigLIP and MiniLM, the production models, with paper 8.

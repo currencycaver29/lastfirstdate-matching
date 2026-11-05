@@ -40,6 +40,8 @@ What every stage reads: the settings files, the member model and the app's datab
 - **Sprint 12:** `blocks` (who blocked whom), `members.forgotten_at` (D18: forgetting keeps an
   anonymous record; `app.forget_statements`), and `list_shows.position`, `match_value` and
   `engine_version`. Times follow D19: timestamps in UTC, dates in the zone's own time.
+- **Sprint 13:** `[models]` pins the production models (D20) by revision and sha256;
+  `photo_embeddings.model` must equal `encoders.photo_model_id`.
 
 ## Tests
 

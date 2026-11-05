@@ -27,6 +27,7 @@ Everything below is tested on a database filled with fake members
 
 | When | Call | Reads (tables) | Returns | The app then |
 |---|---|---|---|---|
+| **A photo is added** | `encoders.PhotoModel.embed` (load once with `PhotoModel.from_settings`) | (none) | 768 numbers of length 1 | encrypts them; stores them in `photo_embeddings` with `encoders.photo_model_id` as the model |
 | **Sign-up** | `app.nearest_neighbourhood_id` | neighbourhoods | a neighbourhood id | stores only the neighbourhood, never the address |
 | **Photo exercise** | `app.start_calibration` (or `app.resume_calibration` after an interruption), then `CalibrationSession.next_question` and `CalibrationSession.answer`, one question at a time | calibration_answers (to resume) | the next photo or pair (`app.question_photo_ids`), until done | shows it; saves each answer with `app.answer_row` |
 | **Every night** | `MarketCache.refresh`: it calls `app.load_market`, `app.calibration_answers`, `app.fit_tastes` and `app.nightly_scores`, refitting only members whose answers changed | members, free_slots, intent_answers, prompts, neighbourhoods, calibration_answers | today's `NightlyScores` (also kept in the cache) | passes the decrypted photo embeddings; once a week passes `refit_start=True` |
@@ -90,6 +91,24 @@ and shuffle that order every day so nobody always goes first. For Phase 1 the ca
 - he wasn't shown to her in the last 7 days;
 - they share a free window, which is the date shown with the profile.
 
+### The photo and text models
+
+Decision D20: photos go through **Google SigLIP base** and prompts through **MiniLM**
+(all-MiniLM-L6-v2). Both are Apache 2.0, run with ONNX Runtime on a normal server's CPU, and
+are pinned in `[models]` by revision and sha256.
+
+- **Install once per server:** `pip install -e ".[models]"`, then
+  `python -m lastfirstdate.encoders download`. It fetches about 460 MB into
+  `models.cache_dir` and refuses any file whose fingerprint doesn't match.
+- **Photos:** when a member adds a photo, `PhotoModel.embed(photo)` returns 768 numbers (about
+  0.1 s on a CPU). Store them encrypted with `photo_model_id` in the `model` column. The
+  nightly refresh refuses embeddings from any other model (`app.check_photo_models`).
+- **Prompts:** set `[personality] text_encoder = "sentence"` in production. The engine reads
+  prompts through MiniLM itself (about 2 ms each) and remembers unchanged ones between
+  nights. Tests and simulations keep `"words"`, which needs no model files.
+- **Changing a model later:** re-embed every photo with the new model, update `[models]`,
+  then run `MarketCache.refresh(..., refit_start=True)`.
+
 ### Picks, blocks and leaving
 
 - **Check a pick again before writing it.** Several women can be shown the same man for the
@@ -136,7 +155,7 @@ of 92%), the forecast said 83% while 76% got their dates; the recalibrated forec
 |---|---|---|
 | `neighbourhoods`, `venues` | `load_market`, `propose` | the zone is set up |
 | `members`, `free_slots`, `intent_answers`, `prompts` | `load_market` | sign-up and profile edits; `forget_statements` when a member deletes their account |
-| `photo_embeddings` | (the app decrypts them and passes the matrix to `photo_feature_matrix`) | photos are added |
+| `photo_embeddings` | `check_photo_models` (the model column); the app decrypts the vectors and passes the matrix to `photo_feature_matrix` or `MarketCache.refresh` | photos are added (`PhotoModel.embed`) |
 | `calibration_answers` | `calibration_answers` | the photo exercise |
 | `list_shows` | `day_lists` | lists are shown (`list_show_row`) and picks are made |
 | `blocks` | `load_market`, `day_lists`, `recheck_pick` | a member blocks someone |
@@ -169,7 +188,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 **Engineering only: changes the data the app collects or how a model is fitted**
 
-`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`, `booking.timezone`, `refit.min_man_cycles`, `refit.holdout_share`, `refit.min_improvement`
+`personality.w_big5`, `personality.text_encoder`, `calibration.pca_dim`, `calibration.l2_penalty`, `calibration.w0_l2_penalty`, `gate.forecast_l2`, `gate.forecast`, `dates.weeks_per_month`, `dates.date_value`, `dates.late_month_bonus`, `values`, `booking.timezone`, `refit.min_man_cycles`, `refit.holdout_share`, `refit.min_improvement`, `models.cache_dir`, `models.photo_model`, `models.photo_repo`, `models.photo_revision`, `models.photo_file`, `models.photo_sha256`, `models.photo_size`, `models.text_model`, `models.text_revision`, `models.text_file`, `models.text_sha256`, `models.tokenizer_sha256`, `models.text_max_tokens`
 <!-- settings:end -->
 
 ## Assumptions the app must keep

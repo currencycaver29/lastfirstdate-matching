@@ -167,8 +167,8 @@ def load_market(con, cfg: Config, calendar: Calendar, today: date) -> Market:
     """
     if cfg.personality.w_big5 > 0:
         raise HandoffError("the database holds no Big Five scores: set personality.w_big5 = 0")
-    if cfg.personality.text_encoder != "words":
-        raise HandoffError("the database holds prompts, not tags: use text_encoder = 'words'")
+    if cfg.personality.text_encoder not in ("words", "sentence"):
+        raise HandoffError("the database holds prompts, not tags: use 'sentence' or 'words'")
     if any(q.mode != "closeness" for q in cfg.values):
         raise HandoffError("the database holds one answer per question: use closeness questions")
     tz = ZoneInfo(cfg.booking.timezone)
@@ -272,6 +272,18 @@ def calibration_answers(con, market: Market) -> dict[int, list[tuple[int, int | 
         b = None if r["shown_b"] is None else market.row[r["shown_b"]]
         out[market.row[r["member_id"]]].append((market.row[r["shown_a"]], b, bool(r["answer"])))
     return dict(out)
+
+
+def check_photo_models(con, cfg: Config) -> None:
+    """Refuse photo embeddings made by a different model than the settings name (FR-LM-62):
+    re-embed every photo, then refresh with `refit_start=True`, before switching models."""
+    from lastfirstdate.encoders import photo_model_id
+
+    want = photo_model_id(cfg.models)
+    found = {r["model"] for r in read(con, "photo_embeddings")}
+    if found - {want}:
+        others = ", ".join(sorted(found - {want}))
+        raise HandoffError(f"photo embeddings from {others}; the settings name {want}")
 
 
 def photo_feature_matrix(embeddings: np.ndarray, cfg: Config) -> np.ndarray:
@@ -448,6 +460,7 @@ class MarketCache:
         """Reload members; refit what changed; recompute the scores. `embeddings` are the
         decrypted photo embeddings, one row per member in database-id order."""
         cfg = self.cfg
+        check_photo_models(con, cfg)
         market = load_market(con, cfg, self.calendar, today)
         raw = np.asarray(embeddings)
         if self.pca is None or refit_start:

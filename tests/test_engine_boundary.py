@@ -12,6 +12,7 @@ ENGINE = [
     "billing",
     "booking",
     "config",
+    "encoders",
     "fairness",
     "filter",
     "forecast",
@@ -41,6 +42,7 @@ SIM_ONLY = {
     "lastfirstdate.gate_report",
     "lastfirstdate.app_sim",
     "lastfirstdate.fixes_report",
+    "lastfirstdate.models_report",
 }
 
 

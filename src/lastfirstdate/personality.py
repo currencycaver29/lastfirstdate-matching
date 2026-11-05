@@ -2,9 +2,9 @@
 
     P_i(j) = w_text * t_ij + w_values * A_ij + w_big5 * p_ij
 
-- t: interest similarity, the cosine of two interest vectors (FR-LM-05). Today the
-  vectors come from interest tags; Sentence-BERT (paper 8) can replace them later through
-  the TextEncoder interface without changing anything else.
+- t: interest similarity, the cosine of two interest vectors (FR-LM-05). The vectors come
+  from interest tags, from word counts of free-text prompts, or in production from MiniLM, a
+  Sentence-BERT model (paper 8, `encoders.SentenceEncoder`, FR-LM-61).
 - A: share of values questions where each answer is one the other accepts (FR-LM-06).
 - p: Big Five similarity, 1 - distance / sqrt(5) (FR-LM-07).
 
@@ -132,6 +132,15 @@ class WordEncoder:
 ENCODERS = {"tags": TagEncoder, "words": WordEncoder}
 
 
+def text_encoder_for(cfg: Config) -> TextEncoder:
+    """The encoder `personality.text_encoder` names; "sentence" is the production model."""
+    if cfg.personality.text_encoder == "sentence":
+        from lastfirstdate.encoders import sentence_encoder
+
+        return sentence_encoder(cfg.models)
+    return ENCODERS[cfg.personality.text_encoder]()
+
+
 def interest_similarity(vectors: np.ndarray) -> np.ndarray:
     """(n, n) t_ij: cosine similarity of unit interest vectors, clipped to 0..1."""
     return np.clip(vectors @ vectors.T, 0.0, 1.0)
@@ -172,7 +181,7 @@ def personality_matrix(
 ) -> np.ndarray:
     """(n, n) P_i(j). Symmetric, between 0 and 1."""
     w = cfg.personality
-    encoder = encoder or ENCODERS[w.text_encoder]()
+    encoder = encoder or text_encoder_for(cfg)
     t = interest_similarity(encoder.encode(members))
     a = values_compatibility(arr, cfg.values)
     p = big5_similarity(arr)

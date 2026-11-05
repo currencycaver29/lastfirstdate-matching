@@ -32,7 +32,7 @@ Scores how well two members fit on what they wrote and answered, apart from look
 ## Tests
 
 FR-LM-05 to FR-LM-08 (`tests/test_personality.py`), FR-LM-30, FR-LM-31
-(`tests/test_phase1.py`).
+(`tests/test_phase1.py`), FR-LM-61 (`tests/test_sprint13.py`).
 
 ## Papers
 
@@ -46,7 +46,12 @@ D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
 
 ## What we know
 
-- TF-IDF matches words, not meaning: "rock climbing" and "bouldering" don't match yet.
+- TF-IDF matches words, not meaning: "rock climbing" and "bouldering" score 0.
+- **Production (Sprint 13, D20):** `text_encoder = "sentence"` reads prompts with MiniLM:
+  "rock climbing" and "bouldering" score 0.67, against 0.13 for opera. On the synthetic
+  prompts, which reuse a small vocabulary, it separates shared lifestyles only a little better
+  (AUC 0.888 against 0.869); real prompts vary far more. It changes about 2 of each member's
+  top 10. Tests and simulations keep "words".
 - The weights are guesses until real dates exist (paper 9).
 
 ## If you change it

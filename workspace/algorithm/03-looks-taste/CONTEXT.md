@@ -33,7 +33,8 @@ attractive someone is in general (R2).
 
 ## Tests
 
-FR-LM-13 to FR-LM-15 (`tests/test_looks.py`), FR-LM-35 (`tests/test_native.py`).
+FR-LM-13 to FR-LM-15 (`tests/test_looks.py`), FR-LM-35 (`tests/test_native.py`), FR-LM-60 and
+FR-LM-62 (`tests/test_sprint13.py`).
 
 ## Papers
 
@@ -46,6 +47,11 @@ FR-LM-13 to FR-LM-15 (`tests/test_looks.py`), FR-LM-35 (`tests/test_native.py`).
 - AUC 0.844 against a ceiling of 0.875. A personal model adds about 0.09 AUC over w_0 alone.
 - In 9,444 real calibration fits, Newton needed 3 to 6 steps. Step halving prevents runaway
   on hard problems and changes nothing when every full step helps.
+- **Production photos (Sprint 13, D20):** Google SigLIP base, 768 numbers per photo, about
+  0.1 s on a CPU (`encoders.PhotoModel`). The settings were tuned on synthetic 128-number
+  embeddings; recheck `calibration.pca_dim` and the penalties on a consented pilot. SigLIP's
+  vectors are all fairly alike (generated test patterns scored 0.93 with each other), which
+  the photo compression handles by centring before it compresses.
 
 ## If you change it
 

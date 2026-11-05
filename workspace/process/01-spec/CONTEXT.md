@@ -17,27 +17,24 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
   one `#### FR-LM-NN · Title` block per requirement: a `Sprint: N` line, what it does in plain
   words, and a `Test:` line saying what will prove it.
 - `Current sprint: N` at the top of `docs/SPEC.md`.
-- New decisions, if any, as rows in the Decisions table (D20 onward).
+- New decisions, if any, as rows in the Decisions table (D21 onward).
 
-Numbering continues from FR-LM-59.
+Numbering continues from FR-LM-63.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 13 (not chosen yet: ask the owner)
+## Sprint 14 (not chosen yet: ask the owner)
 
-Sprint 12 fixed the bugs a real app would hit on day one. Options:
+Sprint 13 plugged in the real models. Options:
 
-- **(a) The real photo and text models** (issue #13), once the owner picks them: a
-  `PhotoEncoder` for a CLIP-style model and a Sentence-BERT `TextEncoder`, with offline
-  stand-ins kept for the tests (R4), and the settings re-checked.
+- **(a) A consented pilot:** 30 to 100 volunteers do the photo exercise; recheck
+  `calibration.pca_dim` and the penalties on SigLIP's real vectors (no data enters the repo).
 - **(b) The gate every cycle,** with the zone's age and recruitment as inputs.
 - **(c) Readiness for the personality weights:** refit them on real "would meet again"
   answers (paper 9).
 - **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
 
-Recommended: (a) as soon as the models are chosen; until then, (d).
-
-Numbering continues from FR-LM-59.
+Numbering continues from FR-LM-63.
