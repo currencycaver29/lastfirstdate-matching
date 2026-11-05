@@ -1,7 +1,7 @@
 # Sprint 9 results: the engine on the app's database
 
 A Phase 1 zone (seed 7: 100 men, 300 women; 60 men subscribed, the rest on the waitlist) is
-written into SQLite by `app_sim.fill_database`, then loaded back by `app.py` as the app would.
+written into SQLite by `app_fill.fill_database`, then loaded back by `app.py` as the app would.
 Commands: `python -m pytest tests/test_sprint9.py -q`, and the timing snippet in
 `docs/sprints/sprint-9.md`.
 

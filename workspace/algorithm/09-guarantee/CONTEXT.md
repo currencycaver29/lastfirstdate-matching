@@ -16,7 +16,7 @@ men to admit, and counts what was delivered and what is owed.
 
 - **The inputs:** r is women per man; pool_j is the women he could meet; share_j is his
   expected share of their attention.
-- **Fitting:** `forecast_fit.py` fits it on simulated markets and writes
+- **Fitting:** `forecast_fit.py` fits it on synthetic markets and writes
   `config/forecast_model.toml`, which records the range it was fitted on.
 - **The gate:** admits waitlisted men in order while women per man ≥ the floor (3), inside the
   fitted range, and the forecast ≥ the target (90%) (`forecast.gate_decision`, with a Rust
@@ -25,7 +25,7 @@ men to admit, and counts what was delivered and what is owed.
 ## On delivered dates (Sprint 8)
 
 - **Forecast:** `forecast_fit.py --delivered` fits the same five start features on the real
-  booking flow (`cycle_sim.py`). Each paying man's market at launch is labelled with the share
+  booking flow (`cycle_runs.py`). Each paying man's market at launch is labelled with the share
   of his paid cycles that reached 3 delivered dates. It is saved to
   `config/forecast_delivered.toml` with its fitted range and the frictions and rate of new
   women it assumes.

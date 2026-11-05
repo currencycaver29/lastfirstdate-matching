@@ -10,7 +10,7 @@ import pytest
 
 import lastfirstdate
 from lastfirstdate import app
-from lastfirstdate.app_sim import fill_database
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.config import ConfigError, from_dict, load
 from lastfirstdate.filter import eligibility_matrix
 from lastfirstdate.synthetic import generate

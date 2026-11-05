@@ -1,6 +1,6 @@
 """The engine as the app calls it: from database rows to decisions (FR-LM-46, FR-LM-47).
 
-Everything here reads the tables in `db/schema.sql` and never the simulator. `docs/handoff/`
+Everything here reads the tables in `db/schema.sql` and never the test harness. `docs/handoff/`
 says when the app calls each function.
 
 Reading: functions take a DB-API connection and only run `SELECT * FROM <table>`, so the same

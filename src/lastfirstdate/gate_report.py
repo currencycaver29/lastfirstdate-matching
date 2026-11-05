@@ -1,7 +1,7 @@
 """The ratio gate in the real booking flow (FR-LM-45, Sprint 8).
 
-Simulation only. Sprint 6 tested the gate with the weekly batch simulation, which counts
-booked dates. Here the men it admits live through the real flow (`cycle_sim.py`): proposed
+Test runs only. Sprint 6 tested the gate with the weekly batch test run, which counts
+booked dates. Here the men it admits live through the real flow (`cycle_runs.py`): proposed
 windows, payment holds, cancellations, no-shows, refills, new women arriving, three billing
 cycles. Three versions on the same markets:
 
@@ -25,7 +25,7 @@ import numpy as np
 
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import Config, load
-from lastfirstdate.cycle_sim import NEVER, join_days, market, simulate_cycles
+from lastfirstdate.cycle_runs import NEVER, join_days, market, run_cycles
 from lastfirstdate.filter import member_ok
 from lastfirstdate.forecast import (
     DEFAULT_MODEL_PATH,
@@ -76,7 +76,7 @@ def real_gate_trial(
     versions: tuple[str, ...] = VERSIONS,
 ) -> list[RealGateRow]:
     """Let each version of the gate admit men, then run the real flow with only them."""
-    rate = cfg.cycle_simulation.new_women_per_cycle
+    rate = cfg.cycle_runs.new_women_per_cycle
     c = _with_market(cfg, n_women, n_waitlist)
     rows = []
     for seed in seeds:
@@ -98,14 +98,14 @@ def real_gate_trial(
                 d = gate_decision(model, sc.eligible, women, [], waitlist, c)
                 admitted = np.array(d.admit, dtype=int)
                 ratio, why = d.women_per_man, d.stopped_because
-            if admitted.size == 0:  # the gate sold nothing: there is nobody to simulate
+            if admitted.size == 0:  # the gate sold nothing: there is nobody to run
                 forecast = actual = credits = float("nan")
             else:
                 mf = market_features(sc.eligible, women, admitted)
                 forecast = forecast_fulfilment(delivered, mf)
                 j = join.copy()
                 j[np.setdiff1d(np.flatnonzero(men), admitted)] = NEVER
-                report = simulate_cycles(pop, c, seed, sc.mutual, version, j)
+                report = run_cycles(pop, c, seed, sc.mutual, version, j)
                 actual = report.guarantee_share
                 credits = report.credits / max(report.revenue, 1.0)
             rows.append(
@@ -175,7 +175,7 @@ def ratio_table(
     n_men: int = 100,
 ) -> list[tuple[float, float]]:
     """(women per man, share of man-cycles with 3 delivered dates) in the real flow."""
-    rate = cfg.cycle_simulation.new_women_per_cycle
+    rate = cfg.cycle_runs.new_women_per_cycle
     out = []
     for ratio in ratios:
         shares = []
@@ -184,7 +184,7 @@ def ratio_table(
             pop = market(c, seed, rate)
             sc = build_scores(pop, c, seed)
             shares.append(
-                simulate_cycles(
+                run_cycles(
                     pop, c, seed, sc.mutual, join_day=join_days(pop, c, rate)
                 ).guarantee_share
             )

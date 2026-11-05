@@ -31,7 +31,7 @@ Schnabel (2017), *Unbiased Learning-to-Rank with Biased Feedback*.
 | A `blocks` table, read into `market.blocked`; `app.photo_pool`; `app.upcoming_between` | `db/schema.sql`, `app.py` | #11 |
 | `members.forgotten_at`; `app.forget_statements`; forgotten members load as inactive; the photo compression skips members with no photo | `db/schema.sql`, `app.py` | #12 |
 | `ListEntry.position` and `match_value`; `list_shows.position`, `match_value`, `engine_version`; `app.list_show_row` | `db/schema.sql`, `app.py` | list logging |
-| The test history now stores UTC timestamps, like a real app | `app_sim.py` | |
+| The test history now stores UTC timestamps, like a real app | `app_fill.py` | |
 | `python -m lastfirstdate.fixes_report` | `fixes_report.py` | the numbers below |
 | Decisions D18 (forgetting) and D19 (times); the handoff's call sequence | `docs/SPEC.md`, `docs/handoff/README.md` | |
 

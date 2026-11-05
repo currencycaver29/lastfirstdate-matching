@@ -21,8 +21,8 @@ from lastfirstdate.looks import (
     photo_features,
     select_pair,
 )
-from lastfirstdate.simulate import run_month
-from lastfirstdate.simulator import Behavior
+from lastfirstdate.member_behavior import Behavior
+from lastfirstdate.month_runs import run_month
 
 pytestmark = pytest.mark.skipif(
     not native.available(), reason="Rust core not built (pip install -e . builds it)"
@@ -177,7 +177,7 @@ def p1cfg():
 
 def test_calibration_and_month_are_identical_on_both_backends(cfg, default_city):
     """FR-LM-35: in the default city, members are shown the same calibration photos and a
-    simulated month books exactly the same dates with either backend."""
+    synthetic month books exactly the same dates with either backend."""
     pop, sc = default_city
     arr = MemberArrays.from_members(pop.members, cfg.values)
     rng = np.random.default_rng(3)

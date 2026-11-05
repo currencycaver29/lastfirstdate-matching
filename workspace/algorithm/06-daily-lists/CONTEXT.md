@@ -58,7 +58,7 @@ D1, D3 (30 a day; a passed profile can return after 7 days), D7 (exposure cap 1Ã
 - Hiding members whose month is full, and capping free members, both made things worse, so
   both are off.
 - Repeated showings wear a closed market out: each pass makes a later pick less likely.
-  Showing men less often did not help in the cycle simulation.
+  Showing men less often did not help in the cycle test run.
 - One man's same window can be offered to dozens of women in a day (73 in a test zone).
   That's fine for lists; `app.recheck_pick` stops double bookings at pick time (Sprint 12).
 - Each `ListEntry` carries its position and match value; `app.list_show_row` stores them
@@ -68,4 +68,4 @@ D1, D3 (30 a day; a passed profile can return after 7 days), D7 (exposure cap 1Ã
 ## If you change it
 
 Keep the Rust and Python lists identical (`tests/test_native.py`). Rerun
-`python -m lastfirstdate.fairness_report` and `python -m lastfirstdate.cycle_sim`.
+`python -m lastfirstdate.fairness_report` and `python -m lastfirstdate.cycle_runs`.

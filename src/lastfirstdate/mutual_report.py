@@ -1,6 +1,6 @@
-"""Compare ways of ranking lists in a simulated month (FR-LM-18 to FR-LM-20).
+"""Compare ways of ranking lists in a synthetic month (FR-LM-18 to FR-LM-20).
 
-Simulation only. Every matchable fake member first calibrates (Stages 2 and 3) so the
+Test runs only. Every matchable fake member first calibrates (Stages 2 and 3) so the
 engine has a looks score V for them. Then the same month (same members, same random
 choices) is run four times, ranking daily lists and weighting dates by:
 
@@ -33,10 +33,10 @@ from lastfirstdate.looks import (
     calibration_pool,
     photo_features,
 )
+from lastfirstdate.member_behavior import Behavior
+from lastfirstdate.month_runs import MonthReport, month_people, run_month
 from lastfirstdate.mutual import directional_score, looks_scores, mutual_score
 from lastfirstdate.personality import personality_matrix
-from lastfirstdate.simulate import MonthReport, month_people, run_month
-from lastfirstdate.simulator import Behavior
 from lastfirstdate.synthetic import Population, generate
 
 RANKINGS = ("personality", "looks only", "one-sided", "mutual")
@@ -72,7 +72,7 @@ def learn_tastes(
     """Calibrate every matchable member; return their taste models and photo features.
 
     The starting taste w_0 is fitted first on earlier "history" swipes: each matchable
-    member's swipes on `simulation.training_swipes` random profiles from their pool.
+    member's swipes on `test_runs.training_swipes` random profiles from their pool.
     """
     behavior = Behavior(pop, arr, cfg, np.random.default_rng(seed + 3_000_017))
     _, feats = photo_features(ArrayPhotoEncoder(pop.photo_embeddings), len(pop), cfg)
@@ -82,7 +82,7 @@ def learn_tastes(
     likes = {v: behavior.swipe_outcomes(v, seed) for v in pools}
     history = []
     for v, pool in pools.items():
-        for j in rng.choice(pool, min(cfg.simulation.training_swipes, pool.size), replace=False):
+        for j in rng.choice(pool, min(cfg.test_runs.training_swipes, pool.size), replace=False):
             history.append(
                 Swipe(int(arr.gender[v]), int(arr.gender[j]), feats[j], bool(likes[v][j]))
             )
@@ -130,11 +130,11 @@ def top_quality(
 ) -> TopQuality:
     """Average pick, accept and mutual-yes chances over each chooser's top k by `ranking`.
 
-    Uses the simulator's true appeal, so it measures how good the ranking is with no
+    Uses the test harness's true appeal, so it measures how good the ranking is with no
     dependence on how a month happens to unfold. Choosers with fewer than k candidates
     are left out.
     """
-    sim = cfg.simulation
+    sim = cfg.test_runs
     u = behavior.utility
     t = sim.choice_temperature
     pick = 1 / (1 + np.exp(-(u - sim.like_threshold - behavior.pickiness[:, None]) / t))
@@ -169,7 +169,7 @@ class MutualReport:
         for name in RANKINGS:
             q = self.top[name]
             lines.append(f"  {name:12s} {q.pick:10.1%} {q.accept:11.1%} {q.mutual:6.1%}")
-        lines += ["", "A simulated month with each ranking"]
+        lines += ["", "A synthetic month with each ranking"]
         head = (
             f"  {'ranking':12s} {'picks':>6s} {'accepted':>9s} {'rate':>5s} {'dates':>6s} "
             f"{'2nd date':>8s} {'appeal':>7s} {'both keen':>9s} {'guarantee':>9s}"
@@ -196,7 +196,7 @@ def compare_rankings(
     pop: Population | None = None, cfg: Config | None = None, seed: int | None = None
 ) -> MutualReport:
     cfg = cfg or load()
-    seed = cfg.simulation.seed if seed is None else seed
+    seed = cfg.test_runs.seed if seed is None else seed
     pop = pop or generate(cfg, seed=seed)
     scores = build_scores(pop, cfg, seed)
     top = top_quality_all(pop, cfg, seed, scores)
@@ -207,7 +207,7 @@ def compare_rankings(
 def top_quality_all(
     pop: Population, cfg: Config, seed: int, scores: Scores
 ) -> dict[str, TopQuality]:
-    """top_quality for every ranking, judged by the same simulated people as run_month."""
+    """top_quality for every ranking, judged by the same synthetic people as run_month."""
     arr = MemberArrays.from_members(pop.members, cfg.values)
     behavior, _ = month_people(pop, arr, cfg, seed)
     rights = pick_rights(arr)
@@ -218,7 +218,7 @@ def top_quality_all(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Compare list rankings in a simulated month.")
+    parser = argparse.ArgumentParser(description="Compare list rankings in a synthetic month.")
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--n", type=int, default=None)
     parser.add_argument("--looks-weight", type=float, default=None)
@@ -228,7 +228,7 @@ def main() -> None:
         cfg = dataclasses.replace(
             cfg, mix=dataclasses.replace(cfg.mix, looks_weight=args.looks_weight)
         )
-    seed = cfg.simulation.seed if args.seed is None else args.seed
+    seed = cfg.test_runs.seed if args.seed is None else args.seed
     pop = generate(cfg, seed=seed, n=args.n)
     print(compare_rankings(pop, cfg, seed).text())
 

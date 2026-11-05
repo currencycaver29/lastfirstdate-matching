@@ -6,7 +6,7 @@ what turns Phase 1's first real cycles into a better forecast: when they arrive,
 one tested call. It rebuilds every completed billing cycle from the app's database: who was in
 the market, whether he got his 3 dates, and his progress each week. It **recalibrates** the
 forecast on those cycles with two numbers, a level and a steepness, and decides whether to
-switch by testing on the latest cycles. In a simulated test where people showed up less often
+switch by testing on the latest cycles. In a synthetic test where people showed up less often
 than the forecast assumed, the forecast said 83% while 76% of men got their dates; the
 recalibrated forecast said 76%, and the switch rule recommended it. On the way it found that
 **fulfilment drifts as a zone ages**, so recalibration has to be repeated, about monthly.
@@ -22,8 +22,8 @@ standard way to correct a classifier's probabilities on new data, and the Brier 
 | File | What it does |
 |---|---|
 | `src/lastfirstdate/refit.py` | Engine side: `cycle_rows` (outcomes from records), `recalibrate` and `fold`, `brier`, `propose_refit` (the switch rule) |
-| `src/lastfirstdate/app_sim.py` | `write_history`: writes a simulated run into the database as the app's records (subscriptions, join dates, bookings with timestamps, payments, refunds) |
-| `src/lastfirstdate/cycle_sim.py` | Remembers when each booking was made and cancelled, so its history has real timestamps |
+| `src/lastfirstdate/app_fill.py` | `write_history`: writes a synthetic run into the database as the app's records (subscriptions, join dates, bookings with timestamps, payments, refunds) |
+| `src/lastfirstdate/cycle_runs.py` | Remembers when each booking was made and cancelled, so its history has real timestamps |
 | `config/*.toml` | `[refit]`: `min_man_cycles` (150), `holdout_share` (0.3), `min_improvement` (0.002) |
 | `docs/handoff/README.md` | A monthly "refit on real cycles" step for the app |
 
@@ -42,15 +42,15 @@ For every paid cycle that has ended, `cycle_rows` works out:
   - **confirmed dates still to come**: confirmed before that day, inside the cycle on or after
     it, and not cancelled before it. Rebuilding this from timestamps is the subtle part.
 
-**The proof:** a simulated history written into the database and rebuilt from the records
+**The proof:** a synthetic history written into the database and rebuilt from the records
 alone:
 
 | Check | Result |
 |---|---|
-| Cycle outcomes (291 cycles the simulation reported) | all identical |
+| Cycle outcomes (291 cycles the test run reported) | all identical |
 | Weekly progress (838 snapshots) | all identical |
 
-The records also contain 6 extra fourth cycles the simulation's summary doesn't report, from
+The records also contain 6 extra fourth cycles the test run's summary doesn't report, from
 men whose cycles started on launch day. They are genuine completed cycles, so they count.
 
 ---
@@ -83,7 +83,7 @@ how many cycles were used.
 
 ### The test world
 
-The Phase 1 market was simulated over three cycles with **80% show-ups instead of the 92% the
+The Phase 1 market was run on synthetic members over three cycles with **80% show-ups instead of the 92% the
 forecast assumes**:
 
 | | Share of cycles with 3 delivered dates |
@@ -137,7 +137,7 @@ docstring says why the median split fails.
 
 ## 6. Honest limits
 
-- **Everything is still simulated:** the "real" history is a simulation written as records. The
+- **Everything is still synthetic:** the "real" history is a test run written as records. The
   machinery is proven; the numbers it will produce aren't known until Phase 1 runs.
 - **Market features use today's profiles,** not profiles as they were then; old preferences
   and pauses aren't stored.

@@ -47,4 +47,4 @@ build.
 ## If you change a twin
 
 Change both versions. `tests/test_native.py` must still show they agree on random problems,
-and a simulated month must book the same dates.
+and a synthetic month must book the same dates.

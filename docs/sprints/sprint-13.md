@@ -121,7 +121,7 @@ many different words, which is where MiniLM helps.
   changes about 2 of them.
 
 **Switching it on:** set `[personality] text_encoder = "sentence"` in production. Tests and
-simulations keep `"words"`, which needs no model files.
+test runs keep `"words"`, which needs no model files.
 
 ---
 

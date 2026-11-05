@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from lastfirstdate import app
-from lastfirstdate.app_sim import fill_database
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import IMPACTS, load, setting_impact, setting_names, settings_table
 from lastfirstdate.filter import eligibility_matrix, member_ok

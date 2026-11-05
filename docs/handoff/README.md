@@ -105,7 +105,7 @@ are pinned in `[models]` by revision and sha256.
   nightly refresh refuses embeddings from any other model (`app.check_photo_models`).
 - **Prompts:** set `[personality] text_encoder = "sentence"` in production. The engine reads
   prompts through MiniLM itself (about 2 ms each) and remembers unchanged ones between
-  nights. Tests and simulations keep `"words"`, which needs no model files.
+  nights. Tests and test runs keep `"words"`, which needs no model files.
 - **Changing a model later:** re-embed every photo with the new model, update `[models]`,
   then run `MarketCache.refresh(..., refit_start=True)`.
 
@@ -130,7 +130,7 @@ are pinned in `[models]` by revision and sha256.
 
 ## Refitting on real cycles
 
-The guarantee forecast was fitted on simulated markets. Once Phase 1 has finished some
+The guarantee forecast was fitted on synthetic markets. Once Phase 1 has finished some
 cycles, `refit.propose_refit(con, market, scores.eligible, gate_model(cfg), cfg)` decides
 whether a forecast recalibrated on the app's own records is better:
 
@@ -146,7 +146,7 @@ whether a forecast recalibrated on the app's own records is better:
   coefficients. One zone can't teach the forecast how much women per man matters, but it can
   correct how optimistic it is. The model file records what was done and on how many cycles.
 
-In a simulated test where people showed up less often than the forecast assumed (80% instead
+In a synthetic test where people showed up less often than the forecast assumed (80% instead
 of 92%), the forecast said 83% while 76% got their dates; the recalibrated forecast said 76%.
 
 ## The data contract
@@ -174,17 +174,17 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 `calibration.group_share_tolerance`, `fairness.min_rate_ratio`, `gate.target`, `gate.min_women_per_man`, `gate.min_pool`, `gate.at_risk_threshold`, `booking.part_starts`, `billing.price_per_cycle`, `billing.trial_days`, `billing.date_fee`, `billing.full_refund_hours`, `billing.late_refund_share`, `billing.own_absence_counts`, `trust.flag_below`, `trust.flag_min_ratings`, `geo.neighbourhoods`, `geo.venues`
 
-**Simulate first: rerun the reports and check fulfilment before changing**
+**Test first: rerun the reports and check fulfilment before changing**
 
 `filter.require_verified`, `filter.active_within_days`, `filter.min_shared_slots`, `personality.w_text`, `personality.w_values`, `mix.looks_weight`, `mix.chooser_weight`, `calibration.n_profiles`, `calibration.n_variety`, `calibration.n_pairs`, `lists.daily_size`, `lists.reshow_after_days`, `lists.policy`, `lists.exposure_multiple`, `lists.guarantee_priority`, `lists.hide_booked`, `lists.nsw_epsilon`, `lists.holdback_yeses`, `lists.exploration_share`, `learning.months`, `learning.taste_date_weight`, `learning.lambda_date_weight`, `learning.lambda_choice_weight`, `learning.lambda_prior_slope`, `learning.lambda_prior_strength`, `learning.lambda_min`, `learning.lambda_max`, `trust.prior_mean`, `trust.prior_strength`, `trust.reliability_weight`, `trust.ranking_weight`
 
-**Refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then simulate**
+**Refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then rerun the tests**
 
 `dates.guaranteed_per_month_paying`, `dates.cap_per_month`, `dates.cap_per_month_free`, `dates.free_cap_genders`, `dates.max_per_week`, `booking.lead_days`, `booking.horizon_days`, `booking.hold_minutes`, `billing.cycle_days`
 
-**Simulation only: the app never reads it**
+**Test runs only: the app never reads it**
 
-`simulation.seed`, `simulation.guarantee_target`, `simulation.min_pool_for_guarantee`, `simulation.open_app_rate`, `simulation.picks_per_day`, `simulation.personality_signal`, `simulation.like_threshold`, `simulation.accept_threshold`, `simulation.again_threshold`, `simulation.choice_temperature`, `simulation.show_up_rate`, `simulation.meeting_noise`, `simulation.rating_cutoffs`, `simulation.repeat_pick_factor`, `simulation.swipe_threshold`, `simulation.training_swipes`, `population.n_members`, `population.share_men`, `population.orientation`, `population.paying_share`, `population.verified_share`, `population.active_share`, `population.age_min`, `population.age_max`, `population.max_km_min`, `population.max_km_max`, `population.embedding_dim`, `population.n_look_types`, `population.n_audit_groups`, `population.interests_min`, `population.interests_max`, `population.slots_min`, `population.slots_max`, `population.dealbreaker_rate`, `population.area_jitter_deg`, `population.prompt_style`, `population.exact_counts`, `population.areas`, `cycle_simulation.cycles`, `cycle_simulation.stagger`, `cycle_simulation.pay_in_time_chooser`, `cycle_simulation.pay_in_time_chosen`, `cycle_simulation.cancel_rate`, `cycle_simulation.late_cancel_share`, `cycle_simulation.event_rate`, `cycle_simulation.new_women_per_cycle`, `cycle_simulation.bad_actor_share`, `cycle_simulation.bad_actor_conduct`, `cycle_simulation.rating_center`, `cycle_simulation.conduct_effect`, `cycle_simulation.rating_noise`, `cycle_simulation.rating_halo`
+`test_runs.seed`, `test_runs.guarantee_target`, `test_runs.min_pool_for_guarantee`, `test_runs.open_app_rate`, `test_runs.picks_per_day`, `test_runs.personality_signal`, `test_runs.like_threshold`, `test_runs.accept_threshold`, `test_runs.again_threshold`, `test_runs.choice_temperature`, `test_runs.show_up_rate`, `test_runs.meeting_noise`, `test_runs.rating_cutoffs`, `test_runs.repeat_pick_factor`, `test_runs.swipe_threshold`, `test_runs.training_swipes`, `population.n_members`, `population.share_men`, `population.orientation`, `population.paying_share`, `population.verified_share`, `population.active_share`, `population.age_min`, `population.age_max`, `population.max_km_min`, `population.max_km_max`, `population.embedding_dim`, `population.n_look_types`, `population.n_audit_groups`, `population.interests_min`, `population.interests_max`, `population.slots_min`, `population.slots_max`, `population.dealbreaker_rate`, `population.area_jitter_deg`, `population.prompt_style`, `population.exact_counts`, `population.areas`, `cycle_runs.cycles`, `cycle_runs.stagger`, `cycle_runs.pay_in_time_chooser`, `cycle_runs.pay_in_time_chosen`, `cycle_runs.cancel_rate`, `cycle_runs.late_cancel_share`, `cycle_runs.event_rate`, `cycle_runs.new_women_per_cycle`, `cycle_runs.bad_actor_share`, `cycle_runs.bad_actor_conduct`, `cycle_runs.rating_center`, `cycle_runs.conduct_effect`, `cycle_runs.rating_noise`, `cycle_runs.rating_halo`
 
 **Engineering only: changes the data the app collects or how a model is fitted**
 

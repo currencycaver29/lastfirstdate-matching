@@ -39,7 +39,7 @@ Three reasons, and the third matters most.
    it from the engine, and then check whether the engine recovers it. That is the only way to
    prove the looks model works before launch.
 
-This is standard practice in recommender research: build a simulator with known ground truth,
+This is standard practice in recommender research: build a test harness with known ground truth,
 then measure how close the algorithm gets.
 
 ## 3. Concept: one settings file for every number
@@ -111,7 +111,7 @@ chosen:
 
 **Same seed, same members (rule R7).** All randomness goes through one random number
 generator started from a seed (default 7). Run it twice with seed 7 and you get the same
-1,000 people, so every test and simulation can be repeated exactly.
+1,000 people, so every test and test run can be repeated exactly.
 
 The population with seed 7:
 
@@ -186,7 +186,7 @@ and it can be changed.
 Other hidden traits: `looks_weight` (how much each fake member truly cares about looks
 versus personality, around 0.5 on average), `pickiness`, `look_type` and `lifestyle`.
 
-**The engine must never read any of this.** Only the simulator may read it. A test checks that
+**The engine must never read any of this.** Only the test harness may read it. A test checks that
 none of these fields exist on the `Member` profile.
 
 ## 8. Concept: a fairness trap, built in on purpose
@@ -271,7 +271,7 @@ days they would run out of new people. So either:
 - people who were shown but not picked can come back later, or
 - the real member base is much larger than 1,000.
 
-Sprint 1's simulation will measure this properly. The answer depends on how many members you
+Sprint 1's test run will measure this properly. The answer depends on how many members you
 expect at launch in NYC (see the questions at the end).
 
 ## 13. Math to study for this sprint

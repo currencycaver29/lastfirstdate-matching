@@ -17,8 +17,8 @@ from lastfirstdate.learning import (
     update_tastes,
 )
 from lastfirstdate.looks import PersonalTaste, StartingTaste
+from lastfirstdate.month_runs import month_people, run_month
 from lastfirstdate.mutual import percentile_rows
-from lastfirstdate.simulate import month_people, run_month
 
 # ---------------------------------------------------------------- FR-LM-25
 
@@ -60,7 +60,7 @@ def test_a_heavier_label_moves_the_model_further():
 def test_date_outcome_ratings_and_wishes(cfg, small_pop):
     """FR-LM-25: ratings run 1 to 5, and people who truly like each other more rate higher."""
     arr = MemberArrays.from_members(small_pop.members, cfg.values)
-    beh, _ = month_people(small_pop, arr, cfg, cfg.simulation.seed)
+    beh, _ = month_people(small_pop, arr, cfg, cfg.test_runs.seed)
     rng = np.random.default_rng(0)
     order = np.argsort(beh.utility[0, 1:]) + 1
     low = [beh.date_outcome(0, int(j), rng) for j in order[:30] for _ in range(5)]
@@ -141,7 +141,7 @@ def test_month_spends_the_configured_share_on_exploration(cfg, city600):
     """FR-LM-27: with exploration on, about 10% of list slots are exploration slots."""
     pop, sc = city600
     unc = np.where(sc.eligible, np.random.default_rng(0).random(sc.eligible.shape), 0.0)
-    m = run_month(pop, cfg, cfg.simulation.seed, sc.mutual, month=1, explore=unc, record=True)
+    m = run_month(pop, cfg, cfg.test_runs.seed, sc.mutual, month=1, explore=unc, record=True)
     share = m.explore_shown / m.total_shown
     assert abs(share - cfg.lists.exploration_share) < 0.03
     who, whom, picked = m.choices
@@ -152,8 +152,8 @@ def test_month_spends_the_configured_share_on_exploration(cfg, city600):
 def test_recording_does_not_change_a_month_without_learning(cfg, city600):
     """FR-LM-28: the default month (no inputs) is unchanged; record only adds information."""
     pop, sc = city600
-    plain = run_month(pop, cfg, cfg.simulation.seed, sc.mutual)
-    again = run_month(pop, cfg, cfg.simulation.seed, sc.mutual)
+    plain = run_month(pop, cfg, cfg.test_runs.seed, sc.mutual)
+    again = run_month(pop, cfg, cfg.test_runs.seed, sc.mutual)
     np.testing.assert_array_equal(plain.dates, again.dates)
     assert plain.choices is None and plain.date_records == []
 
@@ -161,12 +161,12 @@ def test_recording_does_not_change_a_month_without_learning(cfg, city600):
 def test_excluded_pairs_are_never_booked(cfg, city600):
     """FR-LM-28: pairs who already dated are never matched again."""
     pop, sc = city600
-    first = run_month(pop, cfg, cfg.simulation.seed, sc.mutual, month=1, record=True)
+    first = run_month(pop, cfg, cfg.test_runs.seed, sc.mutual, month=1, record=True)
     dated = np.zeros(sc.eligible.shape, dtype=bool)
     for r in first.date_records:
         dated[r.a, r.b] = dated[r.b, r.a] = True
     second = run_month(
-        pop, cfg, cfg.simulation.seed, sc.mutual, month=2, excluded=dated, record=True
+        pop, cfg, cfg.test_runs.seed, sc.mutual, month=2, excluded=dated, record=True
     )
     assert not any(dated[r.a, r.b] for r in second.date_records)
 
@@ -187,7 +187,7 @@ def three_months(cfg, city600):
 
     pop, sc = city600
     # 3 replicates: single runs of a month swing by a couple of points by chance
-    return run_learning_report(pop, cfg, cfg.simulation.seed, replicates=3, base=sc)
+    return run_learning_report(pop, cfg, cfg.test_runs.seed, replicates=3, base=sc)
 
 
 def _second(m):
@@ -241,7 +241,7 @@ def test_exploration_takes_about_the_configured_share(cfg, three_months):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="FR-LM-27 not met: exploration gave no measurable gain in second dates in simulation.",
+    reason="FR-LM-27 not met: exploration gave no measurable gain in second dates in test runs.",
 )
 def test_exploration_raises_second_dates(three_months):
     """FR-LM-27 (original claim): exploration adds 2+ points of second dates (months 2-3)."""

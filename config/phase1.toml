@@ -46,7 +46,7 @@ holdback_yeses = 0            # paper 14 hold-back: hide after this many yeses i
 exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
 
 [learning]                    # Stage 8: learning from dates and list choices
-months = 3                    # length of the learning simulation
+months = 3                    # length of the learning test run
 taste_date_weight = 0.5       # a "would meet again" counts as this many swipes in the looks taste
                               # (Sprint 5: 3.0 made looks accuracy worse; 0.5 is neutral)
 lambda_date_weight = 3.0      # weight of a date outcome when learning the looks weight
@@ -79,7 +79,7 @@ date_value = 1.0              # value of arranging any date, added to every pair
 late_month_bonus = 1.0        # urgency: extra edge weight per missing guaranteed date,
                               # divided by the weeks left in the month
 
-[simulation]                  # Acceptance checks run on fake members only
+[test_runs]                  # Acceptance checks run on fake members only
 seed = 7
 guarantee_target = 0.95       # share of paying members who must reach their guarantee
 min_pool_for_guarantee = 10   # paying members with fewer possible matches are reported apart
@@ -142,8 +142,8 @@ text_sha256 = "6fd5d72fe4589f189f8ebc006442dbb529bb7ce38f8082112682524616046452"
 tokenizer_sha256 = "be50c3628f2bf5bb5e3a7f17b1f74611b2561a3a27eeab05e5aa30f411572037"
 text_max_tokens = 256         # longer prompts are cut to this many word pieces
 
-[cycle_simulation]            # Day-by-day simulation of the real booking flow (FR-LM-42)
-cycles = 3                    # billing cycles simulated per paying member
+[cycle_runs]            # Day-by-day test run of the real booking flow (FR-LM-42)
+cycles = 3                    # billing cycles run per paying member
 stagger = true                # cycles start on different days (false: all on launch day)
 pay_in_time_chooser = 0.97    # chance she pays within the hold after choosing
 pay_in_time_chosen = 0.90     # chance he pays within the hold
@@ -159,7 +159,7 @@ rating_noise = 0.7            # rating points of noise per rating
 rating_halo = 0.1             # rating points per standard deviation of attraction (rater bias)
 
 # Geography (FR-LM-41): members give a neighbourhood, never an address. Venues are
-# made up for the simulation; the real list comes from the app.
+# made up for the test run; the real list comes from the app.
 [[geo.neighbourhoods]]
 name = "Greenwich Village"
 lat = 40.7335

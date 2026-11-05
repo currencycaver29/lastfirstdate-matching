@@ -14,12 +14,12 @@ Forecast. For each paying man j, the chance he reaches his guarantee this cycle:
   1 / (number of men each of them could be matched with)
 - log(min(r, 1)): zero while there is at least one woman per man, negative below that. With
   fewer women than men their date caps run out and fulfilment falls off a cliff (in the
-  Phase 1 simulation, 61% of men reach 3 dates at 1 woman per man but 11% at 0.5); this
+  Phase 1 test run, 61% of men reach 3 dates at 1 woman per man but 11% at 0.5); this
   term lets the curve bend there instead of extrapolating the gentle slope above 1.
 
 The at-risk model adds his progress mid-cycle: dates booked / guarantee,
 log(1 + yeses waiting) and weeks left / weeks. Both are logistic regressions, fitted on
-simulated cycles before launch (`forecast_fit.py` writes `config/forecast_model.toml`) and
+synthetic cycles before launch (`forecast_fit.py` writes `config/forecast_model.toml`) and
 refitted on real cycles once they exist, with the same `fit_forecast`. The model file records
 the range of women per man it was fitted on; the gate never relies on it outside that range.
 

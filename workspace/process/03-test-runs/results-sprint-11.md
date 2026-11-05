@@ -1,14 +1,14 @@
 # Sprint 11 results: ready for real data
 
 Command: `python -m pytest tests/test_sprint11.py -q`. The Phase 1 market (seed 7, 15% new women
-per cycle) is simulated over three cycles with 80% show-ups instead of the forecast's assumed
-92%, and written into SQLite as app records (`app_sim.write_history`).
+per cycle) is run on synthetic members over three cycles with 80% show-ups instead of the forecast's assumed
+92%, and written into SQLite as app records (`app_fill.write_history`).
 
 ## Outcomes from records (FR-LM-51)
 
 | Check | Result |
 |---|---|
-| Cycle outcomes, 291 simulated cycles | all identical when rebuilt from records |
+| Cycle outcomes, 291 synthetic cycles | all identical when rebuilt from records |
 | Weekly delivered-so-far and confirmed-to-come, 838 snapshots | all identical |
 | Extra cycles in the records | 6 genuine fourth cycles (men whose cycles started on launch day) |
 

@@ -1,4 +1,4 @@
-"""FR-LM-36 to FR-LM-42: booking, billing, trust, events, geography and the cycle simulation."""
+"""FR-LM-36 to FR-LM-42: booking, billing, trust, events, geography and the cycle test run."""
 
 import dataclasses
 import re
@@ -30,7 +30,7 @@ from lastfirstdate.booking import (
     window_day_part,
 )
 from lastfirstdate.config import Place, load
-from lastfirstdate.cycle_sim import CycleSimulation, frictionless, join_days, market
+from lastfirstdate.cycle_runs import CycleRun, frictionless, join_days, market
 from lastfirstdate.models import PARTS_OF_DAY
 from lastfirstdate.mutual_report import build_scores
 from lastfirstdate.trust import Rating, TrustBook
@@ -322,17 +322,17 @@ def test_the_venue_keeps_the_longer_trip_short():
     assert geo.venue_for(a, a, [middle, near_a])[0] == 1
 
 
-# ---------------------------------------------------------------- FR-LM-42 cycle simulation
+# ---------------------------------------------------------------- FR-LM-42 cycle test run
 
 
 @pytest.fixture(scope="module")
 def phase1_cycles(p1cfg):
     """Seed 7 Phase 1 market with new women arriving: the real flow and a frictionless one."""
-    pop = market(p1cfg, 7, p1cfg.cycle_simulation.new_women_per_cycle)
+    pop = market(p1cfg, 7, p1cfg.cycle_runs.new_women_per_cycle)
     sc = build_scores(pop, p1cfg, 7)
-    join = join_days(pop, p1cfg, p1cfg.cycle_simulation.new_women_per_cycle)
-    real = CycleSimulation(pop, p1cfg, 7, sc.mutual, join)
-    smooth = CycleSimulation(pop, frictionless(p1cfg), 7, sc.mutual, join)
+    join = join_days(pop, p1cfg, p1cfg.cycle_runs.new_women_per_cycle)
+    real = CycleRun(pop, p1cfg, 7, sc.mutual, join)
+    smooth = CycleRun(pop, frictionless(p1cfg), 7, sc.mutual, join)
     return real, real.run("real"), smooth.run("frictionless")
 
 
@@ -365,13 +365,13 @@ def test_the_books_balance(p1cfg, phase1_cycles):
 def test_friction_costs_men_their_dates(phase1_cycles):
     """FR-LM-42: with everyone paying in time, nobody cancelling and everyone showing up, at
     least 5 points more men reach 3 delivered dates. (Sprint 7 claimed 10; that came from a
-    simulation bug that never refilled a slot after a no-show, fixed in Sprint 8.)"""
+    test run bug that never refilled a slot after a no-show, fixed in Sprint 8.)"""
     _, real, smooth = phase1_cycles
     assert smooth.guarantee_share >= real.guarantee_share + 0.05
 
 
 def test_trust_flags_bad_actors_and_not_looks(phase1_cycles):
-    """FR-LM-42: at least 80% of simulated bad actors with 6+ ratings are flagged (about 6
+    """FR-LM-42: at least 80% of synthetic bad actors with 6+ ratings are flagged (about 6
     poor ratings bring a typical one below the line), at least 80% of flags are bad actors,
     and trust does not track how attractive people find someone (R2)."""
     _, rep, _ = phase1_cycles
@@ -384,7 +384,7 @@ def test_trust_flags_bad_actors_and_not_looks(phase1_cycles):
 @pytest.mark.xfail(
     strict=True,
     reason="Sprint 7 finding (corrected in Sprint 8): at 3 women per man, with payment holds, "
-    "cancellations and no-shows, about 82% of men (3 simulated markets) get 3 delivered dates "
+    "cancellations and no-shows, about 82% of men (3 synthetic markets) get 3 delivered dates "
     "a cycle; reaching 90% takes about 4.5 women per man",
 )
 def test_the_real_flow_reaches_the_north_star(p1cfg, phase1_cycles):

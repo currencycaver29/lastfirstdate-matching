@@ -18,7 +18,7 @@ from datetime import UTC, date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from lastfirstdate import app
-from lastfirstdate.app_sim import fill_database
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.config import Config, load
 from lastfirstdate.synthetic import generate
 

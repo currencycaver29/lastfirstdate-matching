@@ -9,7 +9,7 @@ software. It adds a second settings file with the Phase 1 rules, the website's s
 intent questions, free-text prompts, and "Who are you more drawn to?" pair questions. Most
 importantly, it adds a **forecast** of each man's chance of reaching 3 dates and a **ratio
 gate** that admits men from the waitlist only while the forecast stays at 90% or above. In
-simulation the gate works: with more men waiting than there are women, the men it admits reach
+test runs the gate works: with more men waiting than there are women, the men it admits reach
 3 dates **92% to 96%** of the time. Admitting everyone would give **12.5%**. Along the way the
 first version of the forecast failed badly in a way worth understanding (section 9).
 
@@ -25,7 +25,7 @@ first version of the forecast failed badly in a way worth understanding (section
 
 The forecast and the gate themselves don't come from a paper. They are ordinary logistic
 regression applied to your business rule. Papers 15 and 16 explain *why* the ratio matters so
-much; the simulation measures *how much*.
+much; the test run measures *how much*.
 
 ---
 
@@ -37,12 +37,12 @@ much; the simulation measures *how much*.
 | `config/lastfirstdate.toml` | Research defaults, unchanged in effect. It gained the settings that moved out of the code (city areas, prompt style) and the new `[gate]` section |
 | `config/forecast_model.toml` | The fitted forecast: coefficients and the range of women per man they were fitted on |
 | `forecast.py` | Engine: market features, the forecast, at-risk alerts, the ratio gate |
-| `forecast_fit.py` | Simulation side: builds 42 simulated markets, fits the forecast, tests it on 8 others, saves it |
-| `phase1_report.py` | Simulation side: pair questions versus singles, and the gate in action |
+| `forecast_fit.py` | Test side: builds 42 synthetic markets, fits the forecast, tests it on 8 others, saves it |
+| `phase1_report.py` | Test side: pair questions versus singles, and the gate in action |
 | `synthetic.py` | Fake members can now follow the Phase 1 rules: exact head counts, one zone, single-answer intent questions, prompt-style bios |
-| `filter.py`, `personality.py`, `simulator.py` | Single-answer questions (closeness), the word encoder, and simulated answers to pair questions |
+| `filter.py`, `personality.py`, `member_behavior.py` | Single-answer questions (closeness), the word encoder, and synthetic answers to pair questions |
 | `looks.py` | Pair questions in the taste model and in calibration |
-| `simulate.py` | Optionally records each man's dates and waiting yeses at the end of every week (for at-risk alerts) |
+| `month_runs.py` | Optionally records each man's dates and waiting yeses at the end of every week (for at-risk alerts) |
 
 With the default settings file, every earlier result is identical. The fake population and the
 month report were checked line by line before and after (`test_default_population_is_unchanged_by_sprint_6`).
@@ -125,7 +125,7 @@ answer is most informative: the largest log(1 + p(1 − p) · dᵀΣd), where d 
 predicted chance of choosing A, and Σ is the model's uncertainty. The idea matches Sprint 2's
 singles: ask where the model is unsure *and* the answer would move it most.
 
-### What the simulation showed
+### What the test run showed
 
 Same members, same answers to the same photos (common random numbers), and accuracy measured on
 photos no version showed:
@@ -147,7 +147,7 @@ only 9 answers. Counted **per answer**, pairs and singles teach the same amount:
 **Decision D15:** count calibration length in answers, not photos. If you want pairs, ask about
 as many questions as you would have asked singles.
 
-**What the simulation can't show.** People's yes/no threshold drifts (tired, picky today); a
+**What the test run can't show.** People's yes/no threshold drifts (tired, picky today); a
 choice between two photos is immune to that drift. Our fake people have a fixed threshold, so
 pairs' main real-world advantage isn't modelled. An A/B test at launch should settle it
 (`docs/risk-plan.md`, section 4).
@@ -179,9 +179,9 @@ before the cycle ends.
 
 ### How it was fitted
 
-Before launch there are no real cycles, so the starting coefficients come from **42 simulated
+Before launch there are no real cycles, so the starting coefficients come from **42 synthetic
 markets** with Phase 1 rules. Each combines 60, 100 or 150 men with 0.5, 0.75, 1, 1.5, 2, 3 or 5
-women per man, on two seeds, simulated for 2 cycles each. Every paying man in every cycle is one
+women per man, on two seeds, run for 2 cycles each. Every paying man in every cycle is one
 row: features, plus whether he reached 3 dates. That gives about 8,200 start rows and 24,700
 mid-cycle rows (one per man per week). Logistic regression with a small penalty (`gate.forecast_l2`) fits them, the same
 `fit_logistic` as the looks model. Once real cycles exist, the same function is rerun on real
@@ -193,7 +193,7 @@ The fitted start coefficients:
 |---|---:|---:|---:|---:|---:|
 | b | −5.944 | 0.281 | 1.438 | 1.891 | 2.810 |
 
-**A worked example** from a simulated 3:1 market. A man with 126 possible matches and attention
+**A worked example** from a synthetic 3:1 market. A man with 126 possible matches and attention
 share 2.58:
 
     −5.944 + 0.281·log 3 + 1.438·log 127 + 1.891·log 3.58 + 2.81·0
@@ -251,9 +251,9 @@ Applicants on the men's waitlist are considered **in order** (first come, first 
 The result says how many to admit, who was deferred, the resulting ratio and forecast, and why
 it stopped. All three thresholds live in `config/phase1.toml`.
 
-### What the simulation showed
+### What the test run showed
 
-Each market was simulated for two cycles with only the admitted men in it, on three seeds. Three
+Each market was run on synthetic members for two cycles with only the admitted men in it, on three seeds. Three
 versions: the gate as set, the forecast alone (no 3:1 floor), and admitting everyone.
 
 **Waitlist smaller than the women** (about 285 women, 187 men waiting):
@@ -280,7 +280,7 @@ What this means:
   are within about 2 points, and the forecast errs on the cautious side.
 - **The 3:1 floor is cautious in a zone this size.** The forecast alone admits about 1.8 times
   as many men and still reaches 92%. With about 290 women, men have larger pools, so they need
-  fewer women each. The floor is a safety margin against the simulation being wrong about real
+  fewer women each. The floor is a safety margin against the test run being wrong about real
   people. Whether to keep it at launch is your call (questions below).
 - **For women,** at 3:1 the average woman can have at most about 1 date a cycle (each man needs
   3, three women share him). That is why "commit to three dates" should read "up to three".
@@ -305,7 +305,7 @@ What this means:
 The first forecast was fitted on markets with 1 to 5 women per man. On held-out markets in that
 range it looked excellent (79.7% versus 76.8% actual at 1.5:1; 93.5% versus 93.8% at 3:1). Then
 the gate trial gave it a waitlist of 432 men for 278 women (0.64 per man). It forecast **83%**.
-In the simulation, **7.4%** of men reached 3 dates.
+In the test run, **7.4%** of men reached 3 dates.
 
 The reason is arithmetic. 278 women × 3 dates is 834 dates. 432 men × 3 is 1,296. Most men
 *cannot* reach 3, however good the matching. And the scheduler spreads the dates out, so it's
@@ -343,7 +343,7 @@ on, and anything that acts on it should refuse to act outside that range.**
 
 ## 10. Honest limits
 
-- **Everything is simulated.** Fake people's yes rates, show-up rates and taste decide how many
+- **Everything is run on synthetic members.** Fake people's yes rates, show-up rates and taste decide how many
   women per man are enough. The real number could be higher or lower. Refit the forecast after
   the first real cycles; until then the 3:1 floor is the safety margin.
 - **The forecast doesn't know about seasons, events, or marketing pushes**, only the market's
@@ -388,7 +388,7 @@ the gate report; change `n_pairs` under `[calibration]` and watch the calibratio
 ## Questions for you
 
 1. **The 3:1 floor.** Keep it at launch as a safety margin (my recommendation until real cycles
-   exist), or let the forecast alone decide? In simulation the forecast alone would sell about
+   exist), or let the forecast alone decide? In test runs the forecast alone would sell about
    1.8 times as many subscriptions at 92% fulfilment.
 2. **The target.** 90% matches your north star. A higher target sells fewer subscriptions but
    costs fewer credits.

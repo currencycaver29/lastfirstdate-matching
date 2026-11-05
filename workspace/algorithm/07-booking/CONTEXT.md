@@ -52,7 +52,7 @@ delivered), D19 (timestamps in UTC, date windows in the zone's own time).
 
 - About one booked date in three falls through: the hold expires, someone cancels, or someone
   doesn't show up. Most are refilled in time.
-- Whoever is stood up gets their week and cap slot back (`CycleSimulation.release_slot`).
+- Whoever is stood up gets their week and cap slot back (`CycleRun.release_slot`).
   Sprint 7 missed this, which understated delivered dates (corrected in Sprint 8).
 - Allowing 2 dates a week instead of 1 didn't help.
 - Venue trips averaged under 1 km in Phase 1.
@@ -67,4 +67,4 @@ delivered), D19 (timestamps in UTC, date windows in the zone's own time).
 ## If you change it
 
 Keep `db/schema.sql`'s booking states the same as `booking.STATES` (tested). Rerun
-`python -m lastfirstdate.cycle_sim`.
+`python -m lastfirstdate.cycle_runs`.

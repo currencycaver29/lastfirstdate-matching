@@ -9,15 +9,15 @@ import numpy as np
 import pytest
 
 from lastfirstdate import app, refit
-from lastfirstdate.app_sim import fill_database, write_history
+from lastfirstdate.app_fill import fill_database, write_history
 from lastfirstdate.config import load
-from lastfirstdate.cycle_sim import CycleSimulation, join_days, market
+from lastfirstdate.cycle_runs import CycleRun, join_days, market
 from lastfirstdate.filter import eligibility_matrix
 from lastfirstdate.forecast import DELIVERED_MODEL_PATH, ForecastModel
 from lastfirstdate.looks import sigmoid
 from lastfirstdate.mutual_report import build_scores
 
-EPOCH = date(2026, 1, 5)  # a Monday: simulation day 0
+EPOCH = date(2026, 1, 5)  # a Monday: test run day 0
 
 
 @pytest.fixture(scope="module")
@@ -26,11 +26,11 @@ def history():
     the forecast assumed (80% instead of 92%), written into SQLite as the app's records."""
     base = load("config/phase1.toml")
     cfg = dataclasses.replace(
-        base, simulation=dataclasses.replace(base.simulation, show_up_rate=0.80)
+        base, test_runs=dataclasses.replace(base.test_runs, show_up_rate=0.80)
     )
     pop = market(cfg, 7, 0.15)
     sc = build_scores(pop, cfg, 7)
-    sim = CycleSimulation(pop, cfg, 7, sc.mutual, join_days(pop, cfg, 0.15), record=True)
+    sim = CycleRun(pop, cfg, 7, sc.mutual, join_days(pop, cfg, 0.15), record=True)
     report = sim.run("history")
     today = EPOCH + timedelta(days=sim.days)
     con = sqlite3.connect(":memory:")
@@ -54,14 +54,14 @@ def history():
 # ---------------------------------------------------------------- FR-LM-51
 
 
-def test_cycle_outcomes_from_records_match_the_simulation(history):
-    """FR-LM-51: every cycle the simulation reported reached 3 delivered dates (or not)
+def test_cycle_outcomes_from_records_match_the_test_run(history):
+    """FR-LM-51: every cycle the test run reported reached 3 delivered dates (or not)
     exactly as the records say."""
     men = np.flatnonzero(history.sim.guaranteed)
     want = {
         (1000 + int(m), k): bool(history.report.delivered[r, k] >= 3)
         for r, m in enumerate(men)
-        for k in range(history.cfg.cycle_simulation.cycles)
+        for k in range(history.cfg.cycle_runs.cycles)
     }
     got = dict(
         zip(
@@ -73,9 +73,9 @@ def test_cycle_outcomes_from_records_match_the_simulation(history):
     assert {k: got[k] for k in want} == want
 
 
-def test_weekly_progress_from_records_matches_the_simulation(history):
+def test_weekly_progress_from_records_matches_the_test_run(history):
     """FR-LM-51: delivered-so-far and confirmed-to-come at every weekly snapshot equal what the
-    simulation saw at that moment."""
+    test run saw at that moment."""
     seen = {}
     for rows, men, k in history.sim.week_rows:
         for x, m in zip(rows, men, strict=True):

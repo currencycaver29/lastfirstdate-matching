@@ -4,8 +4,8 @@
 does both. First, the **photo exercise one question at a time**: the app asks the engine for
 the next photo or pair, shows it, and sends back the member's tap. If the member leaves
 halfway, the engine picks up exactly where they stopped. The new `CalibrationSession` is now
-the only implementation of the exercise; the simulations run through it too, so the app and
-the simulations can never drift apart. It asks exactly the questions the old code asked, and
+the only implementation of the exercise; the test runs run through it too, so the app and
+the test runs can never drift apart. It asks exactly the questions the old code asked, and
 the default city's scores came out byte-identical. Second, a **nightly cache** that keeps the
 day's work and refits only the members whose answers changed. For Phase 1 a quiet night now
 takes 0.07 seconds instead of 0.5.
@@ -55,14 +55,14 @@ What the session guarantees:
 
 ### One implementation, not two
 
-`looks.calibrate`, which every simulation uses, is now four lines on top of the session. So
-whatever the simulations measured is exactly what the app will do. The proof:
+`looks.calibrate`, which every test run uses, is now four lines on top of the session. So
+whatever the test runs measured is exactly what the app will do. The proof:
 
 | Check | Result |
 |---|---|
 | Question by question against a frozen copy of the old algorithm (25 members, Phase 1 with pairs and the research setup without) | identical questions, identical taste models |
 | The default 1,000-member city's 50/50 scores | byte-identical to before |
-| A simulated month on those scores | exactly the same dates |
+| A synthetic month on those scores | exactly the same dates |
 | Interrupted after 3, 14, or all but one answer, then resumed | the same remaining questions |
 
 ---

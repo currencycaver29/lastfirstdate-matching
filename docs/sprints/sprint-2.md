@@ -31,8 +31,8 @@ recurrent network, and paper 1's pairwise-comparison setup.
 | File | What it does |
 |---|---|
 | `looks.py` | The engine side: photo encoder interface, PCA, logistic regression, starting taste, personal taste, calibration pool, varied and informative selection |
-| `looks_report.py` | The simulation side: trains, calibrates, scores and audits on fake members |
-| `simulator.py` | New: a photo-only swipe decision |
+| `looks_report.py` | The test run side: trains, calibrates, scores and audits on fake members |
+| `member_behavior.py` | New: a photo-only swipe decision |
 | `tests/test_looks.py` | 20 tests for FR-LM-13 to FR-LM-17 |
 
 ## 2. The big picture
@@ -212,7 +212,7 @@ alternatives, and simple.
 - **The ceiling.** The swipes are noisy (the logistic choice from Sprint 1), so even ranking
   by her true taste can't reach 1.0. Ranking by true taste gives the ceiling: the best any
   model could do.
-- **Rank correlation with true taste.** This is only possible in simulation: how closely the
+- **Rank correlation with true taste.** This is only possible in test runs: how closely the
   model's order matches her hidden true order (1 = identical).
 
 ## 8. Results
@@ -305,13 +305,13 @@ drops. The chosen values are 1.0 and 10.0.
 
 ## 11. Honest limits
 
-- **The fake world suits this model.** In the simulator, true taste is a straight-line
+- **The fake world suits this model.** In the test harness, true taste is a straight-line
   function of the photo embedding, and the model is also a straight-line function. The model
   matches the truth's form exactly. Real taste in CLIP space is messier, so real accuracy
   will be lower. Papers 5 and 7 report that photos carry strong signal in real data (paper 7:
   F1 of 0.87 on mutual matches), but they use different measures, so the numbers aren't
   comparable.
-- **Calibration's edge is small** in simulation (+0.004 to +0.009 AUC). It might be bigger or
+- **Calibration's edge is small** in test runs (+0.004 to +0.009 AUC). It might be bigger or
   smaller with real people. A launch A/B test (half random, half calibrated) would settle
   it.
 - **13 members were skipped** because their calibration pool had fewer than 80 profiles (50

@@ -51,10 +51,10 @@ D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
   "rock climbing" and "bouldering" score 0.67, against 0.13 for opera. On the synthetic
   prompts, which reuse a small vocabulary, it separates shared lifestyles only a little better
   (AUC 0.888 against 0.869); real prompts vary far more. It changes about 2 of each member's
-  top 10. Tests and simulations keep "words".
+  top 10. Tests and test runs keep "words".
 - The weights are guesses until real dates exist (paper 9).
 
 ## If you change it
 
-P feeds the mutual score (stage 5). Rerun `python -m lastfirstdate.simulate` and check that
+P feeds the mutual score (stage 5). Rerun `python -m lastfirstdate.month_runs` and check that
 the default population's results are unchanged unless the change is intended.

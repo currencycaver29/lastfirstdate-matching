@@ -1,7 +1,7 @@
-"""Phase 1 cycles: lastfirstdate's real booking flow, simulated day by day (FR-LM-42).
+"""Phase 1 cycles: the real booking flow, run day by day on synthetic members (FR-LM-42).
 
-Simulation only. Sprints 1 to 6 booked dates in a weekly batch and counted dates per calendar
-month. lastfirstdate actually works like this, and so does this simulation:
+Test runs only. Sprints 1 to 6 booked dates in a weekly batch and counted dates per calendar
+month. lastfirstdate actually works like this, and so does this test run:
 
 1. Every day, women who open the app get up to 30 men, each shown with a proposed date
    window: the earliest time both are free (FR-LM-37). Men with no common window aren't
@@ -14,14 +14,14 @@ month. lastfirstdate actually works like this, and so does this simulation:
 4. Members-only events add a few dates outside the lists (FR-LM-40).
 5. Each paying man's billing cycles run on his own clock. At the end of each, his delivered
    dates decide his credit.
-6. New women keep joining (`cycle_simulation.new_women_per_cycle`). Without them the market
+6. New women keep joining (`cycle_runs.new_women_per_cycle`). Without them the market
    wears out: with up to 30 profiles a day and a 7-day rest, each woman sees every man in her
    pool (about 46 in Phase 1) about once a week, and each pass makes a later pick less likely.
 
 The fake people's conduct (how respectful they are, how accurate their profile is) is hidden
 truth drawn here; the trust score only ever sees their ratings.
 
-Run `python -m lastfirstdate.cycle_sim` to print the report (about a minute).
+Run `python -m lastfirstdate.cycle_runs` to print the report (about a minute).
 """
 
 from __future__ import annotations
@@ -54,8 +54,8 @@ from lastfirstdate.fairness import fair_day_lists
 from lastfirstdate.filter import eligibility_matrix, member_ok
 from lastfirstdate.forecast import delivered_progress_matrix, market_features, start_matrix
 from lastfirstdate.lists import NEVER_SHOWN, available_row, pick_rights
+from lastfirstdate.month_runs import month_people, run_month
 from lastfirstdate.mutual_report import build_scores
-from lastfirstdate.simulate import month_people, run_month
 from lastfirstdate.synthetic import Population, generate
 from lastfirstdate.trust import Rating, TrustBook, with_trust
 
@@ -74,7 +74,7 @@ class Conduct:
 
 
 def hidden_conduct(n: int, cfg: Config, seed: int) -> Conduct:
-    cs = cfg.cycle_simulation
+    cs = cfg.cycle_runs
     rng = np.random.default_rng([seed, 707])
     conduct, honesty = rng.normal(size=n), rng.normal(size=n)
     bad = rng.random(n) < cs.bad_actor_share
@@ -140,7 +140,7 @@ class CycleReport:
             f"{self.cancellations['late']} late; event dates {self.events}",
             f"  launch women's completed dates per 28 days: average "
             f"{self.women_dates.mean():.2f}, none {np.mean(self.women_dates == 0):.0%}",
-            f"  trust: {self.flagged} flagged, {self.flagged_bad} of them simulated bad actors "
+            f"  trust: {self.flagged} flagged, {self.flagged_bad} of them synthetic bad actors "
             f"({self.bad} bad actors in all); caught {self.caught_well_rated} of the "
             f"{self.bad_well_rated} with {WELL_RATED}+ ratings; median ratings when flagged "
             f"{np.median(self.ratings_at_flag) if self.ratings_at_flag else float('nan'):.0f}",
@@ -151,7 +151,7 @@ class CycleReport:
         return "\n".join(lines)
 
 
-class CycleSimulation:
+class CycleRun:
     """One run of the real flow on one market."""
 
     def __init__(
@@ -167,7 +167,7 @@ class CycleSimulation:
         self.record = record  # keep forecast rows (FR-LM-43, FR-LM-44)
         self.launch_rows: np.ndarray | None = None
         self.week_rows: list[tuple[np.ndarray, np.ndarray, int]] = []  # rows, men, cycle
-        cs, b = cfg.cycle_simulation, cfg.billing
+        cs, b = cfg.cycle_runs, cfg.billing
         n = len(pop)
         self.n = n
         self.arr = arr = MemberArrays.from_members(pop.members, cfg.values)
@@ -313,7 +313,7 @@ class CycleSimulation:
                     self.check_flag(rated)
 
     def rate(self, rater: int, rated: int) -> Rating:
-        cs = self.cfg.cycle_simulation
+        cs = self.cfg.cycle_runs
         attraction = float(self.behavior.utility[rater, rated])
 
         def score(trait: float) -> int:
@@ -371,7 +371,7 @@ class CycleSimulation:
     def snapshot(self, today: int) -> None:
         """Forecast rows: every man's market at launch, and his progress each week of his
         paid cycles (FR-LM-43, FR-LM-44)."""
-        c, cycles = self.cfg.billing.cycle_days, self.cfg.cycle_simulation.cycles
+        c, cycles = self.cfg.billing.cycle_days, self.cfg.cycle_runs.cycles
         if today == 0:
             launch = market_features(
                 self.eligible,
@@ -411,7 +411,7 @@ class CycleSimulation:
 
     def lists(self, today: int) -> None:
         cfg, n = self.cfg, self.n
-        sim, lst = cfg.simulation, cfg.lists
+        sim, lst = cfg.test_runs, cfg.lists
         everyone = np.arange(n)
         now = self.period(everyone, np.full(n, today))
         full = (self.period_count[everyone, now] >= self.cap) | self.paused
@@ -460,7 +460,7 @@ class CycleSimulation:
                 self.book(i, int(j), today, "list")
 
     def events(self, today: int) -> None:
-        cs = self.cfg.cycle_simulation
+        cs = self.cfg.cycle_runs
         rate = cs.event_rate / self.cfg.billing.cycle_days
         for m in np.flatnonzero(self.guaranteed & ~self.paused):
             if self.rng.random() >= rate:
@@ -481,7 +481,7 @@ class CycleSimulation:
 
     def book(self, a: int, b: int, today: int, source: str) -> None:
         """a chose b (or they met at an event): propose, hold, pay, confirm."""
-        cfg, cs = self.cfg, self.cfg.cycle_simulation
+        cfg, cs = self.cfg, self.cfg.cycle_runs
         ba, bb = self.bits(today, np.array([a, b]))
         window = int(earliest_common(ba, bb))
         if window == NO_WINDOW:
@@ -531,7 +531,7 @@ class CycleSimulation:
     # ------------------------------------------------------------ results
 
     def report(self, label: str) -> CycleReport:
-        cfg, cs = self.cfg, self.cfg.cycle_simulation
+        cfg, cs = self.cfg, self.cfg.cycle_runs
         c = cfg.billing.cycle_days
         g = cfg.dates.guaranteed_per_month_paying
         men = np.flatnonzero(self.guaranteed)
@@ -612,7 +612,7 @@ NEVER = 10**9  # join day of women who never arrive
 def market(cfg: Config, seed: int, max_new_per_cycle: float) -> Population:
     """The Phase 1 market plus room for new women: the settings' men and women at launch,
     then enough extra women for `max_new_per_cycle` new women per cycle."""
-    p, cs = cfg.population, cfg.cycle_simulation
+    p, cs = cfg.population, cfg.cycle_runs
     n_men = round(p.n_members * p.share_men)
     n_women = p.n_members - n_men
     extra = round(n_women * max_new_per_cycle * cs.cycles)
@@ -624,7 +624,7 @@ def market(cfg: Config, seed: int, max_new_per_cycle: float) -> Population:
 def join_days(pop: Population, cfg: Config, new_per_cycle: float) -> np.ndarray:
     """Day each member joins: everyone at launch except the newest women, who arrive at an
     even pace of `new_per_cycle` (share of launch women) per cycle; the rest never come."""
-    p, cs, c = cfg.population, cfg.cycle_simulation, cfg.billing.cycle_days
+    p, cs, c = cfg.population, cfg.cycle_runs, cfg.billing.cycle_days
     n_women = p.n_members - round(p.n_members * p.share_men)
     women = np.flatnonzero(np.array([m.gender == "woman" for m in pop.members]))
     join = np.zeros(len(pop), dtype=np.int64)
@@ -636,7 +636,7 @@ def join_days(pop: Population, cfg: Config, new_per_cycle: float) -> np.ndarray:
     return join
 
 
-def simulate_cycles(
+def run_cycles(
     pop: Population,
     cfg: Config,
     seed: int,
@@ -644,23 +644,21 @@ def simulate_cycles(
     label: str = "real flow",
     join_day: np.ndarray | None = None,
 ) -> CycleReport:
-    return CycleSimulation(pop, cfg, seed, scores, join_day).run(label)
+    return CycleRun(pop, cfg, seed, scores, join_day).run(label)
 
 
 def frictionless(cfg: Config) -> Config:
     """Everyone pays in time, nobody cancels, everyone shows up."""
     cs = dataclasses.replace(
-        cfg.cycle_simulation, pay_in_time_chooser=1.0, pay_in_time_chosen=1.0, cancel_rate=0.0
+        cfg.cycle_runs, pay_in_time_chooser=1.0, pay_in_time_chosen=1.0, cancel_rate=0.0
     )
-    sim = dataclasses.replace(cfg.simulation, show_up_rate=1.0)
-    return dataclasses.replace(cfg, cycle_simulation=cs, simulation=sim)
+    sim = dataclasses.replace(cfg.test_runs, show_up_rate=1.0)
+    return dataclasses.replace(cfg, cycle_runs=cs, test_runs=sim)
 
 
 def synchronized(cfg: Config) -> Config:
     """Every man's cycles start on launch day."""
-    return dataclasses.replace(
-        cfg, cycle_simulation=dataclasses.replace(cfg.cycle_simulation, stagger=False)
-    )
+    return dataclasses.replace(cfg, cycle_runs=dataclasses.replace(cfg.cycle_runs, stagger=False))
 
 
 def batch_baseline(
@@ -678,7 +676,7 @@ def batch_baseline(
     later = join_day > 0
     excluded[later, :] = excluded[:, later] = True
     shares = []
-    for k in range(cfg.cycle_simulation.cycles):
+    for k in range(cfg.cycle_runs.cycles):
         m = run_month(pop, cfg, seed, scores, month=k + 1, excluded=excluded, record=True)
         paying = men[m.paying[men]]
         shares.append(float((m.dates[paying] >= cfg.dates.guaranteed_per_month_paying).mean()))
@@ -688,18 +686,18 @@ def batch_baseline(
 
 
 def show_up(cfg: Config, rate: float) -> Config:
-    sim = dataclasses.replace(cfg.simulation, show_up_rate=rate)
-    return dataclasses.replace(cfg, simulation=sim)
+    sim = dataclasses.replace(cfg.test_runs, show_up_rate=rate)
+    return dataclasses.replace(cfg, test_runs=sim)
 
 
 def pays_in_time(cfg: Config) -> Config:
-    cs = dataclasses.replace(cfg.cycle_simulation, pay_in_time_chooser=1.0, pay_in_time_chosen=1.0)
-    return dataclasses.replace(cfg, cycle_simulation=cs)
+    cs = dataclasses.replace(cfg.cycle_runs, pay_in_time_chooser=1.0, pay_in_time_chosen=1.0)
+    return dataclasses.replace(cfg, cycle_runs=cs)
 
 
 def scenarios(cfg: Config) -> dict[str, tuple[Config, float]]:
     """name: (settings, new women per cycle). The first is the settings as they are."""
-    new = cfg.cycle_simulation.new_women_per_cycle
+    new = cfg.cycle_runs.new_women_per_cycle
     return {
         f"real flow, {new:.0%} new women per cycle": (cfg, new),
         "real flow, no new women": (cfg, 0.0),
@@ -715,11 +713,11 @@ def compare(cfg: Config, seeds: tuple[int, ...]) -> tuple[dict[str, list[CycleRe
     runs: dict[str, list[CycleReport]] = {}
     batch = []
     for seed in seeds:
-        pop = market(cfg, seed, cfg.cycle_simulation.new_women_per_cycle)
+        pop = market(cfg, seed, cfg.cycle_runs.new_women_per_cycle)
         sc = build_scores(pop, cfg, seed)
         for name, (c, new) in scenarios(cfg).items():
             join = join_days(pop, c, new)
-            runs.setdefault(name, []).append(simulate_cycles(pop, c, seed, sc.mutual, name, join))
+            runs.setdefault(name, []).append(run_cycles(pop, c, seed, sc.mutual, name, join))
         batch.append(np.mean(batch_baseline(pop, cfg, seed, sc.mutual, join_days(pop, cfg, 0.0))))
     return runs, batch
 
@@ -731,7 +729,7 @@ def comparison_text(runs: dict[str, list[CycleReport]], batch: list, seeds) -> s
         return f"{xs.mean():6.1%} ± {se:4.1%}"
 
     lines = [
-        f"Phase 1 cycles: men reaching 3 delivered dates, average of {len(seeds)} simulated "
+        f"Phase 1 cycles: men reaching 3 delivered dates, average of {len(seeds)} synthetic "
         f"markets (seeds {', '.join(map(str, seeds))}), ± one standard error",
         f"  {'version':52s} {'3 dates':>15s} {'by cycle':>16s} {'credits':>8s}",
     ]

@@ -28,8 +28,8 @@ least 50 possible matches gives about 96%), so that decision is yours.
 | File | What it does |
 |---|---|
 | `fairness.py` | Engine: guarantee bonus, "effectively booked" rule, exposure cap, round-robin fair lists, Nash social welfare lists, hold-back rule |
-| `fairness_report.py` | Simulation side: exposure spread (Gini), audience-adjusted shown and date rates by fake group and age band, the hold-back experiment |
-| `simulate.py` | The month now builds each day's lists with the configured policy (`basic`, `fair` or `nsw`), supports a separate cap for free members, and counts any cap breach |
+| `fairness_report.py` | Test side: exposure spread (Gini), audience-adjusted shown and date rates by fake group and age band, the hold-back experiment |
+| `month_runs.py` | The month now builds each day's lists with the configured policy (`basic`, `fair` or `nsw`), supports a separate cap for free members, and counts any cap breach |
 | `config/lastfirstdate.toml` | New `[lists]` switches, a new `[fairness]` section, and `late_month_bonus` raised from 0.2 to 1.0 |
 | `tests/test_fairness.py` | 16 tests for FR-LM-21 to FR-LM-24, including the 95% check as an expected failure |
 
@@ -131,7 +131,7 @@ the "four-fifths rule" used in US hiring audits.
 
 ## 5. What the experiments showed
 
-All rule choices were made on the **tuning city (seed 101)**, averaging 5 simulated months each,
+All rule choices were made on the **tuning city (seed 101)**, averaging 5 synthetic months each,
 then confirmed on the main city (seed 7).
 
 ### List rules alone barely move the guarantee (tuning city)
@@ -213,7 +213,7 @@ need. Capping only free men (who compete with paying men) doesn't help either. S
 exists (`cap_per_month_free`, `free_cap_genders`) but stays at no extra cap.
 
 **The hold-back rule (paper 14)** cost 40 dates on the main city (1,184 to 1,144). Its benefit in
-the paper comes from members getting pickier after many matches, and our simulator doesn't
+the paper comes from members getting pickier after many matches, and our test harness doesn't
 model that. So this test can show the cost but not the benefit. Off by default.
 
 ## 7. Why 95% isn't reached, and what would reach it
@@ -247,11 +247,11 @@ the test suite turns red, so the marker can't be forgotten.
 
 ## 8. Honest limits
 
-- The simulator decides who says yes. If real women are less picky, or real men more picky,
+- The test harness decides who says yes. If real women are less picky, or real men more picky,
   the numbers move.
 - Single-month differences of a point or two are noise. Every comparison above that matters
   uses 5 months.
-- Paper 14's mechanism (members get pickier after matching) isn't in the simulator.
+- Paper 14's mechanism (members get pickier after matching) isn't in the test harness.
 - Paper 13's full method (optimizing everyone's rankings together with explicit capacities) is
   not implemented. Its key idea was tested through `hide_booked`.
 
@@ -290,7 +290,7 @@ Then in `config/lastfirstdate.toml` (change them back afterwards):
 - `policy = "nsw"`: Nash welfare lists. Compare the Gini.
 - `exposure_multiple = 2.0`: a looser cap. Watch the Gini rise.
 - `hide_booked = true`: watch the lists shrink and the guarantee fall.
-- `min_pool_for_guarantee = 50` (in `[simulation]`): the guarantee share measured the way a
+- `min_pool_for_guarantee = 50` (in `[test_runs]`): the guarantee share measured the way a
   50-match rule would sell it.
 
 ## 12. Read before Sprint 5 (learning from dates)

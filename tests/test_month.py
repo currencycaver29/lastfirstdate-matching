@@ -1,9 +1,9 @@
-"""FR-LM-12: the simulated month and its report."""
+"""FR-LM-12: the synthetic month and its report."""
 
 import numpy as np
 import pytest
 
-from lastfirstdate.simulate import DAYS_PER_WEEK, run_month
+from lastfirstdate.month_runs import DAYS_PER_WEEK, run_month
 from lastfirstdate.synthetic import generate
 
 # Personality-only baseline on the default population (seed 7) is about 0.8. This floor only

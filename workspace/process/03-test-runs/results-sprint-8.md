@@ -1,15 +1,15 @@
 # Sprint 8 results: the forecast and the gate on delivered dates
 
-All numbers come from fake members in the real booking flow (`cycle_sim.py`): 15% new women
+All numbers come from fake members in the real booking flow (`cycle_runs.py`): 15% new women
 per cycle, 92% show-ups, 5% cancellations each, 90% of men paying within the 15-minute hold,
 three billing cycles.
 
 ## 1. A correction to Sprint 7 (the refill fix)
 
-Sprint 7's simulation never gave a man his week and cap slot back when a woman didn't show
-up, so her no-show could never be refilled. Fixed in `CycleSimulation.release_slot`.
+Sprint 7's test run never gave a man his week and cap slot back when a woman didn't show
+up, so her no-show could never be refilled. Fixed in `CycleRun.release_slot`.
 
-Command: `python -m lastfirstdate.cycle_sim` (seeds 7, 8, 9).
+Command: `python -m lastfirstdate.cycle_runs` (seeds 7, 8, 9).
 
 | Version | Sprint 7 | Corrected |
 |---|---:|---:|
@@ -65,7 +65,7 @@ Command: `python -m lastfirstdate.gate_report` (seeds 401, 402, 403; waitlist of
 | 500 women | everyone | 426.3 | 1.1 | 82.6% | 81.3% | 11.2% |
 
 The delivered forecast by number of men admitted (seed 401; a quick calculation, no
-simulation):
+test run):
 
 | Zone | 1 | 10 | 50 | 100 | 150 | 200 | 300 | all (~421) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -76,7 +76,7 @@ simulation):
 
 - **The size of the zone matters far more than women per man.** In the 500-woman zone, 56 men
   and 158 men both get about 89%; only past about 1 woman per man, when women's lists
-  overflow, does fulfilment fall. In the simulation a man's dates depend on how many women
+  overflow, does fulfilment fall. In the test run a man's dates depend on how many women
   nearby like him, and the fake women don't become less picky when men are scarce.
 - **In a 300-woman zone, the 90% promise supports only a handful of men.** The Sprint 6 gate
   would sell 95 subscriptions there that deliver about 75%.

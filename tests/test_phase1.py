@@ -22,6 +22,7 @@ from lastfirstdate.forecast import (
 )
 from lastfirstdate.looks import PersonalTaste, StartingTaste
 from lastfirstdate.looks_report import auc
+from lastfirstdate.member_behavior import Behavior
 from lastfirstdate.personality import (
     TagEncoder,
     WordEncoder,
@@ -30,7 +31,6 @@ from lastfirstdate.personality import (
     values_compatibility,
 )
 from lastfirstdate.phase1_report import gate_trial
-from lastfirstdate.simulator import Behavior
 from lastfirstdate.synthetic import generate, summary
 
 PHASE1 = "config/phase1.toml"
@@ -202,7 +202,7 @@ def test_a_pair_is_one_example_on_the_photo_difference():
 
 
 def test_pair_answers_follow_true_looks(p1cfg, p1pop):
-    """FR-LM-32: the simulator picks the better-looking-to-her photo more often, consistently."""
+    """FR-LM-32: the test harness picks the better-looking-to-her photo more often, consistently."""
     arr = MemberArrays.from_members(p1pop.members, p1cfg.values)
     beh = Behavior(p1pop, arr, p1cfg, np.random.default_rng(0))
     woman = next(m.id for m in p1pop.members if m.gender == "woman")
@@ -224,7 +224,7 @@ def test_pairs_teach_about_as_much_as_single_swipes(cfg):
     original = report.CALIBRATION_ARMS
     report.CALIBRATION_ARMS = arms
     try:
-        result = report.calibration_comparison(generate(cfg), cfg, cfg.simulation.seed, 100)
+        result = report.calibration_comparison(generate(cfg), cfg, cfg.test_runs.seed, 100)
     finally:
         report.CALIBRATION_ARMS = original
     diff, se = result.paired("12 singles + 9 pairs", "21 single photos")
@@ -381,12 +381,12 @@ def test_gate_never_relies_on_the_forecast_outside_its_fitted_range(p1cfg):
 
 @pytest.fixture(scope="module")
 def oversubscribed(p1cfg):
-    """A simulated waitlist longer than the women: 200 women invited, 300 men waiting."""
+    """A synthetic waitlist longer than the women: 200 women invited, 300 men waiting."""
     return gate_trial(p1cfg, ForecastModel.load(), 200, 300, seeds=(404,), months=1)
 
 
 def test_gate_protects_fulfilment_when_men_outnumber_women(p1cfg, oversubscribed):
-    """FR-LM-34: on a simulated waitlist longer than the women, the men the gate admits reach
+    """FR-LM-34: on a synthetic waitlist longer than the women, the men the gate admits reach
     3 dates close to the target and close to the forecast, while admitting everyone would fail
     most of them (and the forecast says so)."""
     target = p1cfg.gate.target

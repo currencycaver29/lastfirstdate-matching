@@ -1,9 +1,9 @@
 """Fill an app database from fake members, to test the engine on rows (FR-LM-47).
 
-Simulation only. It writes a synthetic population into the tables of `db/schema.sql` the way
+Test runs only. It writes a synthetic population into the tables of `db/schema.sql` the way
 the app would: neighbourhoods and venues, members with neighbourhoods (never coordinates),
 free slots, intent answers, prompts, subscriptions, and each member's photo exercise, run with
-the engine's own calibration and the simulated people's answers.
+the engine's own calibration and the synthetic people's answers.
 
 Database ids start at 1000 so a mix-up between ids and row numbers shows up in tests.
 """
@@ -29,7 +29,7 @@ from lastfirstdate.looks import (
     calibration_pool,
     photo_features,
 )
-from lastfirstdate.simulator import Behavior
+from lastfirstdate.member_behavior import Behavior
 from lastfirstdate.synthetic import Population
 
 SCHEMA = Path(__file__).resolve().parents[2] / "db" / "schema.sql"
@@ -172,7 +172,7 @@ def _calibration(con, pop: Population, cfg: Config, seed: int) -> FilledDatabase
         Swipe(int(arr.gender[v]), int(arr.gender[j]), feats[j], bool(likes[v][j]))
         for v in viewers
         for j in rng.choice(
-            pools[v], min(cfg.simulation.training_swipes, pools[v].size), replace=False
+            pools[v], min(cfg.test_runs.training_swipes, pools[v].size), replace=False
         )
     ]
     start = StartingTaste.fit(history, cfg.calibration.w0_l2_penalty)
@@ -207,9 +207,9 @@ def _calibration(con, pop: Population, cfg: Config, seed: int) -> FilledDatabase
 
 
 def write_history(con, sim, epoch: date) -> None:
-    """Write a finished `CycleSimulation` into the database as the app's records (FR-LM-51).
+    """Write a finished `CycleRun` into the database as the app's records (FR-LM-51).
 
-    Simulation day 0 is `epoch` (a Monday). Members get their join days, paying men their
+    Test run day 0 is `epoch` (a Monday). Members get their join days, paying men their
     subscriptions (signed up a trial before their first paid cycle), and every booking its
     timestamps, payments and refunds, as the app would have stored them: timestamps in UTC
     with an offset, dates in the zone's own time (D19).

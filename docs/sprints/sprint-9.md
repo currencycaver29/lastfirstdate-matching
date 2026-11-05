@@ -1,8 +1,8 @@
 # Sprint 9: the handoff to the app
 
 **In one paragraph.** You're building the algorithm; someone else will build the app. Until
-now the engine got its inputs from the simulator: simulated people answered the photo exercise,
-and simulated months produced the bookings. A real app has none of that, only its database.
+now the engine got its inputs from the test harness: synthetic people answered the photo exercise,
+and synthetic months produced the bookings. A real app has none of that, only its database.
 Sprint 9 makes the engine run **from the app's database alone**. It adds `app.py`, which reads
 the tables designed in Sprint 7 and returns everything the app needs. It also writes
 `docs/handoff/README.md`, the guide an app developer follows: which call happens when, what
@@ -20,8 +20,8 @@ into a form an app can call.
 
 | File | What it does |
 |---|---|
-| `src/lastfirstdate/app.py` | Engine side, no simulator: loads the market from rows, refits taste models from stored answers, nightly scores, daily lists with date windows, bookings, trust, weekly alerts, cycle-end credits, the gate before a sale |
-| `src/lastfirstdate/app_sim.py` | Simulation side: writes a fake zone into the database the way the app would, including each member's photo exercise |
+| `src/lastfirstdate/app.py` | Engine side, no test harness: loads the market from rows, refits taste models from stored answers, nightly scores, daily lists with date windows, bookings, trust, weekly alerts, cycle-end credits, the gate before a sale |
+| `src/lastfirstdate/app_fill.py` | Test side: writes a fake zone into the database the way the app would, including each member's photo exercise |
 | `docs/handoff/README.md` | The guide for the app developer: call sequence, data contract, settings, assumptions, what's not covered yet |
 | `db/schema.sql` | One new table, `list_shows` (who was shown to whom, and whether they were picked) |
 | `config.py` | Every setting classified by what changing it requires (`setting_impact`, `settings_table`) |
@@ -101,9 +101,9 @@ Nothing is lost if a server restarts.
 | Class | Examples | What to do before changing it |
 |---|---|---|
 | Business terms | price, date fee, refund rules, trial length, the gate's target and floor, trust flag line, venues | change any time, with legal review where money is involved |
-| Simulate first | list size, reshow days, the 50/50 mix, personality weights, calibration length, trust weights | rerun the reports and check fulfilment |
-| Refit the forecast | date caps, dates per week, booking lead and horizon, the payment hold, cycle length | `forecast_fit --delivered`, then simulate |
-| Simulation only | `[simulation]`, `[cycle_simulation]`, `[population]` | nothing: the app never reads them |
+| Test first | list size, reshow days, the 50/50 mix, personality weights, calibration length, trust weights | rerun the reports and check fulfilment |
+| Refit the forecast | date caps, dates per week, booking lead and horizon, the payment hold, cycle length | `forecast_fit --delivered`, then rerun the test runs |
+| Test runs only | `[test_runs]`, `[cycle_runs]`, `[population]` | nothing: the app never reads them |
 | Engineering only | intent questions, Big Five, text encoder, model penalties | changes what the app collects or how models are fitted |
 
 The full list of 119 settings is in the handoff, generated from the code; a test keeps the two

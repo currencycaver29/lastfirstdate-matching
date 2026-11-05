@@ -3,10 +3,10 @@
 **In one paragraph.** Sprint 1 builds a complete matcher without the looks model. It
 filters out everyone who can never match (Stage 1), scores every remaining pair on
 interests, values and personality (Stage 4), gives each chooser a daily list (Stage 6), and
-books dates each week with an exact optimizer (Stage 7). A behavior simulator plays the part
-of real people, and a simulated month measures the result. **About 80% of paying members
+books dates each week with an exact optimizer (Stage 7). A behavior test harness plays the part
+of real people, and a synthetic month measures the result. **About 80% of paying members
 reach 3 dates** (78.7% to 81.6% across four random populations, 88% with 2,000 members),
-short of the 95% target. The simulation also exposed a flaw in the original plan, which is
+short of the 95% target. The test run also exposed a flaw in the original plan, which is
 now fixed (section 9).
 
 **Papers used**
@@ -14,8 +14,8 @@ now fixed (section 9).
 | Paper | What we took from it | Where in the code |
 |---|---|---|
 | 15. Kanoria and Saban, *Facilitating the Search for Partners* | Women pick; men accept or decline (decision D1) | `lists.pick_rights` |
-| 16. Arnosti, Johari and Kanoria, *Managing Congestion in Matching Markets* | Caps: 30 a day, 3 picks a day, 4 dates a month, 1 a week | `lists.daily_list`, the simulator, the scheduler |
-| 9. Joel, Eastwick and Finkel, *Is Romantic Desire Predictable?* | Personality weights are only a guess; in the simulator, measured traits predict true fit only weakly | `personality.py` docstring, `simulation.personality_signal` |
+| 16. Arnosti, Johari and Kanoria, *Managing Congestion in Matching Markets* | Caps: 30 a day, 3 picks a day, 4 dates a month, 1 a week | `lists.daily_list`, the test harness, the scheduler |
+| 9. Joel, Eastwick and Finkel, *Is Romantic Desire Predictable?* | Personality weights are only a guess; in the test harness, measured traits predict true fit only weakly | `personality.py` docstring, `test_runs.personality_signal` |
 | 8. Reimers and Gurevych, *Sentence-BERT* | Only the plug: a `TextEncoder` interface. The model itself comes later; interest tags stand in for now | `personality.TextEncoder` |
 
 Papers 1 to 7, 10 to 14 and 17 are not used yet.
@@ -31,11 +31,11 @@ Papers 1 to 7, 10 to 14 and 17 are not used yet.
 | `personality.py` | 4 | Interest, values and Big Five similarity, and the personality score P |
 | `lists.py` | 6 | Who may pick whom (D1), daily lists, the 7-day re-show rule |
 | `scheduler.py` | 7 | Weekly date booking: min-cost flow or an integer program, both exact |
-| `simulator.py` | test only | Fake people deciding from hidden truth |
-| `simulate.py` | test only | Runs a month and writes the report |
+| `member_behavior.py` | test only | Fake people deciding from hidden truth |
+| `month_runs.py` | test only | Runs a month and writes the report |
 | 8 new test files | | 63 tests in total, plus 1 expected failure (section 9) |
 
-## 2. How a simulated month runs
+## 2. How a synthetic month runs
 
 ```
 every day (28 days)
@@ -170,7 +170,7 @@ third. The median score in her pool is 0.460.
 Joel, Eastwick and Finkel measured 100+ traits before speed dates and couldn't predict who
 would desire whom. General desirability (who most people like) was predictable; desire for
 one specific person was not. So 0.4 / 0.3 / 0.3 is a starting guess, and Sprint 5 retunes it
-from real date outcomes. The simulator builds in the same idea (section 7).
+from real date outcomes. The test harness builds in the same idea (section 7).
 
 ## 5. Stage 6: who chooses, and the daily list
 
@@ -260,16 +260,16 @@ is SCIP, through OR-Tools.
 Both methods give the exact best answer. Tests check this against brute force (trying every
 possible subset of pairs) on 50 small random cases, plus the triangle.
 
-**What actually happened.** In the full simulated city, every week contains same-gender pairs
+**What actually happened.** In the full synthetic city, every week contains same-gender pairs
 with odd cycles, so every week used the integer program ("mip" in the report). My first
 version used a different solver, CP-SAT. On week 1's real problem (1,472 pairs, 673 people) it
 hadn't proven the best answer after 60 seconds. SCIP solves it in 0.5 seconds. The reason is
 worth knowing: if you relax "book or don't book" to "any fraction from 0 to 1", you get a
 linear program, and here that relaxed version already came out in whole numbers. SCIP solves
 the linear program first and finds there's nothing left to search. A whole month now
-simulates in about 2.5 seconds.
+runs in about 2.5 seconds.
 
-## 7. The behavior simulator
+## 7. The behavior test harness
 
 It decides, for each fake person, how much they truly like everyone else:
 
@@ -283,10 +283,10 @@ fit_ij = 0.5 * trait_fit_ij  +  sqrt(1 - 0.5^2) * chemistry_ij
   deviations.
 - **trait_fit** measures how well the two profiles fit. It's computed by **separate code with
   different weights** from the engine's (equal thirds, and Jaccard overlap instead of TF-IDF
-  cosine). If the simulator reused the engine's score, a bug in the engine would also change
+  cosine). If the test harness reused the engine's score, a bug in the engine would also change
   the "truth" and the tests couldn't catch it.
 - **chemistry** is random, shared by both people, and impossible to predict from any profile.
-- **0.5** is `simulation.personality_signal`. Measured traits explain only part of true fit,
+- **0.5** is `test_runs.personality_signal`. Measured traits explain only part of true fit,
   following paper 9. Because sqrt(1 - 0.5^2) = 0.87, unpredictable chemistry carries more
   weight than the traits.
 
@@ -306,9 +306,9 @@ the chance (`repeat_pick_factor = 0.5`). Without this, showing the same person a
 count as a completely fresh chance, which would flatter the re-show rule.
 
 **The boundary is enforced.** A test reads the engine's source files and fails if any of them
-imports the simulator or mentions the hidden truth.
+imports the test harness or mentions the hidden truth.
 
-## 8. What the simulation showed
+## 8. What the test run showed
 
 The default population (1,000 members, seed 7):
 
@@ -342,13 +342,13 @@ How to read it:
   "she chooses", and the reason the guarantee needs active support.
 - **Small pools can't be helped by the algorithm.** 27 paying members have fewer than 10
   possible matches, mostly people far from the center or with narrow age or distance settings.
-- **The second-date rate (37%) is not a prediction.** It depends on simulator settings that
-  are guesses. Use the simulator to compare designs, not to forecast real numbers.
+- **The second-date rate (37%) is not a prediction.** It depends on test harness settings that
+  are guesses. Use the test harness to compare designs, not to forecast real numbers.
 
 ## 9. What changed in the plan, and why
 
 **Change 1: people can reappear after 7 days.** The plan said nobody is shown twice in a
-month. The first simulation showed lists shrinking from 25 profiles a day in week 1 to 0 in
+month. The first test run showed lists shrinking from 25 profiles a day in week 1 to 0 in
 week 4: with about 62 possible matches each, members simply ran out of people. I ran six quick
 experiments to find which factor mattered most:
 
@@ -378,7 +378,7 @@ Both changes are written up at the end of `docs/SPEC.md`.
 
 ## 10. Limits of this sprint
 
-- Everything is fake data. The simulator's thresholds and the 0.5 personality signal are
+- Everything is fake data. The test harness's thresholds and the 0.5 personality signal are
   guesses. The numbers compare designs; they don't predict real-world rates.
 - Distance is straight-line, not travel time, until the original SQL query is added.
 - No looks yet. Looks are 50% of the final score, and Sprints 2 and 3 add them.
@@ -392,8 +392,8 @@ Both changes are written up at the end of `docs/SPEC.md`.
 | Bit masks, AND, popcount | Slots and dealbreakers | You know this from competitive programming |
 | TF-IDF and cosine similarity | Interest score t | Jurafsky and Martin, *Speech and Language Processing*, chapter 6 (free online) |
 | Euclidean distance, norms | Big Five score p | *Mathematics for Machine Learning*, chapter 3 |
-| z-scores (standardizing) | Simulator | *Mathematics for Machine Learning*, chapter 6 |
-| Logistic (sigmoid) function | Simulator decisions; Sprint 2's taste model is built on it | Jurafsky and Martin, *Speech and Language Processing*, chapter 5 (logistic regression, free online) |
+| z-scores (standardizing) | Test harness | *Mathematics for Machine Learning*, chapter 6 |
+| Logistic (sigmoid) function | Test harness decisions; Sprint 2's taste model is built on it | Jurafsky and Martin, *Speech and Language Processing*, chapter 5 (logistic regression, free online) |
 | Bipartite graphs, two-coloring | Choosing flow or integer program | Any graph algorithms text (BFS two-coloring) |
 | Min-cost flow | Scheduler, case 1 | cp-algorithms.com, "Minimum-cost flow"; OR-Tools min-cost flow guide |
 | Linear and integer programming, LP relaxation | Scheduler, case 2 | *Mathematics for Machine Learning*, section 7.3 (linear programming); OR-Tools MIP guide |
@@ -401,9 +401,9 @@ Both changes are written up at the end of `docs/SPEC.md`.
 ## 12. Try it yourself
 
 ```bash
-.venv/bin/python -m lastfirstdate.simulate                # the report above
-.venv/bin/python -m lastfirstdate.simulate --seed 9       # a different fake city
-.venv/bin/python -m lastfirstdate.simulate --n 2000       # a bigger city
+.venv/bin/python -m lastfirstdate.month_runs                # the report above
+.venv/bin/python -m lastfirstdate.month_runs --seed 9       # a different fake city
+.venv/bin/python -m lastfirstdate.month_runs --n 2000       # a bigger city
 ```
 
 Then edit `config/lastfirstdate.toml` and rerun:
@@ -435,7 +435,7 @@ chapter 5), and PCA (*Mathematics for Machine Learning*, chapter 10).
 1. **Should non-paying members be capped at fewer dates** (for example 2 a month) so more of
    the supply goes to paying members? It's a business call. Sprint 4 can test it either way.
 2. **Should the guarantee be offered only to members with at least 10 possible matches?** 27
-   paying members in the simulation could never reach it. Alternatively, the app could prompt
+   paying members in the test run could never reach it. Alternatively, the app could prompt
    them to widen their distance or age settings.
 3. **Are you OK with the 95% check moving to Sprint 4?** (Section 9.)
 4. Still open from Sprint 0: expected NYC member numbers, and the original pre-filter SQL

@@ -28,19 +28,19 @@ ENGINE = [
     "scheduler",
     "trust",
 ]
-SIM_ONLY = {
+TEST_ONLY = {
     "lastfirstdate.synthetic",
-    "lastfirstdate.simulator",
-    "lastfirstdate.simulate",
+    "lastfirstdate.member_behavior",
+    "lastfirstdate.month_runs",
     "lastfirstdate.looks_report",
     "lastfirstdate.mutual_report",
     "lastfirstdate.fairness_report",
     "lastfirstdate.learning_report",
     "lastfirstdate.forecast_fit",
     "lastfirstdate.phase1_report",
-    "lastfirstdate.cycle_sim",
+    "lastfirstdate.cycle_runs",
     "lastfirstdate.gate_report",
-    "lastfirstdate.app_sim",
+    "lastfirstdate.app_fill",
     "lastfirstdate.fixes_report",
     "lastfirstdate.models_report",
 }
@@ -57,10 +57,10 @@ def _imports(path: Path) -> set[str]:
     return out
 
 
-def test_engine_modules_do_not_import_simulation_code():
-    """FR-LM-11: engine stages cannot see GroundTruth because they never import the simulator."""
+def test_engine_modules_do_not_import_test_run_code():
+    """FR-LM-11: engine stages cannot see GroundTruth because they never import the test harness."""
     for name in ENGINE:
-        bad = _imports(PKG / f"{name}.py") & SIM_ONLY
+        bad = _imports(PKG / f"{name}.py") & TEST_ONLY
         assert not bad, f"{name}.py imports {bad}"
 
 

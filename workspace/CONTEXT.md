@@ -11,7 +11,7 @@ so a session can load just the part it needs.
 1. Read this file.
 2. Working on part of the algorithm? Read that stage's `CONTEXT.md` (below), then only the
    files it names.
-3. Running a sprint? Read `process/` in order: spec, build, simulate, notes, handoff.
+3. Running a sprint? Read `process/` in order: spec, build, test runs, notes, handoff.
 4. `CLAUDE.md` holds the rules and is loaded automatically. Don't read the whole repo, old
    sprint notes or long reports unless a context file asks for them: that is where tokens go.
 
@@ -47,7 +47,7 @@ Used by every stage:
 | Shared | What's in it |
 |---|---|
 | [settings and data](shared/settings-and-data/CONTEXT.md) | The settings files, the member model, the app's database design |
-| [simulation](shared/simulation/CONTEXT.md) | Fake members and behaviour, the reports, how to measure honestly |
+| [test runs](shared/test-runs/CONTEXT.md) | Fake members and behaviour, the reports, how to measure honestly |
 | [Rust core](shared/rust-core/CONTEXT.md) | The hot loops in Rust and their Python twins |
 
 ## How a sprint is run
@@ -56,7 +56,7 @@ Used by every stage:
 |---|---|---|
 | [01 spec](process/01-spec/CONTEXT.md) | The sprint's section in `docs/SPEC.md` | The owner agrees on the scope |
 | [02 build](process/02-build/CONTEXT.md) | Code and tests | `./scripts/check.sh` passes; committed locally |
-| [03 simulate](process/03-simulate/CONTEXT.md) | `process/03-simulate/results-sprint-N.md` | Every number has the command that made it |
+| [03 test runs](process/03-test-runs/CONTEXT.md) | `process/03-test-runs/results-sprint-N.md` | Every number has the command that made it |
 | [04 notes](process/04-notes/CONTEXT.md) | `docs/sprints/sprint-N.md`; spec, README and workspace updated | The owner has the notes and the explanation |
 | [05 handoff](process/05-handoff/CONTEXT.md) | `docs/handoff/` for whoever builds the app | Only when an interface the app uses changes |
 

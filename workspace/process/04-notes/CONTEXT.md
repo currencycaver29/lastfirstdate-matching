@@ -5,7 +5,7 @@ Explain the sprint so the owner can study it, then hand over for review.
 ## Read
 
 - The sprint section in `docs/SPEC.md`.
-- `workspace/process/03-simulate/results-sprint-N.md`.
+- `workspace/process/03-test-runs/results-sprint-N.md`.
 - `docs/sprints/sprint-7.md` as the model for structure and tone (skim; don't copy).
 
 ## Produce

@@ -1,6 +1,6 @@
 """Three months with and without learning (FR-LM-25 to FR-LM-28).
 
-Simulation only. The same city and the same simulated people go through
+Test runs only. The same city and the same synthetic people go through
 `learning.months` months three times:
 
 - no learning: the Sprint 4 engine, unchanged all along
@@ -35,9 +35,9 @@ from lastfirstdate.learning import (
     update_tastes,
 )
 from lastfirstdate.looks_report import auc, rank_corr
+from lastfirstdate.month_runs import MonthReport, month_people, run_month
 from lastfirstdate.mutual import looks_scores, mutual_score
 from lastfirstdate.mutual_report import Scores, build_scores
-from lastfirstdate.simulate import MonthReport, month_people, run_month
 from lastfirstdate.synthetic import Population, generate
 
 ARMS = ("no learning", "learning", "learning + exploration")
@@ -74,7 +74,7 @@ def looks_accuracy(
 ) -> tuple[tuple[float, float], tuple[float, float]]:
     """Looks-model accuracy on each member's pool, before and after learning.
 
-    AUC against simulated photo swipes (fixed in advance), and rank correlation with the
+    AUC against synthetic photo swipes (fixed in advance), and rank correlation with the
     hidden true looks appeal. Same members and same candidates for both.
     """
     behavior, _ = month_people(pop, arr, cfg, seed)
@@ -201,7 +201,7 @@ def run_learning_report(
     base: Scores | None = None,
 ) -> LearningReport:
     cfg = cfg or load()
-    seed = cfg.simulation.seed if seed is None else seed
+    seed = cfg.test_runs.seed if seed is None else seed
     pop = pop or generate(cfg, seed=seed)
     base = base or build_scores(pop, cfg, seed)
     arr = MemberArrays.from_members(pop.members, cfg.values)
@@ -229,7 +229,7 @@ def main() -> None:
     parser.add_argument("--replicates", type=int, default=1)
     args = parser.parse_args()
     cfg = load()
-    seed = cfg.simulation.seed if args.seed is None else args.seed
+    seed = cfg.test_runs.seed if args.seed is None else args.seed
     print(run_learning_report(generate(cfg, seed=seed), cfg, seed, args.replicates).text())
 
 

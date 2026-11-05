@@ -7,11 +7,11 @@ the biggest, at 89 seconds for the 1,000-member city. Those four loops now run i
 called from Python through PyO3. The results: looks tastes **3.6× faster** (89 s → 25 s),
 daily lists **10× faster**, and the ratio gate **28× to 81× faster**. The whole test suite
 dropped from 4.5 to 2.5 minutes. The answers are the same: the 50/50 scores and every
-simulated booking are byte-for-byte identical to the pure-Python engine. Writing the Rust
+synthetic booking are byte-for-byte identical to the pure-Python engine. Writing the Rust
 twin also found a weakness that both versions shared, now fixed (section 6).
 
 **What wasn't moved, and why.** The scheduler already runs in C++ (OR-Tools), the NumPy
-parts are already compiled code, and the simulator is for testing only; porting it would
+parts are already compiled code, and the test harness is for testing only; porting it would
 break its seeded random streams. Moving those would add risk and gain nothing.
 
 ---
@@ -153,7 +153,7 @@ Two versions of the same algorithm are a strong check on each other (differentia
 | daily lists, 5 random days with ties and reserved slots | identical lists and cap |
 | the gate, every stopping rule, with and without men already admitted | identical admissions, deferrals and reason |
 | 12 members' calibration in the default city | the same photos shown, in the same order |
-| a simulated month | exactly the same dates booked |
+| a synthetic month | exactly the same dates booked |
 
 And on the full 1,000-member city, compared with results saved *before* any Rust existed:
 the looks scores differ by at most 9 × 10⁻¹⁶ (rounding), and the 50/50 mutual scores and

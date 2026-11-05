@@ -11,7 +11,7 @@ import pytest
 from PIL import Image
 
 from lastfirstdate import app, encoders, personality
-from lastfirstdate.app_sim import fill_database
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import ConfigError, from_dict, load
 from lastfirstdate.encoders import ModelError, PhotoModel, SentenceEncoder, photo_model_id

@@ -20,7 +20,7 @@ from lastfirstdate.fairness_report import (
     holdback_experiment,
     member_groups,
 )
-from lastfirstdate.simulate import run_month
+from lastfirstdate.month_runs import run_month
 
 
 def _skewed_day(n_choosers=12, n_cands=20, seed=0):
@@ -115,13 +115,13 @@ def months(cfg, default_city):
         dates=dataclasses.replace(cfg.dates, late_month_bonus=0.2),
     )
     return {
-        "sprint3": run_month(pop, sprint3, cfg.simulation.seed, sc.mutual),
-        "sprint4": run_month(pop, cfg, cfg.simulation.seed, sc.mutual),
+        "sprint3": run_month(pop, sprint3, cfg.test_runs.seed, sc.mutual),
+        "sprint4": run_month(pop, cfg, cfg.test_runs.seed, sc.mutual),
     }
 
 
 def test_fair_month_never_breaks_the_cap(months):
-    """FR-LM-21: across a whole simulated month, nobody is ever shown above the daily cap."""
+    """FR-LM-21: across a whole synthetic month, nobody is ever shown above the daily cap."""
     assert months["sprint4"].cap_breaches == 0
 
 
@@ -150,7 +150,7 @@ def test_guarantee_target_is_met(cfg, months):
     `strict=True` makes the suite fail the day this starts passing, so the marker is removed
     as soon as the target is reached.
     """
-    assert months["sprint4"].guarantee_share() >= cfg.simulation.guarantee_target
+    assert months["sprint4"].guarantee_share() >= cfg.test_runs.guarantee_target
 
 
 # ---------------------------------------------------------------- FR-LM-22
@@ -175,7 +175,7 @@ def test_nsw_month_spreads_exposure_at_a_small_cost_in_dates(cfg, city600):
     out = {}
     for policy in ("basic", "nsw"):
         c = dataclasses.replace(cfg, lists=dataclasses.replace(cfg.lists, policy=policy))
-        m = run_month(pop, c, cfg.simulation.seed, sc.mutual)
+        m = run_month(pop, c, cfg.test_runs.seed, sc.mutual)
         out[policy] = (exposure_report(m, groups, cfg.fairness.min_rate_ratio).gini, m.booked)
     assert out["nsw"][0] < out["basic"][0]
     assert out["nsw"][1] >= 0.95 * out["basic"][1]
@@ -249,8 +249,8 @@ def test_report_catches_a_deliberately_biased_engine(cfg, city600):
     groups = member_groups(pop)
     short = dataclasses.replace(cfg, lists=dataclasses.replace(cfg.lists, daily_size=5))
     biased = sc.mutual - 2.0 * groups["G1"][None, :]  # G1 candidates pushed to the bottom
-    fair_month = run_month(pop, short, cfg.simulation.seed, sc.mutual)
-    biased_month = run_month(pop, short, cfg.simulation.seed, biased)
+    fair_month = run_month(pop, short, cfg.test_runs.seed, sc.mutual)
+    biased_month = run_month(pop, short, cfg.test_runs.seed, biased)
     fair_flags = exposure_report(fair_month, groups, cfg.fairness.min_rate_ratio).flagged
     biased_flags = exposure_report(biased_month, groups, cfg.fairness.min_rate_ratio).flagged
     assert "G1" in biased_flags
@@ -270,7 +270,7 @@ def test_held_back_rule():
 def test_holdback_experiment_reports_the_difference(cfg, city600):
     """FR-LM-24: the experiment runs the same month with the rule off and on and reports both."""
     pop, sc = city600
-    result = holdback_experiment(pop, cfg, cfg.simulation.seed, sc.mutual, threshold=3)
+    result = holdback_experiment(pop, cfg, cfg.test_runs.seed, sc.mutual, threshold=3)
     assert cfg.lists.holdback_yeses == 0  # off by default
     text = result.text()
     assert "off" in text and "on" in text and "difference in dates" in text

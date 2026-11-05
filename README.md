@@ -98,7 +98,7 @@ month; all three shape the next day's lists.
 
 </details>
 
-## Results in simulation
+## Results in test runs
 
 All numbers come from synthetic members. They compare designs; they are not predictions.
 
@@ -143,7 +143,7 @@ run on a normal CPU, and every file is checked against a pinned fingerprint:
 ```python
 from lastfirstdate.config import load
 from lastfirstdate.synthetic import generate
-from lastfirstdate.simulate import run_month
+from lastfirstdate.month_runs import run_month
 
 cfg = load()                   # research defaults; load("config/phase1.toml") for Phase 1 rules
 pop = generate(cfg, seed=7)    # 1,000 fake New Yorkers
@@ -153,16 +153,16 @@ print(report.text())
 
 ### Reports
 
-Each report runs a simulation and prints what it found:
+Each report runs a test run and prints what it found:
 
 ```bash
-.venv/bin/python -m lastfirstdate.simulate          # one simulated month
+.venv/bin/python -m lastfirstdate.month_runs          # one synthetic month
 .venv/bin/python -m lastfirstdate.looks_report      # how well the looks model learns taste
 .venv/bin/python -m lastfirstdate.mutual_report     # list rankings compared
 .venv/bin/python -m lastfirstdate.fairness_report   # exposure, fairness audit, hold-back test
 .venv/bin/python -m lastfirstdate.learning_report   # three months with and without learning
 .venv/bin/python -m lastfirstdate.phase1_report     # Phase 1 rules: pair questions, the ratio gate
-.venv/bin/python -m lastfirstdate.cycle_sim         # the real booking flow over three billing cycles
+.venv/bin/python -m lastfirstdate.cycle_runs         # the real booking flow over three billing cycles
 .venv/bin/python -m lastfirstdate.gate_report       # the ratio gate in the real flow, two zone sizes
 ```
 
@@ -201,7 +201,7 @@ lastfirstdate-matching/
 ├── rust/
 │   ├── lastfirstdate-core/   the hot loops in pure Rust
 │   └── lastfirstdate-py/     Python bindings (lastfirstdate._core)
-├── src/lastfirstdate/   the engine (Python; app.py is what the app calls) and the simulator
+├── src/lastfirstdate/   the engine (Python; app.py is what the app calls) and the test harness
 ├── tests/               one or more tests per requirement
 ├── workspace/           a map of every algorithm stage, for working with an AI assistant
 └── scripts/check.sh     all the checks

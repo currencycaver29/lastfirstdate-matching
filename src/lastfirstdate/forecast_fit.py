@@ -1,7 +1,7 @@
-"""Fit the guarantee forecast on simulated markets and test it on others (FR-LM-33).
+"""Fit the guarantee forecast on synthetic markets and test it on others (FR-LM-33).
 
-Simulation only. Before launch there are no real cycles, so the forecast's starting
-coefficients come from simulated Phase 1-style markets (lastfirstdate's rules from
+Test runs only. Before launch there are no real cycles, so the forecast's starting
+coefficients come from synthetic Phase 1-style markets (lastfirstdate's rules from
 `config/phase1.toml`, varying the number of men and women per man, including markets with
 fewer women than men so the forecast sees the cliff there). They are checked on separate
 markets with different seeds and sizes, then written to `config/forecast_model.toml` with the
@@ -11,7 +11,7 @@ the same way.
 Run `python -m lastfirstdate.forecast_fit` (about ten minutes).
 
 Sprint 8 (FR-LM-43, FR-LM-44): `python -m lastfirstdate.forecast_fit --delivered` fits the same
-forecast on *delivered* dates in the real booking flow (`cycle_sim.py`), under the settings'
+forecast on *delivered* dates in the real booking flow (`cycle_runs.py`), under the settings'
 frictions and rate of new women, and writes `config/forecast_delivered.toml` (about 20 minutes).
 Start rows: each paying man's market at launch, labelled with the share of his paid cycles that
 reached 3 delivered dates. Progress rows: his progress each week of each cycle.
@@ -36,8 +36,8 @@ from lastfirstdate.forecast import (
     start_matrix,
 )
 from lastfirstdate.looks_report import auc
+from lastfirstdate.month_runs import run_month
 from lastfirstdate.mutual_report import build_scores
-from lastfirstdate.simulate import run_month
 from lastfirstdate.synthetic import Population, generate
 
 PHASE1 = "config/phase1.toml"
@@ -87,7 +87,7 @@ class Rows:
 
 
 def market_rows(pop: Population, cfg: Config, seed: int, rows: Rows, label: dict) -> None:
-    """Simulate MONTHS cycles of one market and add its forecast rows."""
+    """Run MONTHS cycles of one synthetic market and add its forecast rows."""
     sc = build_scores(pop, cfg, seed)
     men_mask = np.array([m.gender == "man" for m in pop.members])
     for k in range(MONTHS):
@@ -118,7 +118,7 @@ def collect(cfg: Config, plan: dict) -> Rows:
 
 def evaluate(model: ForecastModel, rows: Rows) -> str:
     xs, ys, xp, yp = rows.stacked()
-    lines = ["Held-out markets: forecast versus simulated fulfilment"]
+    lines = ["Held-out markets: forecast versus synthetic fulfilment"]
     lines.append(f"  {'men':>4s} {'women/man':>9s} {'month':>5s} {'forecast':>9s} {'actual':>7s}")
     errors = []
     for mk in rows.markets:
@@ -147,17 +147,17 @@ def evaluate(model: ForecastModel, rows: Rows) -> str:
 
 
 def delivered_market(cfg: Config, n_men: int, ratio: float, seed: int):
-    """Simulate the real flow on one market (with new women arriving) and record rows."""
-    from lastfirstdate.cycle_sim import CycleSimulation, join_days
-    from lastfirstdate.cycle_sim import market as cycle_market
+    """Run the real flow on one synthetic market (with new women arriving) and record rows."""
+    from lastfirstdate.cycle_runs import CycleRun, join_days
+    from lastfirstdate.cycle_runs import market as cycle_market
 
-    rate = cfg.cycle_simulation.new_women_per_cycle
+    rate = cfg.cycle_runs.new_women_per_cycle
     n = int(round(n_men * (1 + ratio)))
     pop_cfg = dataclasses.replace(cfg.population, n_members=n, share_men=n_men / n)
     c = dataclasses.replace(cfg, population=pop_cfg)
     pop = cycle_market(c, seed, rate)
     sc = build_scores(pop, c, seed)
-    sim = CycleSimulation(pop, c, seed, sc.mutual, join_days(pop, c, rate), record=True)
+    sim = CycleRun(pop, c, seed, sc.mutual, join_days(pop, c, rate), record=True)
     report = sim.run(f"{n_men} men, {ratio:g} women per man, seed {seed}")
     return sim.forecast_rows(report), report
 
@@ -211,18 +211,18 @@ def evaluate_delivered(model: ForecastModel, rows: Rows) -> str:
 
 
 def fit_delivered(cfg: Config, save: bool) -> ForecastModel:
-    cs = cfg.cycle_simulation
+    cs = cfg.cycle_runs
     train = collect_delivered(cfg, DELIVERED_TRAIN)
     model = fit_forecast(
         *train.stacked(),
         cfg.gate.forecast_l2,
-        note=f"real booking flow (cycle_sim): men {DELIVERED_TRAIN['men']}, women per man "
+        note=f"real booking flow (cycle_runs): men {DELIVERED_TRAIN['men']}, women per man "
         f"{DELIVERED_TRAIN['ratios']}, seeds {DELIVERED_TRAIN['seeds']}",
         fitted_women_per_man=train.ratio_range(),
         kind="delivered",
         assumptions={
             "new_women_per_cycle": cs.new_women_per_cycle,
-            "show_up_rate": cfg.simulation.show_up_rate,
+            "show_up_rate": cfg.test_runs.show_up_rate,
             "pay_in_time_chosen": cs.pay_in_time_chosen,
             "pay_in_time_chooser": cs.pay_in_time_chooser,
             "cancel_rate": cs.cancel_rate,
@@ -253,7 +253,7 @@ def main() -> None:
     model = fit_forecast(
         *train.stacked(),
         cfg.gate.forecast_l2,
-        note=f"simulated Phase 1 markets: men {TRAIN['men']}, women per man {TRAIN['ratios']}, "
+        note=f"synthetic Phase 1 markets: men {TRAIN['men']}, women per man {TRAIN['ratios']}, "
         f"seeds {TRAIN['seeds']}, {MONTHS} cycles each",
         fitted_women_per_man=train.ratio_range(),
     )

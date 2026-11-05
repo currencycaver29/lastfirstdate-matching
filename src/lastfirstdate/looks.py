@@ -164,7 +164,7 @@ def _fit_logistic_python(x, y, l2, m, o, s, w) -> tuple[np.ndarray, np.ndarray]:
     a quarter, and so on. Plain Newton can overshoot and diverge on hard problems. Steps
     already below the tolerance are always taken in full, and a rise smaller than
     OBJECTIVE_NOISE (relative) counts as rounding, so near the optimum, and whenever every
-    full step helps (all calibration fits in the simulation), the path is plain Newton's.
+    full step helps (all calibration fits in the test run), the path is plain Newton's.
     """
     eye = np.eye(x.shape[1])
     f = _logistic_objective(x, y, l2, m, o, s, w)

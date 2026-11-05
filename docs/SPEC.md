@@ -45,23 +45,23 @@ dates, and dates are scheduled into time both people have free.
 |---|---|---|---|
 | D1 | Who chooses | Women pick from their daily list; men accept or decline. Same-gender pairs: both get lists, whoever picks first, the other accepts. | Paper 15: letting the short side initiate can raise welfare |
 | D2 | Looks vs personality | 50 / 50 (`mix.looks_weight`) | Your brief. Sprint 5 can learn a personal split. |
-| D3 | Daily list size | Up to 30. Someone passed over can reappear after 7 days (`lists.reshow_after_days`). If fewer eligible people are available, show fewer; never pad with people who failed the filter. | Your brief; paper 16 on caps; Sprint 1 simulation |
+| D3 | Daily list size | Up to 30. Someone passed over can reappear after 7 days (`lists.reshow_after_days`). If fewer eligible people are available, show fewer; never pad with people who failed the filter. | Your brief; paper 16 on caps; Sprint 1 test run |
 | D4 | Dates per month | 3 guaranteed for paying members; nobody gets more than 4 | Your brief |
 | D5 | Calibration set | 50 profiles: 20 picked for variety, 30 for uncertainty | Papers 1 and 2 |
 | D6 | Personality split | 0.4 interests text, 0.3 values, 0.3 Big Five | Starting guess; paper 9 says retune from outcomes |
 | D7 | Exposure cap | Automatic: no one on more lists per day than a fair share (`lists.exposure_multiple` = 1.0) | Paper 12; Sprint 4 found 1x spreads attention most at no clear cost |
-| D8 | Guarantee target | 95% of paying members with at least 10 possible matches reach 3 dates in the simulated month. Checked from Sprint 4 (FR-LM-21). | Measurable version of the promise |
+| D8 | Guarantee target | 95% of paying members with at least 10 possible matches reach 3 dates in the synthetic month. Checked from Sprint 4 (FR-LM-21). | Measurable version of the promise |
 | D9 | Distance | Straight-line km within both people's max distance. Replaced by the original SQL query's route rule once that query is added to `db/`. | The SQL query is not in this repo yet |
 | D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
 | D11 | Test population | 1,000 synthetic NYC members, seed 7. Settings are tuned on a different fake city (seed 101) so tuning cannot flatter the results. | Fast and big enough to see effects |
-| D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's simulation found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
+| D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's test run found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
 | D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
-| D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 simulation |
+| D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 test run |
 | D17 | His own absence | His own late cancellation (under 24 hours) or no-show counts as one of his 3 delivered dates: no credit, no refill. Her cancellation or no-show never counts against him and his slot is refilled. In either case the person who wasn't at fault gets the $10 fee back (`billing.own_absence_counts`) | The site says "no-shows and cancellations don't count"; counting his own absences as delivered stops credits being gamed. To confirm with the lawyer (risk plan) |
 | D18 | Forgetting a member | When a member deletes their account, delete what describes them (photos, photo embeddings, prompts, intent answers, free slots, their photo-exercise answers and others' answers about their photo) and keep only the birth year; keep bookings, payments, ratings, blocks and list history under the same anonymous id, for accounting, other members' trust scores and safety. The member row stays, marked forgotten, and never matches again | Chosen by the owner (Sprint 12); the lawyer should confirm |
 | D19 | Times | Timestamps are stored in UTC, with an offset (`Z` or `+00:00`) or without one (then read as UTC); a value with no time of day is a date in the zone's own time. Date windows (`date_on` and the part of the day) are the zone's local time (`booking.timezone`). The engine converts before comparing | One rule removes the 4 to 5 hour error behind issue #9 |
 | D20 | Production models | Photos: Google SigLIP base (`google/siglip-base-patch16-224`, Apache 2.0), from a pinned ONNX export; text: `sentence-transformers/all-MiniLM-L6-v2` (Apache 2.0, English), ONNX. Both run with ONNX Runtime on a normal server's CPU, with every file pinned by revision and sha256 (`[models]`). Tests keep offline stand-ins (R4) | Chosen by the owner (Sprint 13). Licences allow commercial use (OpenAI CLIP's model card puts deployed use out of scope); small installs, no graphics card |
-| D16 | Languages | Python for the engine, the simulator and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the simulator in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
+| D16 | Languages | Python for the engine, the test harness and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the test harness in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 
 ## Requirements by sprint
@@ -146,15 +146,15 @@ late in the month.
 Test: capacities respected; only allowed pairs and shared slots used; result matches brute
 force on small cases.
 
-#### FR-LM-11 · Behavior simulator
+#### FR-LM-11 · Behavior test harness
 Sprint: 1
 Fake members swipe, pick, accept and rate dates using only the hidden ground truth, never
 the engine's scores.
 Test: deterministic; members like profiles they truly prefer more often.
 
-#### FR-LM-12 · Month simulation report
+#### FR-LM-12 · Month test run report
 Sprint: 1
-Runs a simulated month (daily lists, picks, weekly scheduling) and reports dates per paying
+Runs a synthetic month (daily lists, picks, weekly scheduling) and reports dates per paying
 member, the share reaching the guarantee, candidate pool sizes, list sizes by week, and
 everyone who missed with the reason.
 Test (acceptance): the month runs within the caps; week 4 lists keep at least 80% of their
@@ -219,7 +219,7 @@ M(i, j) = harmonic mean of S(i to j) and S(j to i): high only when both are high
 and 10. `mix.chooser_weight` generalizes it to a weighted harmonic mean (D13); at 0.5 it is
 the plain harmonic mean and M is symmetric.
 Test: symmetric at 0.5; zero if either side is zero; between the two sides. Acceptance, judged
-by the simulator's hidden truth on the top 10 of each chooser's list: candidates ranked by
+by the test harness's hidden truth on the top 10 of each chooser's list: candidates ranked by
 M are likelier to accept the chooser than candidates ranked by the chooser's one-sided S;
 M gets more mutual yeses than looks alone or personality alone, and is within 1.5 points of
 one-sided S.
@@ -234,8 +234,8 @@ Papers 12 and 16. The scheduler's urgency bonus also rises to 1.0 (`dates.late_m
 Optional switches, off by default after testing: hide members whose waiting yeses fill their
 month (`lists.hide_booked`), and a monthly cap for free members (`dates.cap_per_month_free`).
 Test (acceptance): no one exceeds the cap; on the default city the fair policy beats Sprint 3
-on the guarantee share and on exposure spread; at least `simulation.guarantee_target` of
-paying members with at least `simulation.min_pool_for_guarantee` possible matches reach
+on the guarantee share and on exposure spread; at least `test_runs.guarantee_target` of
+paying members with at least `test_runs.min_pool_for_guarantee` possible matches reach
 their guarantee (D8). The last check is not met (about 82%) and is tracked as a strict
 expected failure in `tests/test_fairness.py`.
 
@@ -271,7 +271,7 @@ Sprint: 5
 Records show-up, "would meet again" and a private 1 to 5 rating, and adds each held date to
 both people's looks models as a weighted label (`learning.taste_date_weight`).
 Test: at the chosen weight, looks accuracy does not get worse (within 0.005 AUC). The original
-claim, that accuracy improves, was **not met** in simulation and is a strict expected failure:
+claim, that accuracy improves, was **not met** in test runs and is a strict expected failure:
 "would meet again" also depends on personality and chemistry, and only already-liked people
 get dated, so a heavy weight (3.0, as first planned) made accuracy worse. The weight is 0.5.
 
@@ -289,11 +289,11 @@ Sprint: 5
 list is filled by score, for the candidates the member's looks model is least sure about,
 under the same daily exposure cap. Paper 17.
 Test: share respected (within 3 points) with no cap breaches. The claim that exploration
-raises second dates was **not met** in simulation and is a strict expected failure.
+raises second dates was **not met** in test runs and is a strict expected failure.
 
-#### FR-LM-28 · Three-month simulation
+#### FR-LM-28 · Three-month test run
 Sprint: 5
-Three simulated months with learning against the same months without it: second-date rate,
+Three synthetic months with learning against the same months without it: second-date rate,
 guarantee share, match quality and exposure spread. Pairs who dated never meet again.
 Test: month 1 is identical with and without learning; pairs never repeat; the report shows
 every measure. Acceptance, "learning raises the second-date rate" (by 2 points in months 2
@@ -336,7 +336,7 @@ Sprint: 6
 P(A over B) = sigmoid((w_0 + delta) . (x_A - x_B)), in the same taste model as single swipes;
 each next pair is the most informative among the most uncertain profiles.
 `calibration.n_pairs` sets how many.
-Test: a pair adds one example on the photo difference; the simulator's pair answers follow
+Test: a pair adds one example on the photo difference; the test harness's pair answers follow
 true looks; per answer, pairs teach about as much as single swipes (within 0.01 AUC).
 
 #### FR-LM-33 · Guarantee forecast and at-risk alerts
@@ -344,7 +344,7 @@ Sprint: 6
 Each paying man's chance of reaching his guarantee, from women per man, a shortfall term
 log(min(women per man, 1)), his possible matches and his share of women's attention (start of
 cycle), plus dates booked, yeses waiting and weeks left (mid-cycle at-risk alerts). Logistic
-regressions fitted on simulated markets from 0.5 to 5 women per man (`forecast_fit.py`, saved
+regressions fitted on synthetic markets from 0.5 to 5 women per man (`forecast_fit.py`, saved
 to `config/forecast_model.toml` with that range) and refitted on real cycles later.
 Test: features as defined; the model saves and loads; the committed model has sensible signs,
 and on markets it never saw it ranks men well (AUC above 0.85) and forecasts the share
@@ -356,7 +356,7 @@ Admits waitlisted men in order while women per man stays at or above `gate.min_w
 and inside the forecast's fitted range, and forecast fulfilment stays at or above
 `gate.target`; defers applicants whose pool is below `gate.min_pool`.
 Test: the gate stops at the ratio limit, at the end of the fitted range and at the forecast
-limit, defers small pools, keeps waitlist order; in simulation, with a waitlist longer than
+limit, defers small pools, keeps waitlist order; in test runs, with a waitlist longer than
 the women, the men it admits reach 3 dates within 5 points of the target and of the forecast,
 while admitting everyone fails most of them.
 
@@ -367,7 +367,7 @@ Python dependency (so a future Rust service can reuse them), and `rust/lastfirst
 exposes them to Python. The engine uses Rust whenever the compiled module is present.
 Test: on random problems the Rust and Python versions agree (logistic fit weights and
 covariance to 1e-9, uncertainty, pair choice, daily lists and exposure cap, gate decisions
-for every stopping rule); members see the same calibration photos and a simulated month
+for every stopping rule); members see the same calibration photos and a synthetic month
 books the same dates with either backend; the Rust crate passes its own tests and Clippy.
 
 ### Sprint 7: booking, billing, trust and geography
@@ -437,32 +437,32 @@ total trip. Neighbourhoods and venues live in the settings file.
 Test: nearest neighbourhood; the venue minimises the longer trip; ties go to the shorter
 total; one-neighbourhood couples get a venue in or next to it.
 
-#### FR-LM-42 · Phase 1 cycle simulation
+#### FR-LM-42 · Phase 1 cycle test run
 Sprint: 7
-A day-by-day simulation of the real flow on the Phase 1 market: daily lists with proposed
+A day-by-day test run of the real flow on the Phase 1 market: daily lists with proposed
 windows, picks, payment holds, cancellations, no-shows, refills, event dates, ratings, trust
-and credits, over `cycle_simulation.cycles` billing cycles per man, with cycle starts all on
+and credits, over `cycle_runs.cycles` billing cycles per man, with cycle starts all on
 launch day or spread out.
 Test: the books balance (every past booking ends in a final state; nobody passes a cap;
 delivered dates never exceed 3 a cycle; credits match missing dates; refunds never exceed
 fees); with no friction at least 5 points more men reach 3 delivered dates (10 before the
 Sprint 8 correction); trust flags at
-least 80% of simulated bad actors with 6 or more ratings, at least 80% of flags are bad
+least 80% of synthetic bad actors with 6 or more ratings, at least 80% of flags are bad
 actors, and trust does not track looks. Reaching `gate.target` in the real flow is tracked as
 a strict expected failure (Sprint 7 finding).
 
 ### Sprint 8: the forecast and the gate on delivered dates
 
-Sprint 6 fitted the guarantee forecast on the batch simulation's *booked* dates; Sprint 7
+Sprint 6 fitted the guarantee forecast on the batch test run's *booked* dates; Sprint 7
 showed the real booking flow delivers fewer. This sprint refits the forecast and the
 mid-cycle alerts on the real flow, and lets the gate use them.
 
 #### FR-LM-43 · Forecast on delivered dates
 Sprint: 8
 At launch, each paying man's chance of 3 delivered dates in a cycle, averaged over his first
-`cycle_simulation.cycles` cycles, from the same features as FR-LM-33 (women per man, his
+`cycle_runs.cycles` cycles, from the same features as FR-LM-33 (women per man, his
 possible matches, his share of women's attention, the shortfall below one woman per man).
-Fitted on the real flow (`cycle_sim.py`) across market sizes and women per man, under the
+Fitted on the real flow (`cycle_runs.py`) across market sizes and women per man, under the
 settings' frictions and rate of new women, and saved with its fitted range and those
 assumptions in `config/forecast_delivered.toml`.
 Test: the model file loads and records what it assumes; on a market it never saw, the
@@ -490,7 +490,7 @@ target and of the forecast.
 ### Sprint 9: handoff to the app
 
 The owner builds the algorithm; someone else builds the app. This sprint makes the engine run
-from the app's database alone, not from simulator objects, and writes down exactly when the
+from the app's database alone, not from test harness objects, and writes down exactly when the
 app calls what.
 
 #### FR-LM-46 · Call sequence
@@ -511,7 +511,7 @@ Test: every function the handoff names can be imported.
 
 #### FR-LM-47 · The engine from database rows
 Sprint: 9
-`app.py` (engine side, no simulation imports) loads members, calibration answers, list
+`app.py` (engine side, no test run imports) loads members, calibration answers, list
 history, bookings, ratings, subscriptions and the waitlist from the tables in `db/schema.sql`,
 and returns lists with windows, bookings, trust, alerts, credits and gate decisions. Members'
 locations are their neighbourhood centres. The schema gains a `list_shows` table (who was shown
@@ -519,14 +519,14 @@ to whom, and picked).
 Test:
 - members and taste models loaded from rows match those built directly from the same
   profiles and answers;
-- a full simulated day runs from rows alone: every listed man is eligible and has a window both
+- a full synthetic day runs from rows alone: every listed man is eligible and has a window both
   can make, and bookings written back pass the schema's checks and block those days next time;
 - the gate on rows matches the gate on arrays.
 
 #### FR-LM-48 · Operator settings
 Sprint: 9
 Every setting is classified by what changing it requires: business terms (change any time),
-simulate first, refit the forecast, simulation only, or engineering only. The handoff lists
+test first, refit the forecast, test runs only, or engineering only. The handoff lists
 them.
 Test: every setting in `Config` is classified, and the handoff's table matches the
 classification.
@@ -560,7 +560,7 @@ result of a full rebuild with the same starting taste; an unchanged refresh refi
 
 There is no real data yet, and this repo never holds any (R3). This sprint builds and tests
 what turns Phase 1's first real cycles into better forecasts, so refitting is one tested call
-when they arrive. Tests use simulated histories written into the database as if they were
+when they arrive. Tests use synthetic histories written into the database as if they were
 real.
 
 #### FR-LM-51 · Outcomes from the app's records
@@ -568,8 +568,8 @@ Sprint: 11
 `refit.py` rebuilds, from the app's tables, every completed paid cycle: the market at its start
 (women who had joined, men who had subscribed), whether it reached 3 delivered dates, and each
 week's progress (delivered so far, confirmed dates to come, days left).
-Test: on a simulated history written as app records, every cycle's outcome and every weekly
-count equals what the simulation recorded.
+Test: on a synthetic history written as app records, every cycle's outcome and every weekly
+count equals what the test run recorded.
 
 #### FR-LM-52 · Recalibrating the forecast on real cycles
 Sprint: 11
@@ -685,7 +685,7 @@ one passes.
 
 ## Changes to this plan
 
-- **Sprint 1.** The simulation showed two problems with the plan as first written. (1) "Never
+- **Sprint 1.** The test run showed two problems with the plan as first written. (1) "Never
   show anyone twice in a month" emptied every list by week 4, because the typical member has
   only about 62 possible matches; passed profiles now return after 7 days (D3, FR-LM-09).
   (2) A personality-only matcher reaches about 80% on the guarantee, not 95%: most misses are
@@ -702,7 +702,7 @@ one passes.
   `docs/sprints/sprint-2.md`.
 - **Sprint 3.** The mutual score behaves as designed (people at the top of a list are
   likelier to accept), but the original acceptance test, "more mutual likes than one side
-  only", did not hold: in the simulation choosers are pickier than the people they pick, so
+  only", did not hold: in the test run choosers are pickier than the people they pick, so
   weighing both sides equally costs about as many of her picks as it gains in his
   acceptances (24.2% versus 25.7% mutual yeses in the top 10). The test now checks what M
   reliably does, and a chooser weight (D13) was added, kept at 0.5. A second finding: in a
@@ -746,23 +746,23 @@ one passes.
   member's looks taste in the 1,000-member city went from 89 to 25 seconds, the daily lists
   became 10 times faster and the gate 28 to 81 times faster, with identical scores and
   bookings. Writing the twin found a weakness shared by both versions: plain Newton steps can
-  overshoot and diverge on hard fitting problems (never in the simulation's 9,444
+  overshoot and diverge on hard fitting problems (never in the test run's 9,444
   calibration fits). Both now halve a step that makes the fit worse. Details:
   `docs/sprints/rust-core.md`.
 - **Sprint 7.** No app exists yet, so the sprint defined the database the app should keep
   (`db/schema.sql`) and built proposed date windows, the 15-minute payment hold, per-member
   billing cycles with refills and credits, a behaviour-only trust score, event dates and venue
-  midpoints, then simulated the real flow day by day over three cycles. The headline changed
-  the business picture: in three simulated Phase 1 markets, **about 68% of men get 3 delivered
-  dates a cycle**, not the 87% to 96% of the earlier batch simulations. The earlier figure
+  midpoints, then synthetic the real flow day by day over three cycles. The headline changed
+  the business picture: in three synthetic Phase 1 markets, **about 68% of men get 3 delivered
+  dates a cycle**, not the 87% to 96% of the earlier batch test runs. The earlier figure
   counted booked dates, ignored payment holds, cancellations and no-shows (about one booked
   date in three falls through), and forgot passes each month. Without new women joining it is
   58% and falls every cycle, because each woman sees every man in her pool about weekly and
   passes pile up. Show-ups are the biggest single lever (97% instead of 92%: +8 points);
   showing men less often or allowing two dates a week did not help. Credits cost about 17% of
-  subscription revenue. The original acceptance check, "near the batch simulation", failed and
+  subscription revenue. The original acceptance check, "near the batch test run", failed and
   is kept as a strict expected failure. Writing the books-balance test also caught a
-  simulation bug: his own late cancellation was counted as delivered and also gave his slot
+  test run bug: his own late cancellation was counted as delivered and also gave his slot
   back. Details: `docs/sprints/sprint-7.md`.
 - **Sprint 8.** A second Sprint 7 bug turned up first: a no-show was never refilled (the man
   never got his slot back). Fixed; the real flow is about **82%**, not 68%, and credits about
@@ -784,7 +784,7 @@ one passes.
   The schema gained `list_shows`; all 119 settings are classified by what a change requires.
   Details: `docs/sprints/sprint-9.md`.
 - **Sprint 10.** The photo exercise now runs one question at a time (`CalibrationSession`), and
-  `looks.calibrate` runs on top of it, so the app and the simulations share one
+  `looks.calibrate` runs on top of it, so the app and the test runs share one
   implementation. It asks exactly what the old code asked: the default city's scores are
   byte-identical. Interrupted exercises resume where they stopped. `MarketCache` keeps the
   nightly work, refits only members whose answers changed (equal to a full rebuild with the
@@ -793,10 +793,10 @@ one passes.
   (132 MB at 2,000 members), so a city should run as zones of a few thousand. Details:
   `docs/sprints/sprint-10.md`.
 - **Sprint 11.** Option (b), "wait for real data", built as readiness: `refit.py` rebuilds every
-  completed cycle and its weekly progress from the app's records (identical to the simulation
+  completed cycle and its weekly progress from the app's records (identical to the test run
   on all 291 cycles and 838 snapshots), recalibrates the forecast with two numbers folded into
   its coefficients (Platt scaling; one zone can't re-learn the ratio effect), and switches only
-  after testing on the latest cycles. In a simulated world with 80% show-ups instead of 92%,
+  after testing on the latest cycles. In a synthetic world with 80% show-ups instead of 92%,
   the forecast said 83% against 76% actual; recalibrated, 76%. Finding: fulfilment drifts as a
   zone ages, so a recalibration on first cycles alone did worse on later ones; recalibrate
   monthly on recent cycles. Details: `docs/sprints/sprint-11.md`.

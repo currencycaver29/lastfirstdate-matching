@@ -1,13 +1,13 @@
-"""Phase 1 report: lastfirstdate's real rules in simulation (Sprint 6).
+"""Phase 1 report: lastfirstdate's real rules in test runs (Sprint 6).
 
-Simulation only. Two parts:
+Test runs only. Two parts:
 
 1. Calibration (FR-LM-32): does a 30-photo exercise with pair questions ("Who are you more
    drawn to?") learn a member's type as well as single swipes? Every version shows the same
    member the same questions and gets the same answers (common random numbers); accuracy is
    AUC on photos none of the versions showed.
 2. Gate (FR-LM-34): starting from committed women and a men's waitlist, admit the men the gate
-   allows, then simulate the admitted market and compare its fulfilment with the forecast and
+   allows, then run the admitted market and compare its fulfilment with the forecast and
    the target. Three versions: the gate as set, the forecast alone (no women-per-man floor),
    and admitting everyone. (The forecast's own held-out test is in `forecast_fit.py`.)
 
@@ -41,9 +41,9 @@ from lastfirstdate.looks import (
     photo_features,
 )
 from lastfirstdate.looks_report import auc, rank_corr
+from lastfirstdate.member_behavior import Behavior
+from lastfirstdate.month_runs import run_month
 from lastfirstdate.mutual_report import build_scores
-from lastfirstdate.simulate import run_month
-from lastfirstdate.simulator import Behavior
 from lastfirstdate.synthetic import Population, generate
 
 PHASE1 = "config/phase1.toml"
@@ -100,7 +100,7 @@ def calibration_comparison(
     for v in train:
         pool = calibration_pool(arr, cfg, int(v))
         likes = behavior.swipe_outcomes(int(v), seed)
-        for j in rng.choice(pool, min(cfg.simulation.training_swipes, pool.size), replace=False):
+        for j in rng.choice(pool, min(cfg.test_runs.training_swipes, pool.size), replace=False):
             swipes.append(Swipe(int(arr.gender[v]), int(arr.gender[j]), feats[j], bool(likes[j])))
     start = StartingTaste.fit(swipes, cfg.calibration.w0_l2_penalty)
     out = CalibrationComparison(
@@ -209,11 +209,11 @@ def gate_trial(
     arms: tuple[str, ...] = GATE_ARMS,
     title: str = "",
 ) -> GateTrial:
-    """Let the gate admit men from a waitlist, then simulate the admitted market.
+    """Let the gate admit men from a waitlist, then run the admitted market.
 
     Versions: "gate as set" uses `[gate]` as configured; "forecast only" drops the
     women-per-man floor so only the forecast decides; "everyone" admits the whole waitlist.
-    Men not admitted are kept out of the simulated month entirely.
+    Men not admitted are kept out of the synthetic month entirely.
     """
     n = n_women + n_waitlist
     pop_cfg = dataclasses.replace(
@@ -271,13 +271,13 @@ def gate_trial(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="lastfirstdate's real rules in simulation.")
+    parser = argparse.ArgumentParser(description="lastfirstdate's real rules in test runs.")
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument("--viewers", type=int, default=150)
     parser.add_argument("--skip-calibration", action="store_true")
     args = parser.parse_args()
     cfg = load()
-    seed = cfg.simulation.seed if args.seed is None else args.seed
+    seed = cfg.test_runs.seed if args.seed is None else args.seed
     if not args.skip_calibration:
         print(calibration_comparison(generate(cfg, seed=seed), cfg, seed, args.viewers).text())
         print()

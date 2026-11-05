@@ -5,7 +5,7 @@
 people would like each other. Every fake member now calibrates on 50 photos, so the engine
 has a looks score for everyone. The results are more interesting than "it works". **Mixing
 looks and personality clearly beats either alone.** The mutual score does its job: people
-at the top of a list are about 5 points more likely to accept. But in our simulated market,
+at the top of a list are about 5 points more likely to accept. But in our synthetic market,
 choosers are the pickier side, so weighing both sides equally costs about as many of her
 picks as it gains in his acceptances. And in a city of 1,000 members, **the ranking barely
 changes the month**, because members see almost everyone in their pool anyway. The
@@ -26,8 +26,8 @@ algorithm's quality starts to matter with bigger pools or shorter lists.
 | File | What it does |
 |---|---|
 | `mutual.py` | Stage 5: percentiles inside each pool, the 50/50 directional score S, the mutual score M, and V for every calibrated member |
-| `mutual_report.py` | Simulation side: calibrates every member, builds all the scores, measures the top of each list against the hidden truth, and runs a month with each of four rankings |
-| `simulate.py` | New: match-quality measures from the hidden truth, one shared definition of a month's simulated people (`month_people`), and date weights that work for one-sided scores too |
+| `mutual_report.py` | Test side: calibrates every member, builds all the scores, measures the top of each list against the hidden truth, and runs a month with each of four rankings |
+| `month_runs.py` | New: match-quality measures from the hidden truth, one shared definition of a month's synthetic people (`month_people`), and date weights that work for one-sided scores too |
 | `looks.py` | Calibration now fits once after the 20 variety profiles instead of after each one (identical result, about twice as fast), and marks a calibration as complete |
 | `tests/test_mutual.py` | 10 tests for FR-LM-18 to FR-LM-20 |
 
@@ -119,7 +119,7 @@ Two measurements:
    pick each candidate and the chance he'd accept her. Multiplying them gives the chance of a
    **mutual yes**. This judges the ranking itself, with no dependence on how a month happens
    to unfold.
-2. **A whole simulated month** with each ranking: same people, same random choices. New
+2. **A whole synthetic month** with each ranking: same people, same random choices. New
    measures from the hidden truth: **appeal** (how much the two people in each booked date
    truly like each other, in standard deviations) and **both keen** (the share of dates where
    each likes the other above their own average).
@@ -152,12 +152,12 @@ On the tuning city (seed 101), I also tried other combinations:
    and personality only (20.7%). Your 50/50 idea is supported.
 2. **The mutual score does what it promises.** Men at the top of her list are 4.6 points more
    likely to accept (64.3% versus 59.7%).
-3. **But it costs some of her picks** (34.7% versus 39.4%). In this simulated market, women
+3. **But it costs some of her picks** (34.7% versus 39.4%). In this synthetic market, women
    pick about 35–40% of the top of their lists, while men accept about 60%. The pick is the scarce
    step, so the chooser's view matters more. Weighing both sides equally lands slightly below
    her own view (24.2% versus 25.7%). Weighting the chooser at 0.8 lands slightly above it.
 4. **Is the market really like this?** Women being more selective on dating apps is commonly
-   reported, so the direction is plausible. But the size of the gap in our simulator is my
+   reported, so the direction is plausible. But the size of the gap in our test harness is my
    guess (`like_threshold` 1.0 versus `accept_threshold` 0.0). That's why the chooser weight
    stays at 0.5 for now, and it's your call (section 12).
 
@@ -219,7 +219,7 @@ All written up in `docs/SPEC.md`.
 
 ## 9. Honest limits
 
-- **The simulator's pickiness gap is a guess**, and it decides whether equal weighting or
+- **The test harness's pickiness gap is a guess**, and it decides whether equal weighting or
   chooser weighting wins.
 - **Percentiles throw away confidence.** If her top candidate has V = 0.99 or V = 0.60, both
   become her top percentile. A model with calibrated probabilities could use more information.
@@ -265,7 +265,7 @@ Math: logarithms and why maximizing a sum of logs spreads value out; the Gini co
 
 ## 13. Questions for you
 
-1. **Chooser weight: keep 0.5 (equal) or move to about 0.8?** In simulation, 0.8 gives about 1
+1. **Chooser weight: keep 0.5 (equal) or move to about 0.8?** In test runs, 0.8 gives about 1
    point more mutual yeses, but only if women really are much pickier than men on your app.
    My recommendation: keep 0.5 until real data exists, then let Sprint 5's learning set it.
 2. **What this means for launch.** With about 1,000 members, the ranking barely matters,

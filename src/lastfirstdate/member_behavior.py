@@ -1,4 +1,4 @@
-"""Behavior simulator: how fake members pick, accept and feel about dates (FR-LM-11).
+"""Synthetic members' behavior: how they pick, accept and feel about dates (FR-LM-11).
 
 This is the stand-in for real people. It decides only from the hidden ground truth and the
 profiles, never from the engine's scores, so the engine can be judged against it.
@@ -11,7 +11,7 @@ Each fake member i has a true appeal for every other member j, in standard-devia
 - fit_ij: true personality fit = s * trait_fit_ij + sqrt(1 - s^2) * chemistry_ij.
   trait_fit is computed here from the profiles with equal weights (deliberately not the
   engine's 0.4 / 0.3 / 0.3), and chemistry is random noise shared by both people that
-  no profile can predict. s = simulation.personality_signal (0.5): paper 9 found that
+  no profile can predict. s = test_runs.personality_signal (0.5): paper 9 found that
   traits measured before meeting predict desire for a specific person only weakly.
 
 Choices use a logistic curve: P(yes) = 1 / (1 + exp(-(U - threshold - pickiness) / T)).
@@ -51,7 +51,7 @@ def _standardize(x: np.ndarray) -> np.ndarray:
 def trait_fit(pop: Population, arr: MemberArrays, questions=None) -> np.ndarray:
     """(n, n) how well two profiles fit on interests, values and Big Five, equally weighted.
 
-    Simulator-only code, written separately from the engine's personality score.
+    Test harness-only code, written separately from the engine's personality score.
     """
     m = pop.members
     tags = sorted({t for x in m for t in x.interests})
@@ -79,7 +79,7 @@ class Behavior:
     """Decisions of fake members. Reads ground truth; the engine never does."""
 
     def __init__(self, pop: Population, arr: MemberArrays, cfg: Config, rng: np.random.Generator):
-        sim = cfg.simulation
+        sim = cfg.test_runs
         self.cfg = sim
         n = len(pop)
         looks = _standardize_rows(pop.truth.taste @ pop.photo_embeddings.T)
@@ -106,7 +106,7 @@ class Behavior:
         """Profiles chooser i picks from today's list: liked ones, best first, up to the cap.
 
         `passes` counts how often i already saw each shown profile without picking it. Each
-        earlier pass multiplies the chance of picking by `simulation.repeat_pick_factor`, so
+        earlier pass multiplies the chance of picking by `test_runs.repeat_pick_factor`, so
         showing someone again is not treated as a fresh chance.
         """
         shown = np.asarray(shown, dtype=int)
@@ -160,7 +160,7 @@ class Behavior:
         """After a date: does i want to meet j again, and i's private 1 to 5 rating of it.
 
         Meeting adds new information (meeting_noise); the rating steps up at each of
-        simulation.rating_cutoffs on that same after-meeting appeal.
+        test_runs.rating_cutoffs on that same after-meeting appeal.
         """
         u = self.utility[i, j] + rng.normal(0.0, self.cfg.meeting_noise)
         again = bool(rng.random() < self._p(u, self.cfg.again_threshold, 0.0))

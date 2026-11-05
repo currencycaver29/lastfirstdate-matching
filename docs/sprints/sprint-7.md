@@ -1,8 +1,8 @@
 # Sprint 7: booking, billing, trust and geography
 
-> **Correction (Sprint 8).** The simulation in this sprint never gave a man his slot back after a
+> **Correction (Sprint 8).** The test run in this sprint never gave a man his slot back after a
 > woman didn't show up, so a no-show could never be refilled, though the site says it is. Fixed
-> in Sprint 8 (`CycleSimulation.release_slot`). Corrected results for the same three markets:
+> in Sprint 8 (`CycleRun.release_slot`). Corrected results for the same three markets:
 >
 > | Version | Reported here | Corrected |
 > |---|---:|---:|
@@ -27,9 +27,9 @@ on her list *with a proposed date window*, she chooses, both $10 payments must a
 before *his* billing cycle ends. Sprints 1 to 6 skipped all of that: they booked dates in a
 weekly batch and counted dates booked per calendar month. Sprint 7 builds your real rules.
 Since no app exists yet, it also designs the **database the app should keep**. Then it
-simulates the real flow **day by day over three billing cycles**. The result changes the
-business picture: in three simulated Phase 1 markets, about **68% of men get 3 delivered dates
-a cycle**, not the 87% to 96% the batch simulations suggested, and credits cost about **17% of
+runs the real flow **day by day over three billing cycles**. The result changes the
+business picture: in three synthetic Phase 1 markets, about **68% of men get 3 delivered dates
+a cycle**, not the 87% to 96% the batch test runs suggested, and credits cost about **17% of
 subscription revenue**. The causes are clear, and so are the levers (section 8).
 
 **Papers used.** Sprint 7 is mostly your business rules turned into code, so it uses fewer
@@ -51,8 +51,8 @@ papers than earlier sprints.
 | `billing.py` | Engine: billing cycles after the free trial, what counts as delivered, refill bonus, pro-rated credits, $10 fee refunds |
 | `trust.py` | Engine: private ratings and the behaviour-only trust score: lowers ranking, flags for review |
 | `geo.py` | Engine: neighbourhoods and the fair venue choice |
-| `cycle_sim.py` | Simulation: the real flow, day by day, over billing cycles, with women joining over time |
-| `config/*.toml` | New sections `[booking]`, `[billing]`, `[trust]`, `[geo]`, `[cycle_simulation]` (rule R5: every number is a setting) |
+| `cycle_runs.py` | Test run: the real flow, day by day, over billing cycles, with women joining over time |
+| `config/*.toml` | New sections `[booking]`, `[billing]`, `[trust]`, `[geo]`, `[cycle_runs]` (rule R5: every number is a setting) |
 
 The default fake population and every earlier result are unchanged (checked byte for byte).
 
@@ -149,7 +149,7 @@ ratings, so one bad date can't sink anyone, and a newcomer starts exactly at the
 
 **How fast is a bad actor flagged?** Solving the conduct formula: a member whose ratings average
 m (scaled) drops below the line after n > k(prior − 0.55)/(0.55 − m) ratings. For a typical
-simulated bad actor (m ≈ 0.3) that is the **6th poor rating**. A man has about 3 dates a cycle,
+synthetic bad actor (m ≈ 0.3) that is the **6th poor rating**. A man has about 3 dates a cycle,
 so that's about two cycles. Flagging faster (a lower k, or a higher line) catches them sooner
 but flags more ordinary members. That's your call (questions below).
 
@@ -162,11 +162,11 @@ but flags more ordinary members. That's your call (questions below).
 - **Neighbourhoods, not addresses:** the app never holds anyone's exact location.
 - **The venue:** the one that makes the *longer* of the two trips shortest, ties broken by the
   total trip. That's fairer than "closest to the midpoint" when venues are sparse. In the
-  simulation the longer trip averaged 0.98 km, and the two trips differed by 0.30 km.
+  test run the longer trip averaged 0.98 km, and the two trips differed by 0.30 km.
 
 ---
 
-## 7. The real flow, simulated (FR-LM-42)
+## 7. The real flow, synthetic (FR-LM-42)
 
 Every day of three billing cycles per man:
 
@@ -179,7 +179,7 @@ Every day of three billing cycles per man:
 Hidden truths decide how respectful each fake member is; 5% are bad actors. The engine only
 sees their ratings.
 
-### Results: three simulated markets, averaged
+### Results: three synthetic markets, averaged
 
 | Version | Men with 3 delivered dates | By cycle | Credits |
 |---|---:|---|---:|
@@ -202,19 +202,19 @@ One market in detail (seed 7, the real flow):
 | Bookings: completed / no-show / cancelled / expired | 894 / 151 / 99 / 149 |
 | Event dates | 32 |
 | Launch women's completed dates per 28 days | 0.66 on average; 55% had none |
-| Trust flags | 10, all simulated bad actors; all 10 bad actors with 6+ ratings caught; none of the others |
+| Trust flags | 10, all synthetic bad actors; all 10 bad actors with 6+ ratings caught; none of the others |
 | Trust against true looks appeal | correlation +0.15 |
 
 ### Why 68% and not 90%
 
 1. **About one booked date in three falls through:** 31% of bookings were cancelled, no-shows
    or expired holds. Each one needs a refill, and late in a man's cycle there often isn't time.
-   With no friction at all it's 90%, about the same as the batch simulation.
-2. **The batch simulation was optimistic.** It counted *booked* dates, had no payment holds or
+   With no friction at all it's 90%, about the same as the batch test run.
+2. **The batch test run was optimistic.** It counted *booked* dates, had no payment holds or
    cancellations, and forgot every pass at the start of each month.
 3. **A closed market wears out.** Each woman's pool holds about 46 men. With up to 30 profiles
    a day and a 7-day rest after each showing, she sees every man in it about once a week. Each
-   pass makes her less likely to pick him later (the simulator's model of people). By the third cycle the median man has been
+   pass makes her less likely to pick him later (the test harness's model of people). By the third cycle the median man has been
    passed over about 300 times. Without new women, fulfilment falls from 66% to 49%. Paper 16
    describes exactly this kind of wasted repetition.
 
@@ -244,7 +244,7 @@ One market in detail (seed 7, the real flow):
 - **Women's experience:** at these ratios more than half of women have no completed date in a
   28-day period. "Up to three dates" is the honest wording, and events matter.
 - **Two policy questions** for you and the lawyer (risk plan, questions 13 and 14): his own
-  absences (D17), and whether a pick *he declines* (28% of picks in the simulation) should still
+  absences (D17), and whether a pick *he declines* (28% of picks in the test run) should still
   leave you owing him a credit.
 
 ---
@@ -252,7 +252,7 @@ One market in detail (seed 7, the real flow):
 ## 9. Bugs and corrections found on the way
 
 - **His late cancellation counted twice.** Writing the "books balance" test caught it. Under
-  D17, his own late cancellation counted as delivered, but the simulation also gave his slot
+  D17, his own late cancellation counted as delivered, but the test run also gave his slot
   back, so one man reached 5 "delivered" dates in a cycle. Now the cancelled date keeps using
   his cap and frees only hers.
 - **Picks lost by accident.** A first version closed a pair forever when she picked a man but
@@ -261,21 +261,21 @@ One market in detail (seed 7, the real flow):
 - **The first batch comparison was unfair.** It forgot who had already dated each month; now it
   remembers.
 - **The original acceptance check was wrong.** It expected the real flow to be "near the batch
-  simulation". It isn't, so the check is kept as a strict expected failure that will pass on
+  test run". It isn't, so the check is kept as a strict expected failure that will pass on
   its own if the real flow ever reaches 90%.
 
 ---
 
 ## 10. Honest limits
 
-- **Everything is simulated.** Show-up, cancellation and payment rates are assumptions (all in
-  `[cycle_simulation]`). Real Phase 1 data replaces them.
+- **Everything is run on synthetic members.** Show-up, cancellation and payment rates are assumptions (all in
+  `[cycle_runs]`). Real Phase 1 data replaces them.
 - **People never change:** the fake women's commitment doesn't make them pick more widely, and
   the $10 fee doesn't make anyone show up more often. Both would help in reality.
-- **Ratings carry some halo.** The simulation assumes raters are slightly kinder to people they
+- **Ratings carry some halo.** The test run assumes raters are slightly kinder to people they
   find attractive, and trust picked up a +0.15 correlation with looks from that alone. Audit
   real ratings by group, as Sprint 4 does for exposure.
-- **No new men join,** and the gate isn't re-run each cycle in this simulation.
+- **No new men join,** and the gate isn't re-run each cycle in this test run.
 - **One zone,** with made-up venues.
 
 ---
@@ -288,7 +288,7 @@ One market in detail (seed 7, the real flow):
 3. **Bayesian shrinkage:** `(k × prior + sum) / (k + n)`, and solving it for "how many ratings
    until flagged".
 4. **Minimax choice:** minimising the worse of two outcomes (the longer trip).
-5. **Simulating over time:** state that carries over (passes, closed pairs, cycles) produces
+5. **Test runs over time:** state that carries over (passes, closed pairs, cycles) produces
    effects a single-month model can't show.
 6. **Replicates and paired comparisons:** the same markets for every version, and a standard
    error before believing a difference.
@@ -296,13 +296,13 @@ One market in detail (seed 7, the real flow):
 ## Try it yourself
 
 ```bash
-.venv/bin/python -m lastfirstdate.cycle_sim                     # all versions, 3 markets (~2 min)
-.venv/bin/python -m lastfirstdate.cycle_sim --seeds 7           # one market (~30 s)
+.venv/bin/python -m lastfirstdate.cycle_runs                     # all versions, 3 markets (~2 min)
+.venv/bin/python -m lastfirstdate.cycle_runs --seeds 7           # one market (~30 s)
 .venv/bin/python -m pytest tests/test_sprint7.py -q             # Sprint 7's tests
 ```
 
-Things to try: in `config/phase1.toml`, change `show_up_rate` under `[simulation]`,
-`new_women_per_cycle` or `pay_in_time_chosen` under `[cycle_simulation]`, or `own_absence_counts`
+Things to try: in `config/phase1.toml`, change `show_up_rate` under `[test_runs]`,
+`new_women_per_cycle` or `pay_in_time_chosen` under `[cycle_runs]`, or `own_absence_counts`
 under `[billing]`, then rerun.
 
 ---

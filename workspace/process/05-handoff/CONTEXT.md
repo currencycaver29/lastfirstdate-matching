@@ -25,7 +25,7 @@ before any app integration.
   - at cycle end, credits;
   - before every men's sale, the gate;
 - **the data each call needs and returns**, mapped to the tables in `db/schema.sql`;
-- **settings** the app may change and which ones need a fresh simulation first;
+- **settings** the app may change and which ones need a fresh test run first;
 - **assumptions** the app must keep (rules R1 to R7, the 15-minute hold, D17), and the open
   legal questions in `docs/risk-plan.md`.
 

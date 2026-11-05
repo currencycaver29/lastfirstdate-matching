@@ -1,6 +1,6 @@
 """Exposure and fairness report (FR-LM-23) and the hold-back experiment (FR-LM-24).
 
-Simulation only.
+Test runs only.
 
 Exposure is how often a member appears on someone's list. Raw exposure partly reflects each
 member's own settings (a narrow age range or a short distance means fewer people can see
@@ -28,8 +28,8 @@ from dataclasses import dataclass
 import numpy as np
 
 from lastfirstdate.config import Config, load
+from lastfirstdate.month_runs import MonthReport, run_month
 from lastfirstdate.mutual_report import build_scores
-from lastfirstdate.simulate import MonthReport, run_month
 from lastfirstdate.synthetic import Population, generate
 
 AGE_BANDS = ((21, 25), (26, 30), (31, 35), (36, 40), (41, 99))
@@ -169,7 +169,7 @@ def main() -> None:
     parser.add_argument("--holdback", type=int, default=3, help="yeses in 7 days before hiding")
     args = parser.parse_args()
     cfg = load()
-    seed = cfg.simulation.seed if args.seed is None else args.seed
+    seed = cfg.test_runs.seed if args.seed is None else args.seed
     pop = generate(cfg, seed=seed)
     scores = build_scores(pop, cfg, seed).mutual
     groups = member_groups(pop)

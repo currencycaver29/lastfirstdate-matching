@@ -8,7 +8,7 @@ sprint are in `docs/sprints/`.
 
 - Build one sprint at a time, in the order in `docs/SPEC.md`. After a sprint passes the
   gates, stop and write `docs/sprints/sprint-N.md`: what was built, the math in plain words,
-  which papers it uses and how, what the simulation showed, and what to study. The owner
+  which papers it uses and how, what the test runs showed, and what to study. The owner
   studies each sprint before approving the next.
 - Push to GitHub only when the owner says so.
 - Every test docstring names the requirement id it proves (for example `FR-LM-04`).
@@ -22,7 +22,9 @@ sprint are in `docs/sprints/`.
   only: no real photos, profiles or embeddings in this repo. R4 tests run offline, no model
   downloads. R5 every tunable number in `config/lastfirstdate.toml`. R6 dealbreakers are hard
   filters. R7 all randomness seeded.
-- The simulator may read `GroundTruth`; the engine must never read it.
+- The test harness (synthetic members) may read `GroundTruth`; the engine must never read it.
+- Call the testing code "test runs" or "the test harness", never "simulator" or
+  "simulation" (the owner's wording).
 
 ## Commands
 
@@ -30,5 +32,5 @@ sprint are in `docs/sprints/`.
 uv venv .venv && uv pip install --python .venv/bin/python -e ".[dev]"
 ./scripts/check.sh
 .venv/bin/python -m lastfirstdate.synthetic
-.venv/bin/python -m lastfirstdate.simulate
+.venv/bin/python -m lastfirstdate.month_runs
 ```

@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from lastfirstdate import app
-from lastfirstdate.app_sim import fill_database
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.config import load
 from lastfirstdate.filter import member_ok
@@ -24,7 +24,7 @@ from lastfirstdate.looks import (
     select_pair,
     select_varied,
 )
-from lastfirstdate.simulator import Behavior
+from lastfirstdate.member_behavior import Behavior
 from lastfirstdate.synthetic import generate
 
 TODAY, EPOCH = date(2026, 11, 4), date(2026, 11, 2)

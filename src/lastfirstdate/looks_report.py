@@ -1,9 +1,9 @@
 """Looks report: how well the looks model learns each member's taste (FR-LM-17).
 
-Simulation only (reads ground truth through the behavior simulator).
+Test runs only (reads ground truth through the behavior test harness).
 
 1. Matchable members are split in half at random. The first half each swipe on
-   `simulation.training_swipes` random profiles; their pooled swipes fit the starting
+   `test_runs.training_swipes` random profiles; their pooled swipes fit the starting
    taste w_0. The second half are evaluated; they are different people.
 2. Each evaluated member calibrates twice from scratch: once with the calibration method
    (20 varied, then 30 most informative) and once with 50 random profiles. Common random
@@ -11,7 +11,7 @@ Simulation only (reads ground truth through the behavior simulator).
    profile the member answers the same way. Differences come only from which profiles
    each method chose.
 3. Both models then predict likes on held-out profiles neither method showed. Scores:
-   AUC against the member's simulated held-out swipes (0.5 = coin flip, 1 = perfect), and
+   AUC against the member's synthetic held-out swipes (0.5 = coin flip, 1 = perfect), and
    the rank correlation with their hidden true looks appeal.
 4. Audit: for each fake demographic group, the share of each member's top 30 by the
    model, by w_0 alone, and by true taste. A group whose model share differs from its
@@ -41,7 +41,7 @@ from lastfirstdate.looks import (
     photo_features,
     sigmoid,
 )
-from lastfirstdate.simulator import Behavior
+from lastfirstdate.member_behavior import Behavior
 from lastfirstdate.synthetic import Population, generate
 
 CURVE = (10, 20, 30, 40, 50)
@@ -195,7 +195,7 @@ def run_looks_report(
     max_viewers: int | None = None,
 ) -> LooksReport:
     cfg = cfg or load()
-    seed = cfg.simulation.seed if seed is None else seed
+    seed = cfg.test_runs.seed if seed is None else seed
     pop = pop or generate(cfg, seed=seed)
     n = len(pop)
     rng = np.random.default_rng(seed + 2_000_003)
@@ -218,7 +218,7 @@ def run_looks_report(
     for v in train:
         pool = calibration_pool(arr, cfg, int(v))
         likes = outcomes(int(v))
-        for j in rng.choice(pool, min(cfg.simulation.training_swipes, pool.size), replace=False):
+        for j in rng.choice(pool, min(cfg.test_runs.training_swipes, pool.size), replace=False):
             swipes.append(Swipe(int(genders[v]), int(genders[j]), feats[j], bool(likes[j])))
     start = StartingTaste.fit(swipes, cfg.calibration.w0_l2_penalty)
 
@@ -313,7 +313,7 @@ def main() -> None:
     parser.add_argument("--viewers", type=int, default=None, help="evaluate at most this many")
     args = parser.parse_args()
     cfg = load()
-    seed = cfg.simulation.seed if args.seed is None else args.seed
+    seed = cfg.test_runs.seed if args.seed is None else args.seed
     pop = generate(cfg, seed=seed, n=args.n)
     print(run_looks_report(pop, cfg, seed=seed, max_viewers=args.viewers).text())
 

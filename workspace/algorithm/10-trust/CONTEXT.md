@@ -36,9 +36,9 @@ FR-LM-39, FR-LM-42 (`tests/test_sprint7.py`).
 
 ## What we know
 
-- In simulation, every bad actor with 6 or more ratings was flagged, and no one else. A
+- In test runs, every bad actor with 6 or more ratings was flagged, and no one else. A
   typical bad actor crosses the line at about the 6th poor rating, roughly two cycles.
-- With a small simulated halo (raters kinder to people they find attractive), trust
+- With a small synthetic halo (raters kinder to people they find attractive), trust
   correlated +0.15 with looks. Audit real ratings by group.
 
 ## Open question
@@ -47,5 +47,5 @@ Flag sooner, at the cost of reviewing more ordinary members? That is the owner's
 
 ## If you change it
 
-Rerun `python -m lastfirstdate.cycle_sim` and check the flag numbers and the trust-versus-looks
+Rerun `python -m lastfirstdate.cycle_runs` and check the flag numbers and the trust-versus-looks
 correlation.

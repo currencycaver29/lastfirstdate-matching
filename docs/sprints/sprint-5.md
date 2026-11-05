@@ -4,10 +4,10 @@
 actually happened (who picked whom, which dates went well) and updates itself. It learns each
 member's own balance between looks and personality, adds date outcomes to their looks model,
 and reserves 10% of every list for profiles it is unsure about so it keeps learning. Over three
-simulated months, the personal balance is learned well. But **learning does not measurably raise
+synthetic months, the personal balance is learned well. But **learning does not measurably raise
 second dates** in a 1,000-member city, and two parts of the research doc's plan didn't work as
 expected: date outcomes don't improve the looks model (counting them heavily made it worse), and
-exploration gave no consistent gain. The biggest effect in the simulation is something else
+exploration gave no consistent gain. The biggest effect in the test run is something else
 entirely: second dates fall about 10 points from month 1 to month 3 in every version, because
 the best pairs get used up.
 
@@ -25,9 +25,9 @@ the best pairs get used up.
 | File | What it does |
 |---|---|
 | `learning.py` | Engine: date records, adding date outcomes to looks models, collecting evidence, learning each member's looks weight, personal 50/50 scores, uncertainty, exploration slots |
-| `learning_report.py` | Simulation side: three months, three versions, replicates, and what the engine learned |
-| `simulate.py` | The month can now continue with the same people (`month`), skip pairs who already dated (`excluded`), reserve exploration slots (`explore`), and record every list choice and date outcome (`record`). With none of these, it is identical to Sprint 4, checked line by line |
-| `simulator.py` | New: after a date, each person says whether they'd meet again and gives a private 1 to 5 rating |
+| `learning_report.py` | Test side: three months, three versions, replicates, and what the engine learned |
+| `month_runs.py` | The month can now continue with the same people (`month`), skip pairs who already dated (`excluded`), reserve exploration slots (`explore`), and record every list choice and date outcome (`record`). With none of these, it is identical to Sprint 4, checked line by line |
+| `member_behavior.py` | New: after a date, each person says whether they'd meet again and gives a private 1 to 5 rating |
 | `looks.py` | Labels can now carry weights, so a date outcome can count differently from a swipe |
 | `fairness.py` | Fair lists accept reserved slots, so exploration counts toward the daily cap |
 | `tests/test_learning.py` | 22 tests for FR-LM-25 to FR-LM-28, including 3 strict expected failures |
@@ -53,7 +53,7 @@ months. A test checks this, and it holds.
 
 ## 3. What happens after a date
 
-The simulator decides each person's reaction from their true appeal plus a random shift for
+The test harness decides each person's reaction from their true appeal plus a random shift for
 what you learn by meeting:
 
 ```
@@ -172,7 +172,7 @@ exploration), and the 600-member test city gave 25.7%, 25.6% and 27.3%. The diff
    and month 3, and about 8 points of guarantee. Pairs who dated never meet again, and the best
    pairs are used first. In month 3 the engine is choosing among weaker leftovers, whatever it
    has learned. In a real app, new members joining each month would refill pools. The
-   simulation doesn't model new sign-ups, so this decline is a worst case.
+   test run doesn't model new sign-ups, so this decline is a worst case.
 3. **The personal weights are modest.** True looks weights vary around 0.5 with a spread of
    about 0.15, and learning moves lambda_i about 0.12. That's real, but too small to change
    many decisions.
@@ -192,19 +192,19 @@ All written up in `docs/SPEC.md`.
 
 One "expected failure" first **passed**: on a single run, exploration happened to beat
 learning-only by more than 2 points. Over 3 replicates the gain was 1.7 points on that city and
--1.4 on the main city. A single simulated month swings by a couple of points by chance, so the
+-1.4 on the main city. A single synthetic month swings by a couple of points by chance, so the
 three-month tests now average 3 replicates and compare months 2 to 3. That made the suite
 slower (about 3 minutes in all) but its verdicts trustworthy. When you see one good result in real data
 later, the same caution applies.
 
 ## 10. Honest limits
 
-- **No new members join during the simulation.** Real apps refill pools, so the month-on-month
+- **No new members join during the test run.** Real apps refill pools, so the month-on-month
   decline is exaggerated, and learning might matter more with fresh people to rank.
 - **Three months is short.** The research doc suggests a dedicated second-date model once there
   are a few hundred completed dates. With about 1,000 dates a month, that point would come
   quickly, but it isn't built.
-- **All of this is fake data.** The simulator's thresholds and noise levels shape every result.
+- **All of this is fake data.** The test harness's thresholds and noise levels shape every result.
 
 ## 11. Math to study
 
@@ -249,7 +249,7 @@ A complete matching engine for lastfirstdate, built and tested on fake New York 
 | 8. Learning | Personal looks weights, date outcomes, exploration | Sprint 5 |
 
 There are 28 requirements, each with tests, plus 4 strict expected failures that record claims
-the simulation did not support. Every finding is written up in `docs/sprints/` and every plan
+the test run did not support. Every finding is written up in `docs/sprints/` and every plan
 change in `docs/SPEC.md`.
 
 ### The findings that matter most for the business
@@ -281,7 +281,7 @@ change in `docs/SPEC.md`.
    - the chooser weight;
    - the number of onboarding swipes;
    - who owns the audit.
-6. **A launch experiment:** real data will differ from the simulator. Measure what the simulator
+6. **A launch experiment:** real data will differ from the test harness. Measure what the test harness
    could only guess, such as how picky each side really is, and A/B test the choices this
    project couldn't settle.
 

@@ -1,9 +1,9 @@
 # Sprint 8: the forecast and the gate on delivered dates
 
 **In one paragraph.** The ratio gate from Sprint 6 decides how many men to sell subscriptions
-to. Its forecast was fitted on the old batch simulation, which counts dates *booked*. Sprint 8
+to. Its forecast was fitted on the old batch test run, which counts dates *booked*. Sprint 8
 refits it on the real booking flow from Sprint 7, which counts dates *delivered*: confirmed,
-paid, inside his cycle, and actually happened. On the way, a bug in Sprint 7's simulation
+paid, inside his cycle, and actually happened. On the way, a bug in Sprint 7's test run
 turned up: a no-show was never refilled. Fixing it raises the real flow from 68% to **82%**.
 The refit changes what the gate believes. **The size of the zone matters far more than the
 ratio of women to men.** With 500 committed women, about 90% of men get their 3 delivered
@@ -24,8 +24,8 @@ flow.
 | File | What it does |
 |---|---|
 | `forecast.py` | A model now records what it forecasts (`kind`: booked or delivered) and what it assumes. New: delivered-date progress features, `at_risk_delivered`, and `gate_model(cfg)` to pick the gate's forecast |
-| `forecast_fit.py --delivered` | Fits the forecast on the real flow across 60 simulated markets and writes `config/forecast_delivered.toml` |
-| `cycle_sim.py` | Records forecast rows (each man's market at launch; his progress every week); fixed the refill after a no-show |
+| `forecast_fit.py --delivered` | Fits the forecast on the real flow across 60 synthetic markets and writes `config/forecast_delivered.toml` |
+| `cycle_runs.py` | Records forecast rows (each man's market at launch; his progress every week); fixed the refill after a no-show |
 | `gate_report.py` | The gate in the real flow: two zone sizes, three versions, three markets each |
 | `config/*.toml` | `[gate] forecast = "booked"` (research) or `"delivered"` (Phase 1) |
 
@@ -36,7 +36,7 @@ reads changed.
 
 ## 2. The bug, and what it changed
 
-Your site says no-shows "don't count and the slot is refilled". Sprint 7's simulation counted
+Your site says no-shows "don't count and the slot is refilled". Sprint 7's test run counted
 correctly (her no-show didn't count for him), but it never gave him his weekly slot and cap
 slot back. With a cap of 3 dates a cycle, one no-show by her could leave him at most 2. The
 fix (`release_slot`): whoever was stood up gets their slot back, and whoever didn't come
@@ -72,7 +72,7 @@ Same form and features as Sprint 6:
 - **The label changed:** for each paying man, the share of his first three paid cycles that
   reached 3 *delivered* dates. A share between 0 and 1 is fine for logistic regression: its
   gradient is just (p − y), whatever y is.
-- **The rows changed:** each man's market at launch, in 60 simulated real-flow markets (60,
+- **The rows changed:** each man's market at launch, in 60 synthetic real-flow markets (60,
   100 or 150 men; 1 to 7 women per man; four seeds, because markets differ by about ±5
   points).
 - **The file says what it assumes:** 15% new women per cycle, 92% show-ups, 5% cancellations,
@@ -138,7 +138,7 @@ The forecast against the number of men, in one market of each zone:
 
 ### Why the zone matters more than the ratio
 
-In the simulation, a man's dates depend on how many women near him *like* him and pick him.
+In the test run, a man's dates depend on how many women near him *like* him and pick him.
 Other men barely compete until there are so many that women's 30-profile lists overflow
 (around 1 woman per man). A bigger zone means a bigger pool for every man; a few more or fewer
 men changes little.
@@ -172,7 +172,7 @@ women may, which would make the ratio matter more. Real Phase 1 data will tell.
 
 ## 7. Honest limits
 
-- **People don't adapt** in the simulation: scarcity doesn't make anyone less picky. This
+- **People don't adapt** in the test run: scarcity doesn't make anyone less picky. This
   drives the "zone size over ratio" result.
 - **The forecast assumes today's friction and recruitment.** If show-ups, cancellations or the
   rate of new women change, refit (the file lists what it assumed).

@@ -1,9 +1,9 @@
-"""FR-LM-11: behavior simulator (fake members decide from hidden truth only)."""
+"""FR-LM-11: behavior test harness (fake members decide from hidden truth only)."""
 
 import numpy as np
 
 from lastfirstdate.arrays import MemberArrays
-from lastfirstdate.simulator import Behavior
+from lastfirstdate.member_behavior import Behavior
 
 
 def _behavior(cfg, pop, seed=0):
@@ -11,7 +11,7 @@ def _behavior(cfg, pop, seed=0):
     return Behavior(pop, arr, cfg, np.random.default_rng(seed))
 
 
-def test_simulator_is_deterministic(cfg, small_pop):
+def test_member_behavior_is_deterministic(cfg, small_pop):
     """FR-LM-11 / R7: the same seed gives the same true appeal and the same choices."""
     a, b = _behavior(cfg, small_pop, 3), _behavior(cfg, small_pop, 3)
     np.testing.assert_array_equal(a.utility, b.utility)
@@ -49,11 +49,11 @@ def test_earlier_passes_lower_the_chance_of_a_pick(cfg, small_pop):
 
 
 def test_picks_respect_the_daily_cap(cfg, small_pop):
-    """FR-LM-11: a chooser never picks more than simulation.picks_per_day profiles in a day."""
+    """FR-LM-11: a chooser never picks more than test_runs.picks_per_day profiles in a day."""
     beh = _behavior(cfg, small_pop)
     for k in range(50):
         assert len(beh.choose(k, np.arange(100, 130), np.random.default_rng(k))) <= (
-            cfg.simulation.picks_per_day
+            cfg.test_runs.picks_per_day
         )
 
 

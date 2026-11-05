@@ -3,7 +3,7 @@
 **As of 4 November 2026.** This report checks the engine in this repo against what
 lastfirstdate actually promises and plans, as published on its website. It covers which
 rules match, what the engine does differently, what the onboarding must collect, and how the
-real business rules perform in simulation.
+real business rules perform in test runs.
 
 **Sources (public pages, read 4 November 2026):**
 [home](https://lastfirstdate.vercel.app/), [product demo](https://lastfirstdate.vercel.app/product/),
@@ -14,7 +14,7 @@ Sample data", and the privacy page says the site is a prototype whose forms do n
 anything. **No app or member database exists yet**, so the onboarding can still be designed
 around what the engine needs.
 
-**All simulation numbers come from fake members.** They compare designs and expose
+**All test run numbers come from fake members.** They compare designs and expose
 arithmetic; they are not predictions of real behavior.
 
 ## Summary
@@ -23,12 +23,12 @@ arithmetic; they are not predictions of real behavior.
    matches, a photo exercise that learns each member's type, no attractiveness scores, and
    learning from private post-date ratings are all built and tested.
 2. **The Phase 1 plan works, but below the 90% north star once real friction is counted.** The
-   batch simulations gave about **87%** of men 3 *booked* dates at 3:1 and **94%** at 5:1. Sprint 7
-   simulated the real flow (payment holds, cancellations, no-shows, refills, billing cycles):
+   batch test runs gave about **87%** of men 3 *booked* dates at 3:1 and **94%** at 5:1. Sprint 7
+   synthetic the real flow (payment holds, cancellations, no-shows, refills, billing cycles):
    about **82%** of men get 3 *delivered* dates a cycle at 3:1, and credits cost about 12% of
    subscription revenue. Reaching 90% delivered takes about **4.5 women per man** (section 8).
 3. **The women's promise needs rewording.** At 3:1 the average woman can get at most about 1 date
-   a month (100 men × 3 dates = 300 dates for 300 women), and in simulation 34% get none. "Commit
+   a month (100 men × 3 dates = 300 dates for 300 women), and in test runs 34% get none. "Commit
    to three dates a month" should read "up to three".
 4. **The gender ratio is the biggest business risk.** With the site's rules but a city-wide mix of
    55% men, only about 52% of men reach 3 dates.
@@ -67,8 +67,8 @@ arithmetic; they are not predictions of real behavior.
 | The photo exercise teaches your type; no attractiveness scores | Calibration plus personal taste (Stages 2 and 3); rule R2 | Yes, but see pairs and 30 photos in section 4 |
 | Intent questions: values, lifestyle, timelines, dealbreakers | Values questions with accepted answers and dealbreakers | Partly: the site uses single answers |
 | Shared interests from prompts | Interest tags; Sentence-BERT plugs in later | Partly: prompts are free text |
-| Learns from ratings and "would meet again" | Stage 8 (Sprint 5) | Built, but no measurable gain in simulation yet |
-| Guarantee for every subscriber, at-risk alerts trigger priority matching | Guarantee bonus on lists and urgency in the scheduler | Yes, but the earlier simulations assumed only half of men pay |
+| Learns from ratings and "would meet again" | Stage 8 (Sprint 5) | Built, but no measurable gain in test runs yet |
+| Guarantee for every subscriber, at-risk alerts trigger priority matching | Guarantee bonus on lists and urgency in the scheduler | Yes, but the earlier test runs assumed only half of men pay |
 | Women commit to 3 dates | Not modeled | Gap |
 | Proposed date window shown with each profile | A weekly batch schedule after picks | Gap |
 | Delivered = confirmed and paid before his cycle ends; refills after cancellations | Booked dates per calendar month | Gap |
@@ -76,12 +76,12 @@ arithmetic; they are not predictions of real behavior.
 | Event dates count toward the 3 | Not modeled | Gap |
 | Man-woman only | Supports all orientations | Simpler configuration |
 
-## 3. The real business rules in simulation
+## 3. The real business rules in test runs
 
 ### Phase 1 as planned
 
 One dense NYC zone, 100 paying men, man-woman only, nobody over 3 dates, 30 calibration photos.
-Five simulated months each:
+Five synthetic months each:
 
 | | 300 women (3:1) | 500 women (5:1) |
 |---|---|---|
@@ -97,7 +97,7 @@ of the 100 men were matchable. In a real beta everyone is verified.)
 ### The same rules across a city, by share of men
 
 1,000 fake members spread across NYC, every man paying, women free, nobody over 3 dates. Three
-simulated months each:
+synthetic months each:
 
 | Share of men | Men reaching 3 dates | Women completing 3 | Missing dates per man |
 |---|---|---|---|
@@ -117,7 +117,7 @@ per month, or 13% to 27% of subscription revenue.
   something most women will reach.
 - **Many women will have empty months.** This is a retention risk that free events can help
   with.
-- **The simulation does not model the commitment's effect.** Women who must do dates may pick more
+- **The test run does not model the commitment's effect.** Women who must do dates may pick more
   widely than the fake women, which would help men's numbers.
 
 ## 4. Where the app differs from the engine, and the change needed
@@ -171,8 +171,8 @@ per month, or 13% to 27% of subscription revenue.
 
 ## 8. The real booking flow (Sprint 7)
 
-Sprint 7 built the site's booking and billing rules and simulated them day by day over three
-billing cycles, in three simulated Phase 1 markets (100 paying men, 300 women, 15% new women per
+Sprint 7 built the site's booking and billing rules and synthetic them day by day over three
+billing cycles, in three synthetic Phase 1 markets (100 paying men, 300 women, 15% new women per
 cycle):
 
 | Version | Men with 3 delivered dates | Credits (share of subscriptions) |
@@ -183,12 +183,12 @@ cycle):
 | Everyone pays within the 15 minutes | 85% ± 2 | 10% |
 | No friction at all | 90% ± 3 | 7% |
 
-These are the corrected figures: Sprint 7 first reported 68%, because its simulation never
+These are the corrected figures: Sprint 7 first reported 68%, because its test run never
 refilled a man's slot after a woman didn't show up (fixed in Sprint 8). About one booked date in
 three still falls through, but most are refilled in time. New women joining every cycle are the
 biggest lever; without them the market wears out.
 
-By women per man (real flow, 100 men, 15% new women per cycle, 2 simulated markets):
+By women per man (real flow, 100 men, 15% new women per cycle, 2 synthetic markets):
 
 | Women per man | 2 | 3 | 4 | 5 | 8 |
 |---|---:|---:|---:|---:|---:|

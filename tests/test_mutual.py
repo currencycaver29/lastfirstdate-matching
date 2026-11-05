@@ -8,9 +8,9 @@ import pytest
 from lastfirstdate.arrays import MemberArrays
 from lastfirstdate.lists import pick_rights
 from lastfirstdate.looks import CalibrationIncomplete, PersonalTaste, StartingTaste
+from lastfirstdate.month_runs import month_people
 from lastfirstdate.mutual import directional_score, looks_scores, mutual_score, percentile_rows
 from lastfirstdate.mutual_report import RANKINGS, top_quality
-from lastfirstdate.simulate import month_people
 
 # ---------------------------------------------------------------- FR-LM-18
 
@@ -117,7 +117,7 @@ def test_scores_stay_inside_the_filtered_pool(city):
 def _top(cfg, city, matrices):
     pop, sc = city
     arr = MemberArrays.from_members(pop.members, cfg.values)
-    behavior, _ = month_people(pop, arr, cfg, cfg.simulation.seed)
+    behavior, _ = month_people(pop, arr, cfg, cfg.test_runs.seed)
     rights = pick_rights(arr)
     return {k: top_quality(m, sc.eligible, rights, behavior, cfg) for k, m in matrices.items()}
 
@@ -125,7 +125,7 @@ def _top(cfg, city, matrices):
 def test_mutual_ranking_puts_people_who_say_yes_back_at_the_top(cfg, city):
     """FR-LM-20 (acceptance): M's top 10 are likelier to accept the chooser than one side's.
 
-    Judged with the simulator's hidden truth. The 50/50 mutual score also beats either half
+    Judged with the test harness's hidden truth. The 50/50 mutual score also beats either half
     alone on mutual yeses (she picks and he accepts), and is within 1.5 points of the
     chooser's one-sided view, which she likes slightly more (Sprint 3 study notes).
     """

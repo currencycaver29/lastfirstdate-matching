@@ -1,11 +1,11 @@
-# Stage 03: simulate
+# Stage 03: test runs
 
 Measure what the sprint changed, on fake members, honestly.
 
 ## Read
 
 - The new sprint section in `docs/SPEC.md` (what each requirement claims).
-- The report module the sprint touched (for example `src/lastfirstdate/cycle_sim.py`).
+- The report module the sprint touched (for example `src/lastfirstdate/cycle_runs.py`).
 - The previous results file in this folder, to compare against.
 
 ## How to measure
@@ -19,7 +19,7 @@ Measure what the sprint changed, on fake members, honestly.
 
 ## Produce
 
-`workspace/process/03-simulate/results-sprint-N.md` containing:
+`workspace/process/03-test-runs/results-sprint-N.md` containing:
 
 - each command that produced a number, so anyone can rerun it;
 - the tables (versions as rows, mean ± standard error);

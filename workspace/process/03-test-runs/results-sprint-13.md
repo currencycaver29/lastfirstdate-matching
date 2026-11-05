@@ -41,5 +41,5 @@ vectors are all fairly alike, which the photo compression handles by centring th
 
 ## Earlier results
 
-Unchanged: tests and simulations use `text_encoder = "words"` and synthetic embeddings, and
+Unchanged: tests and test runs use `text_encoder = "words"` and synthetic embeddings, and
 every earlier test passes.

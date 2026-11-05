@@ -18,28 +18,28 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   committed women are at least 3 per paying man and the forecast fulfilment is at least 90%.
   *Owner: Engine (Sprint 6) and Engineering.* Why: at 55% men only about 52% of men reach 3 dates.
   *Engine part done in Sprint 6* (`gate_decision` in `src/lastfirstdate/forecast.py`; in
-  simulation it keeps admitted men at 92% to 96%). Still to do: Engineering calls it before
+  test runs it keeps admitted men at 92% to 96%). Still to do: Engineering calls it before
   every men's sale and pauses the waitlist when it says stop.
 - [ ] **Reword the women's commitment** to "up to three dates a month". At 3:1 the average woman
   can have at most about 1 date a month. *Owner: Founder.*
 - [ ] **Recruit about 500 committed women for the Phase 1 zone, the top of the plan.** In the
-  simulated real booking flow, the size of the zone matters more than the ratio: with 500 women,
+  synthetic real booking flow, the size of the zone matters more than the ratio: with 500 women,
   about 90% of men get 3 delivered dates even at 3 women per man; with 300, about 75% at 3:1, and
   the 90% promise covers only a handful of men. The Phase 1 gate now uses a forecast fitted on
   delivered dates and will sell almost nothing in a 300-woman zone (Sprint 8). *Owner: Founder.*
 - [ ] **Budget for credits** from day one and track fulfilment weekly: about 7% of subscription
   revenue in a 500-woman zone at 3:1, about 16% in a 300-woman zone. *Owner: Founder.*
 - [ ] **Keep recruiting women after launch,** about 15% of the launch number every cycle. Without
-  new women, fulfilment falls each cycle (86%, 69%, 53% in simulation) because the same people
+  new women, fulfilment falls each cycle (86%, 69%, 53% in test runs) because the same people
   keep passing on each other. *Owner: Founder.*
 - [ ] **Keep no-shows and cancellations low.** Each one needs a refill before his cycle ends; with
   none at all, fulfilment would be about 8 points higher. Reminders, the $10 fee and reliability in
   the trust score all help. *Owner: Founder and Engineering.*
-- [ ] **Decide who the guarantee is offered to.** In simulation, offering it only to men with 50 or
+- [ ] **Decide who the guarantee is offered to.** In test runs, offering it only to men with 50 or
   more possible matches reaches about 96%. Pool size depends only on a member's own settings and
   location, so it is fair to use. Never use how often someone is picked: that would be a
   desirability score (rule R2). *Owner: Founder.*
-- [ ] **Plan for women's empty months** (34% to 53% of women had no date in a simulated Phase 1
+- [ ] **Plan for women's empty months** (34% to 53% of women had no date in a synthetic Phase 1
   month): events, honest expectations, and a measure of it on the dashboard. *Owner: Founder.*
 
 ### Security and privacy
@@ -153,7 +153,7 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   *Owner: Security tester.*
 - [ ] **Fulfilment at or above the target for at least two cycles in the beta zone** before
   opening the next zone. *Owner: Founder.*
-- [ ] **Real data replaces the simulator's guesses:** measure how picky each side is, how often
+- [ ] **Real data replaces the test harness's guesses:** measure how picky each side is, how often
   people show up, and the share of women with empty months; rerun the reports with those numbers.
   *Owner: Engine.*
 
@@ -163,7 +163,7 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   audit already flagged one age band). *Owner: Engine and Founder.*
 - [ ] **Rule R2 stays enforced:** no global attractiveness score anywhere; the trust score measures
   behavior only. *Owner: Engine.*
-- [ ] **Small A/B tests** to settle what the simulation could only guess: 30 versus 50 calibration
+- [ ] **Small A/B tests** to settle what the test run could only guess: 30 versus 50 calibration
   photos, the chooser weight, exploration. *Owner: Engine.*
 - [ ] **Explain decisions for appeals** (the intent check promises "you can always appeal").
   *Owner: Engineering.*

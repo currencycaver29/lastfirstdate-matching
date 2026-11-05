@@ -48,9 +48,9 @@ def test_the_delivered_model_records_what_it_assumes(p1cfg, delivered):
     lo, hi = delivered.fitted_women_per_man
     assert lo <= 1.1 and hi >= 6.5
     a = delivered.assumptions
-    assert a["new_women_per_cycle"] == p1cfg.cycle_simulation.new_women_per_cycle
-    assert a["show_up_rate"] == p1cfg.simulation.show_up_rate
-    assert a["cancel_rate"] == p1cfg.cycle_simulation.cancel_rate
+    assert a["new_women_per_cycle"] == p1cfg.cycle_runs.new_women_per_cycle
+    assert a["show_up_rate"] == p1cfg.test_runs.show_up_rate
+    assert a["cancel_rate"] == p1cfg.cycle_runs.cancel_rate
     assert len(delivered.progress) == len(DELIVERED_PROGRESS_FEATURES)
 
 

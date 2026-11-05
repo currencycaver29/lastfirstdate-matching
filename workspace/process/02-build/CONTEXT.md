@@ -13,13 +13,13 @@ Write the code and tests for the requirements agreed in stage 01.
 
 - **Settings:** every new tunable number goes in both `config/lastfirstdate.toml` and
   `config/phase1.toml`, with a dataclass field and a range check in `config.py` (R5).
-- **Engine and simulation stay apart:** engine modules never import simulation modules or
+- **Engine and test run stay apart:** engine modules never import test run modules or
   read `GroundTruth`. Add new modules to the right list in `tests/test_engine_boundary.py`.
 - **Rust:** if you change a function that has a Rust twin (`native.py` lists them), change
   both versions; `tests/test_native.py` checks that they agree. Rebuild with
   `.venv/bin/maturin develop --release --skip-install`.
 - **Tests:** every test docstring starts with its `FR-LM-NN`. An acceptance target the
-  simulation doesn't meet becomes `@pytest.mark.xfail(strict=True, reason=...)`. Never weaken
+  test run doesn't meet becomes `@pytest.mark.xfail(strict=True, reason=...)`. Never weaken
   a test.
 - **Earlier results must not move:** with the default settings, the default fake population
   and the earlier reports stay the same.

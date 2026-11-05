@@ -1,7 +1,7 @@
 """Ready for real data: outcomes from the app's records, recalibration, and when to switch
 (FR-LM-51 to FR-LM-53).
 
-The guarantee forecast (Sprint 8) was fitted on simulated markets. Once Phase 1 has run for a
+The guarantee forecast (Sprint 8) was fitted on synthetic markets. Once Phase 1 has run for a
 few cycles, the app's records say what really happened. This module turns those records into
 training rows and decides whether a refitted forecast is better.
 

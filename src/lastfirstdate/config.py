@@ -105,7 +105,7 @@ class DatesConfig:
 
 
 @dataclass(frozen=True)
-class SimulationConfig:
+class TestRunsConfig:
     seed: int
     guarantee_target: float
     min_pool_for_guarantee: int
@@ -194,7 +194,7 @@ class ModelsConfig:
 
 
 @dataclass(frozen=True)
-class CycleSimulationConfig:
+class CycleRunsConfig:
     cycles: int
     stagger: bool
     pay_in_time_chooser: float
@@ -272,14 +272,14 @@ class Config:
     learning: LearningConfig
     gate: GateConfig
     dates: DatesConfig
-    simulation: SimulationConfig
+    test_runs: TestRunsConfig
     population: PopulationConfig
     values: tuple[ValuesQuestion, ...]
     booking: BookingConfig
     billing: BillingConfig
     trust: TrustConfig
     geo: GeoConfig
-    cycle_simulation: CycleSimulationConfig
+    cycle_runs: CycleRunsConfig
     refit: RefitConfig
     models: ModelsConfig
 
@@ -364,9 +364,9 @@ def validate(cfg: Config) -> None:
             raise ConfigError(f"learning.{name} must not be negative")
     if not 0.0 <= learn.lambda_min <= 0.5 <= learn.lambda_max <= 1.0:
         raise ConfigError("learning: need 0 <= lambda_min <= 0.5 <= lambda_max <= 1")
-    cuts = cfg.simulation.rating_cutoffs
+    cuts = cfg.test_runs.rating_cutoffs
     if len(cuts) != 4 or sorted(cuts) != list(cuts):
-        raise ConfigError("simulation.rating_cutoffs needs 4 increasing numbers")
+        raise ConfigError("test_runs.rating_cutoffs needs 4 increasing numbers")
     _check_share("lists.exploration_share", lists.exploration_share)
 
     d = cfg.dates
@@ -385,7 +385,7 @@ def validate(cfg: Config) -> None:
     if d.max_per_week != 1:
         raise ConfigError("dates.max_per_week: only 1 date per person per week is supported")
 
-    sim = cfg.simulation
+    sim = cfg.test_runs
     for name in (
         "guarantee_target",
         "open_app_rate",
@@ -393,14 +393,14 @@ def validate(cfg: Config) -> None:
         "show_up_rate",
         "repeat_pick_factor",
     ):
-        _check_share(f"simulation.{name}", getattr(sim, name))
-    _check_positive("simulation.picks_per_day", sim.picks_per_day)
-    _check_positive("simulation.training_swipes", sim.training_swipes)
-    _check_positive("simulation.choice_temperature", sim.choice_temperature)
+        _check_share(f"test_runs.{name}", getattr(sim, name))
+    _check_positive("test_runs.picks_per_day", sim.picks_per_day)
+    _check_positive("test_runs.training_swipes", sim.training_swipes)
+    _check_positive("test_runs.choice_temperature", sim.choice_temperature)
     if sim.meeting_noise < 0:
-        raise ConfigError("simulation.meeting_noise must not be negative")
+        raise ConfigError("test_runs.meeting_noise must not be negative")
     if sim.min_pool_for_guarantee < 0:
-        raise ConfigError("simulation.min_pool_for_guarantee must not be negative")
+        raise ConfigError("test_runs.min_pool_for_guarantee must not be negative")
 
     f = cfg.filter
     if f.active_within_days < 0 or f.min_shared_slots < 0:
@@ -506,10 +506,10 @@ def validate(cfg: Config) -> None:
             raise ConfigError(f"models.{name} must be a 64-character sha256")
     _check_positive("models.photo_size", md.photo_size)
     _check_positive("models.text_max_tokens", md.text_max_tokens)
-    cs = cfg.cycle_simulation
-    _check_positive("cycle_simulation.cycles", cs.cycles)
+    cs = cfg.cycle_runs
+    _check_positive("cycle_runs.cycles", cs.cycles)
     if cs.new_women_per_cycle < 0:
-        raise ConfigError("cycle_simulation.new_women_per_cycle must not be negative")
+        raise ConfigError("cycle_runs.new_women_per_cycle must not be negative")
     for name in (
         "pay_in_time_chooser",
         "pay_in_time_chosen",
@@ -518,13 +518,13 @@ def validate(cfg: Config) -> None:
         "event_rate",
         "bad_actor_share",
     ):
-        _check_share(f"cycle_simulation.{name}", getattr(cs, name))
+        _check_share(f"cycle_runs.{name}", getattr(cs, name))
     if cs.rating_noise < 0 or cs.rating_halo < 0 or cs.conduct_effect < 0:
         raise ConfigError(
-            "cycle_simulation.rating_noise, rating_halo and conduct_effect must not be negative"
+            "cycle_runs.rating_noise, rating_halo and conduct_effect must not be negative"
         )
     if not 1 <= cs.rating_center <= 5:
-        raise ConfigError("cycle_simulation.rating_center must be between 1 and 5")
+        raise ConfigError("cycle_runs.rating_center must be between 1 and 5")
 
 
 def _population(raw: dict) -> PopulationConfig:
@@ -581,14 +581,14 @@ def from_dict(raw: dict) -> Config:
         learning=_section(raw, "learning", LearningConfig),
         gate=_section(raw, "gate", GateConfig),
         dates=_section(raw, "dates", DatesConfig),
-        simulation=_section(raw, "simulation", SimulationConfig),
+        test_runs=_section(raw, "test_runs", TestRunsConfig),
         population=_population(raw),
         values=values,
         booking=_section(raw, "booking", BookingConfig),
         billing=_section(raw, "billing", BillingConfig),
         trust=_section(raw, "trust", TrustConfig),
         geo=_geo(raw),
-        cycle_simulation=_section(raw, "cycle_simulation", CycleSimulationConfig),
+        cycle_runs=_section(raw, "cycle_runs", CycleRunsConfig),
         refit=_section(raw, "refit", RefitConfig),
         models=_section(raw, "models", ModelsConfig),
     )
@@ -606,30 +606,30 @@ def load(path: str | Path = DEFAULT_PATH) -> Config:
 
 # FR-LM-48: every setting is classified by what changing it in production requires.
 BUSINESS = "business terms: change any time (with legal review where money is involved)"
-SIMULATE = "simulate first: rerun the reports and check fulfilment before changing"
-REFIT = "refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then simulate"
-SIM_ONLY = "simulation only: the app never reads it"
+TEST_FIRST = "test first: rerun the reports and check fulfilment before changing"
+REFIT = "refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then rerun the tests"
+TEST_ONLY = "test runs only: the app never reads it"
 ENGINEERING = "engineering only: changes the data the app collects or how a model is fitted"
-IMPACTS = (BUSINESS, SIMULATE, REFIT, SIM_ONLY, ENGINEERING)
+IMPACTS = (BUSINESS, TEST_FIRST, REFIT, TEST_ONLY, ENGINEERING)
 
 _SECTION_IMPACT = {
-    "filter": SIMULATE,
-    "personality": SIMULATE,
-    "mix": SIMULATE,
-    "calibration": SIMULATE,
-    "lists": SIMULATE,
+    "filter": TEST_FIRST,
+    "personality": TEST_FIRST,
+    "mix": TEST_FIRST,
+    "calibration": TEST_FIRST,
+    "lists": TEST_FIRST,
     "fairness": BUSINESS,
-    "learning": SIMULATE,
+    "learning": TEST_FIRST,
     "gate": BUSINESS,
     "dates": REFIT,
-    "simulation": SIM_ONLY,
-    "population": SIM_ONLY,
+    "test_runs": TEST_ONLY,
+    "population": TEST_ONLY,
     "values": ENGINEERING,
     "booking": REFIT,
     "billing": BUSINESS,
-    "trust": SIMULATE,
+    "trust": TEST_FIRST,
     "geo": BUSINESS,
-    "cycle_simulation": SIM_ONLY,
+    "cycle_runs": TEST_ONLY,
     "refit": ENGINEERING,
     "models": ENGINEERING,
 }

@@ -5,7 +5,7 @@ real data (rule R3). The same seed always gives the same population (rule R7).
 
 The generator also draws hidden "ground truth" for each fake member: their true
 visual taste, how much they truly care about looks versus personality, and how
-picky they are. The simulator uses it to decide swipes, picks and how dates go.
+picky they are. The test harness uses it to decide swipes, picks and how dates go.
 The matching engine must never read it: it exists only so tests can check
 whether the engine learned what is really there.
 
@@ -126,7 +126,7 @@ def slot_weights() -> np.ndarray:
 
 @dataclass(frozen=True)
 class GroundTruth:
-    """Hidden traits of fake members. Simulation only: the engine never reads these."""
+    """Hidden traits of fake members. Test runs only: the engine never reads these."""
 
     shared_taste: np.ndarray  # (d,) looks most people like; real tastes overlap like this
     taste: np.ndarray  # (n, d) each member's true visual taste, unit vectors
@@ -205,7 +205,7 @@ def generate(
     """
     cfg = cfg or load()
     pop = cfg.population
-    seed = cfg.simulation.seed if seed is None else seed
+    seed = cfg.test_runs.seed if seed is None else seed
     n = pop.n_members if n is None else n
     rng = np.random.default_rng(seed)
     d, k_types, n_groups = pop.embedding_dim, pop.n_look_types, pop.n_audit_groups
