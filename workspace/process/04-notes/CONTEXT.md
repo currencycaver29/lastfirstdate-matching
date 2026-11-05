@@ -27,7 +27,7 @@ Explain the sprint so the owner can study it, then hand over for review.
 5. **The version,** in `pyproject.toml`, `src/lastfirstdate/__init__.py` and `rust/Cargo.toml`
    (all three the same): the minor number is the sprint (Sprint 12 is 0.12.0); the major
    number changes when the app must change how it calls the engine; the fix number is for bug
-   fixes. Update the current release in the README's Releases section.
+   fixes. Update the current release in the README's Releases section and its release badge.
 6. **This workspace, ready for the next sprint:**
    - the "What we know" sections of the algorithm stages the sprint changed
      (`workspace/algorithm/`);

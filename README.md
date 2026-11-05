@@ -1,25 +1,76 @@
-<h1 align="center">lastfirstdate-matching</h1>
-
 <p align="center">
-  The matching engine behind <a href="https://lastfirstdate.vercel.app/">lastfirstdate</a>:
-  mutual, fair, and built around real dates.
+  <img src="docs/assets/banner.svg" width="100%" alt="lastfirstdate-matching: the AI matchmaking engine behind lastfirstdate. Mutual, fair, and built around real dates.">
 </p>
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB">
-  <img alt="Rust" src="https://img.shields.io/badge/rust-core-B7410E">
-  <img alt="synthetic data only" src="https://img.shields.io/badge/data-synthetic%20only-555555">
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.13.0" src="https://img.shields.io/badge/release-v0.13.0-2b6cb0"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
+  <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
+  <img alt="data: synthetic only" src="https://img.shields.io/badge/data-synthetic%20only-555555">
+  <img alt="license: proprietary" src="https://img.shields.io/badge/license-proprietary-lightgrey">
+</p>
+
+<p align="center">
+  <a href="#how-it-works"><b>How it works</b></a> ·
+  <a href="#quick-start"><b>Quick start</b></a> ·
+  <a href="#results"><b>Results</b></a> ·
+  <a href="#for-the-app-developer"><b>For the app developer</b></a> ·
+  <a href="#documentation"><b>Docs</b></a> ·
+  <a href="#roadmap"><b>Roadmap</b></a>
 </p>
 
 ---
 
 ## About
 
-lastfirstdate is a verified dating service for New York. This repository is its matching
-engine: it decides who sees whom, and when and where they meet. Matches are ranked half on
-looks, as each member sees them, and half on personality, and only pairs who suit each other
-are suggested. The app itself is built separately.
+[lastfirstdate](https://lastfirstdate.vercel.app/) is a verified dating service for New York.
+This repository is its matching engine: it decides who sees whom, and when and where they meet.
+Matches are ranked half on looks, as each member sees them, and half on personality, and only
+pairs who suit each other are suggested. The app itself is built separately and calls the
+engine through one module, [`lastfirstdate.app`](src/lastfirstdate/app.py).
+
+## At a glance
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <h4>Learns each member's own taste</h4>
+      About 30 photo questions train a personal looks model on top of Google SigLIP. There is
+      no global attractiveness score, ever.
+    </td>
+    <td width="50%" valign="top">
+      <h4>Mutual by design</h4>
+      50% looks and 50% personality, scored in both directions. A pair ranks high only when
+      both people would say yes.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Fair attention</h4>
+      Daily lists share exposure under a cap, so a few popular profiles can't take it all, with
+      a boost for members still owed dates.
+    </td>
+    <td valign="top">
+      <h4>Real dates, not just matches</h4>
+      Every profile comes with a time both can make, a 15-minute payment hold, and a venue fair
+      to both.
+    </td>
+  </tr>
+  <tr>
+    <td valign="top">
+      <h4>Protects the promise</h4>
+      Forecasts each man's chance of three dates a month and pauses sales when the zone can't
+      serve more.
+    </td>
+    <td valign="top">
+      <h4>Fast, tested, reproducible</h4>
+      A Rust core for the hot loops (up to 81× faster), a test for every one of 62
+      requirements, and every model file pinned by fingerprint.
+    </td>
+  </tr>
+</table>
 
 ## How it works
 
@@ -98,7 +149,15 @@ month; all three shape the next day's lists.
 
 </details>
 
-## Results in test runs
+### The engine and the test harness
+
+| | The engine | The test harness |
+|---|---|---|
+| **What it is** | The product: filter, tastes, scores, lists, booking, billing, trust, forecast | Synthetic members who pick, accept, show up and rate |
+| **In production** | Yes: the app calls [`lastfirstdate.app`](src/lastfirstdate/app.py) | Never |
+| **Hidden "true" tastes** | Never reads them (a test enforces it) | Reads them, to grade the engine |
+
+## Results
 
 All numbers come from synthetic members. They compare designs; they are not predictions.
 
@@ -112,33 +171,22 @@ All numbers come from synthetic members. They compare designs; they are not pred
 
 Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain these results and their limits.
 
-## Getting started
+## Quick start
 
-### Requirements
-
-- Python 3.11 or newer
-- Rust, from [rustup.rs](https://rustup.rs). Installing the package compiles the Rust core.
-
-### Install
+**Requirements:** Python 3.11 or newer, and Rust from [rustup.rs](https://rustup.rs) (installing
+the package compiles the Rust core).
 
 ```bash
 git clone https://github.com/currencycaver29/lastfirstdate-matching.git
 cd lastfirstdate-matching
 python -m venv .venv
 .venv/bin/pip install -e ".[dev]"
+./scripts/check.sh                      # Rust and Python lint, tests, traceability
 ```
 
 On Windows, use `.venv\Scripts\pip` instead of `.venv/bin/pip`.
 
-For production, add the photo and text models (Google SigLIP and MiniLM, decision D20). They
-run on a normal CPU, and every file is checked against a pinned fingerprint:
-
-```bash
-.venv/bin/pip install -e ".[models]"
-.venv/bin/python -m lastfirstdate.encoders download
-```
-
-### Try it
+**Try it** on 1,000 synthetic New Yorkers:
 
 ```python
 from lastfirstdate.config import load
@@ -146,38 +194,64 @@ from lastfirstdate.synthetic import generate
 from lastfirstdate.month_runs import run_month
 
 cfg = load()                   # research defaults; load("config/phase1.toml") for Phase 1 rules
-pop = generate(cfg, seed=7)    # 1,000 fake New Yorkers
+pop = generate(cfg, seed=7)    # 1,000 synthetic New Yorkers
 report = run_month(pop, cfg)
 print(report.text())
 ```
 
-### Reports
-
-Each report runs a test run and prints what it found:
+**Production models** (Google SigLIP for photos, MiniLM for prompts) run on a normal CPU; every
+file is checked against a pinned fingerprint:
 
 ```bash
-.venv/bin/python -m lastfirstdate.month_runs          # one synthetic month
+.venv/bin/pip install -e ".[models]"
+.venv/bin/python -m lastfirstdate.encoders download
+```
+
+<details>
+<summary><b>All reports</b></summary>
+
+<br/>
+
+Each report runs on synthetic members and prints what it found:
+
+```bash
+.venv/bin/python -m lastfirstdate.month_runs        # one test month
 .venv/bin/python -m lastfirstdate.looks_report      # how well the looks model learns taste
 .venv/bin/python -m lastfirstdate.mutual_report     # list rankings compared
 .venv/bin/python -m lastfirstdate.fairness_report   # exposure, fairness audit, hold-back test
 .venv/bin/python -m lastfirstdate.learning_report   # three months with and without learning
 .venv/bin/python -m lastfirstdate.phase1_report     # Phase 1 rules: pair questions, the ratio gate
-.venv/bin/python -m lastfirstdate.cycle_runs         # the real booking flow over three billing cycles
+.venv/bin/python -m lastfirstdate.cycle_runs        # the real booking flow over three billing cycles
 .venv/bin/python -m lastfirstdate.gate_report       # the ratio gate in the real flow, two zone sizes
+.venv/bin/python -m lastfirstdate.fixes_report      # the Sprint 12 fixes, measured
+.venv/bin/python -m lastfirstdate.models_report     # the real photo and text models (needs .[models])
 ```
 
 To refit the guarantee forecast after changing the settings, run
 `python -m lastfirstdate.forecast_fit --delivered` (about 16 minutes).
 
-### Checks
+</details>
 
-```bash
-./scripts/check.sh
-```
+## For the app developer
 
-This runs Rust formatting, Clippy and tests, rebuilds the Rust module, then runs ruff, the
-Python tests and a check that every requirement has a test. The same checks run on GitHub for
-every push.
+- **One module:** the app calls [`lastfirstdate.app`](src/lastfirstdate/app.py) and nothing
+  else. It reads the app's database and returns decisions; it never writes or talks to members.
+- **When to call what:** the [handoff guide](docs/handoff/README.md) lists every call (sign-up,
+  photo exercise, nightly refresh, daily lists, picks, bookings, cycle end, the gate) with what
+  it reads and returns.
+- **The database:** [`db/schema.sql`](db/schema.sql) runs on PostgreSQL and SQLite.
+- **Build against a release,** not `main`: [releases](https://github.com/currencycaver29/lastfirstdate-matching/releases).
+
+## Tech stack
+
+| Layer | Tools |
+|---|---|
+| Engine | Python 3.11+, NumPy, SciPy |
+| Scheduling | Google OR-Tools |
+| Hot loops | Rust, called through PyO3 and built with maturin; a Python twin for each, with identical answers |
+| Models | ONNX Runtime on CPU: Google SigLIP (photos), MiniLM (prompts) |
+| Data | SQLite in tests, PostgreSQL in production |
+| Quality | pytest, ruff, rustfmt, Clippy, GitHub Actions on every push |
 
 ## Configuration
 
@@ -193,6 +267,11 @@ are the same, only slower.
 
 ## Project structure
 
+<details>
+<summary><b>Show the tree</b></summary>
+
+<br/>
+
 ```
 lastfirstdate-matching/
 ├── config/              settings files and the fitted forecast
@@ -206,6 +285,8 @@ lastfirstdate-matching/
 ├── workspace/           a map of every algorithm stage, for working with an AI assistant
 └── scripts/check.sh     all the checks
 ```
+
+</details>
 
 ## Principles
 
@@ -255,11 +336,6 @@ These rules are never broken, and tests enforce them:
 | 13 | The real models: Google SigLIP for photos and MiniLM for prompts, pinned and checked | Done |
 | 14 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | Next |
 
-## License
-
-Proprietary: all rights reserved by currencycaver29. See [`LICENSE`](LICENSE). The libraries it
-builds on (NumPy, SciPy, OR-Tools, PyO3, rust-numpy) keep their own permissive licences.
-
 ## Releases
 
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
@@ -267,3 +343,11 @@ when the app must change how it calls the engine, the minor number with each spr
 fix number for bug fixes. Build the app against a release, not against `main`. The current
 release is **v0.13.0** (Sprint 13, the real photo and text models); v1.0.0 is planned for the
 Phase 1 launch.
+
+## License
+
+Proprietary: all rights reserved by currencycaver29. See [`LICENSE`](LICENSE). The libraries it
+builds on (NumPy, SciPy, OR-Tools, PyO3, rust-numpy, ONNX Runtime) keep their own permissive
+licences, and both models are Apache 2.0.
+
+<p align="center"><sub>The matching engine behind <a href="https://lastfirstdate.vercel.app/">lastfirstdate</a>, New York.</sub></p>

@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="260" viewBox="0 0 960 260" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" role="img" aria-label="lastfirstdate-matching: the AI matchmaking engine behind lastfirstdate">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1626"/>
+      <stop offset="1" stop-color="#1a2b4c"/>
+    </linearGradient>
+    <linearGradient id="her" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7a8a"/>
+      <stop offset="1" stop-color="#e2456b"/>
+    </linearGradient>
+    <linearGradient id="him" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5aa9ff"/>
+      <stop offset="1" stop-color="#2f6fd6"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="958" height="258" rx="22" fill="url(#bg)" stroke="#24395f" stroke-width="2"/>
+  <!-- two overlapping circles: a match only where both want it -->
+  <g transform="translate(812 130)">
+    <circle cx="-38" cy="0" r="72" fill="url(#her)" fill-opacity="0.85"/>
+    <circle cx="38" cy="0" r="72" fill="url(#him)" fill-opacity="0.85"/>
+    <path d="M0,-61 A72,72 0 0 1 0,61 A72,72 0 0 1 0,-61 Z" fill="#ffffff" fill-opacity="0.92"/>
+    <text x="0" y="6" font-size="15" font-weight="800" fill="#1a2b4c" text-anchor="middle">match</text>
+  </g>
+  <text x="48" y="78" font-size="14" font-weight="700" fill="#8fb3e8" letter-spacing="3">AI MATCHMAKING ENGINE</text>
+  <text x="48" y="124" font-size="42" font-weight="800" fill="#ffffff">lastfirstdate-matching</text>
+  <text x="48" y="158" font-size="18" fill="#c7d5ea">Mutual, fair, and built around real dates.</text>
+  <g font-size="13" font-weight="600">
+    <rect x="48" y="186" width="196" height="30" rx="15" fill="#ffffff" fill-opacity="0.08" stroke="#3a5584"/>
+    <text x="146" y="205.5" fill="#e6eefb" text-anchor="middle">50% looks · 50% personality</text>
+    <rect x="252" y="186" width="130" height="30" rx="15" fill="#ffffff" fill-opacity="0.08" stroke="#3a5584"/>
+    <text x="317" y="205.5" fill="#e6eefb" text-anchor="middle">Mutual by design</text>
+    <rect x="390" y="186" width="118" height="30" rx="15" fill="#ffffff" fill-opacity="0.08" stroke="#3a5584"/>
+    <text x="449" y="205.5" fill="#e6eefb" text-anchor="middle">Fair daily lists</text>
+    <rect x="516" y="186" width="144" height="30" rx="15" fill="#ffffff" fill-opacity="0.08" stroke="#3a5584"/>
+    <text x="588" y="205.5" fill="#e6eefb" text-anchor="middle">Real dates, booked</text>
+  </g>
+</svg>
