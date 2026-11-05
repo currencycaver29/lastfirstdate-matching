@@ -12,7 +12,8 @@ recalibrated forecast said 76%, and the switch rule recommended it. On the way i
 **fulfilment drifts as a zone ages**, so recalibration has to be repeated, about monthly.
 
 **Papers used.** None from the original 17. The method is Platt scaling (Platt, 1999), the
-standard way to correct a classifier's probabilities on new data.
+standard way to correct a classifier's probabilities on new data, and the Brier score (Brier,
+1950) judges the forecasts. Both are listed in `docs/research.md` under "Methods added since".
 
 ---
 
