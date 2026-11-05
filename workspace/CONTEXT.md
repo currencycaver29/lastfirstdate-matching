@@ -64,8 +64,9 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 14, not chosen yet. Recommended: wait for the app and real Phase 1 data,
-  or a small consented pilot to recheck the photo settings. Ask the owner in process stage 01.
+- **Current sprint:** 14, not chosen yet. Options include a consented pilot to recheck the
+  photo settings and abuse testing with synthetic attackers (option (e)); or wait for the app
+  and real Phase 1 data. Ask the owner in process stage 01.
 - **Last finished:** Sprint 13 (v0.13.0), the real models: Google SigLIP for photos and MiniLM
   for prompts (D20), pinned and checked, run with ONNX Runtime on a CPU.
 - **Where the engine stands:**

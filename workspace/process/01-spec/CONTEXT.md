@@ -36,5 +36,12 @@ Sprint 13 plugged in the real models. Options:
 - **(c) Readiness for the personality weights:** refit them on real "would meet again"
   answers (paper 9).
 - **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
+- **(e) Abuse testing (AI red team):** add synthetic attackers to the test runs and measure what
+  each gains: keyword-stuffed prompts, fake accounts inflating the ratio gate, coordinated
+  rating rings against the trust score, fake accounts poisoning the starting taste, attempts
+  to read a hidden "desirability" score from lists (R2), and malformed rows (code review
+  finding 2). Every attack that gains anything gets a rule, a fix and a test. Reading list:
+  `docs/research.md`, "Reading list: abuse testing". Complements, not replaces, the outside
+  pentest of the app before the beta.
 
 Numbering continues from FR-LM-63.

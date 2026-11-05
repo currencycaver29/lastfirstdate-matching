@@ -5,7 +5,8 @@ These 17 papers come from the research doc
 (31 Oct 2026). Each requirement in `docs/SPEC.md` names the papers it draws on. The links
 below are the ones from that doc, except papers 9 and 14: that doc linked press releases about
 them, so they now link to the papers themselves. Four methods used later are listed after the
-17, under [Methods added since](#methods-added-since).
+17, under [Methods added since](#methods-added-since). A reading list for abuse testing, not
+used yet, closes the file.
 
 ## Papers by stage
 
@@ -55,3 +56,24 @@ production models.
 - **Sprint 5:** paper 17.
 - **Sprint 11:** Platt scaling and the Brier score (under [Methods added since](#methods-added-since)).
 - **Sprint 13:** SigLIP and MiniLM, the production models, with paper 8.
+
+## Reading list: abuse testing (not used yet)
+
+Papers for a possible abuse-testing sprint (Sprint 14 option (e)): synthetic attackers added to
+the test runs, each trying to game or exploit the engine, with a rule and a test for every attack
+that gains anything. None of these methods is built yet.
+
+| Attack on the engine | Papers | What they'd add |
+|---|---|---|
+| **Fake profiles gaming recommendations, poisoning the shared starting taste** | Lam and Riedl, *Shilling Recommender Systems for Fun and Profit*, WWW 2004 · Mobasher, Burke, Bhaumik, Williams, *Toward Trustworthy Recommender Systems: An Analysis of Attack Models and Algorithm Robustness*, ACM TOIT 2007 · Li, Wang, Singh, Vorobeychik, [*Data Poisoning Attacks on Factorization-Based Collaborative Filtering*](https://arxiv.org/abs/1608.08182), NeurIPS 2016 · Steinhardt, Koh, Liang, [*Certified Defenses for Data Poisoning Attacks*](https://arxiv.org/abs/1706.03691), NeurIPS 2017 · Deldjoo, Di Noia, Merra, [*A Survey on Adversarial Recommender Systems*](https://arxiv.org/abs/2005.10322), ACM Computing Surveys 2021 | Attack models to copy as synthetic attackers; how much fake data it takes to move the starting taste; provable limits |
+| **Fake accounts inflating the ratio gate** | Douceur, *The Sybil Attack*, IPTPS 2002 · Yu, Kaminsky, Gibbons, Flaxman, *SybilGuard: Defending Against Sybil Attacks via Social Networks*, SIGCOMM 2006 | Why verification is the real defence; spotting fakes by how they connect |
+| **Coordinated rating attacks on the trust score** | Dellarocas, *Immunizing Online Reputation Reporting Systems Against Unfair Ratings and Discriminatory Behavior*, ACM EC 2000 · Jøsang, Ismail, Boyd, *A Survey of Trust and Reputation Systems for Online Service Provision*, Decision Support Systems 2007 | Unfair-rating attacks and statistical defences for scores like ours |
+| **Finding a member's location** | Polakis et al., *Where's Wally? Precise User Discovery Attacks in Location Proximity Services*, ACM CCS 2015 | How distance features on dating apps reveal locations, and which defences work (it supports neighbourhood centres) |
+| **Inferring private behaviour or a hidden "desirability" score; re-identifying kept records** | Calandrino et al., *"You Might Also Like:" Privacy Risks of Collaborative Filtering*, IEEE S&P 2011 · Narayanan and Shmatikov, *Robust De-anonymization of Large Sparse Datasets*, IEEE S&P 2008 | Tests that lists can't be turned into a ranking (R2) and that D18's anonymous records stay anonymous |
+| **Privacy of the trained models and photo embeddings** | Shokri, Stronati, Song, Shmatikov, [*Membership Inference Attacks Against Machine Learning Models*](https://arxiv.org/abs/1610.05820), IEEE S&P 2017 · Fredrikson, Jha, Ristenpart, *Model Inversion Attacks that Exploit Confidence Information and Basic Countermeasures*, ACM CCS 2015 | Why embeddings are biometric data; what a stolen taste model could reveal |
+| **Fooling the photo and text models** | Szegedy et al., [*Intriguing Properties of Neural Networks*](https://arxiv.org/abs/1312.6199), ICLR 2014 · Goodfellow, Shlens, Szegedy, [*Explaining and Harnessing Adversarial Examples*](https://arxiv.org/abs/1412.6572), ICLR 2015 · Jin et al., [*Is BERT Really Robust?*](https://arxiv.org/abs/1907.11932) (TextFooler), AAAI 2020 · Carlini et al., [*Poisoning Web-Scale Training Datasets is Practical*](https://arxiv.org/abs/2302.10149), IEEE S&P 2024 | Doctored photos and keyword-stuffed prompts against SigLIP and MiniLM |
+| **Members gaming the matching rules** | Dubins and Freedman, *Machiavelli and the Gale-Shapley Algorithm*, American Mathematical Monthly 1981 · Roth, *The Economics of Matching: Stability and Incentives*, Mathematics of Operations Research 1982 · Hardt, Megiddo, Papadimitriou, Wootters, [*Strategic Classification*](https://arxiv.org/abs/1506.06980), ITCS 2016 | Limits on what two-sided matching can prevent; models that stay accurate when people game their features |
+
+Frameworks for organising the testing: NIST AI 100-2, *Adversarial Machine Learning: A Taxonomy
+and Terminology* (the standard vocabulary), and MITRE ATLAS (a public catalogue of real attacks
+on machine-learning systems).
