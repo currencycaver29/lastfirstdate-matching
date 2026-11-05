@@ -1,6 +1,6 @@
 [package]
 name = "lastfirstdate-core"
-version = "0.1.0"
+version.workspace = true
 description = "Pure-Rust core of lastfirstdate's matching engine: logistic fits, calibration kernels, fair daily lists and the ratio gate."
 edition.workspace = true
 rust-version.workspace = true

@@ -1,6 +1,6 @@
 [package]
 name = "lastfirstdate-py"
-version = "0.1.0"
+version.workspace = true
 description = "Python bindings (PyO3) for lastfirstdate-core, imported as lastfirstdate._core."
 edition.workspace = true
 rust-version.workspace = true

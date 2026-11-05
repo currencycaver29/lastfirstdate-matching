@@ -247,4 +247,13 @@ These rules are never broken, and tests enforce them:
 
 ## License
 
-No open-source license has been chosen yet. All rights are reserved by the owner.
+Proprietary: all rights reserved by currencycaver29. See [`LICENSE`](LICENSE). The libraries it
+builds on (NumPy, SciPy, OR-Tools, PyO3, rust-numpy) keep their own permissive licences.
+
+## Releases
+
+Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
+when the app must change how it calls the engine, the minor number with each sprint, and the
+fix number for bug fixes. Build the app against a release, not against `main`. The current
+release is **v0.11.0** (Sprint 11, ready for real data); v1.0.0 is planned for the Phase 1
+launch.
