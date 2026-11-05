@@ -236,6 +236,49 @@ is zero there).
 7. **Differential testing:** two independent versions checking each other catch bugs
    neither would catch alone, as section 6 shows.
 
+## 10. Round 2: the date windows (v0.13.1)
+
+After Sprint 13, profiling the app's calls and the test runs found one more place where Python
+loops cost real time: working out which evenings two members are both free. It runs for every
+candidate on every list, at every pick and in every test run.
+
+| Python | Rust | What it does |
+|---|---|---|
+| `booking.window_bits` | `_core.window_bits` | each member's free windows over the next two weeks, as bits |
+| `booking.earliest_common` | `_core.earliest_common` | the first window two members share |
+| `app._blocked_days` | `_core.blocked_days` | days a member can't date: a date that day, a full week, or a full cap period |
+
+**The trick in `earliest_common`.** The free windows are one 64-bit number per member, one bit
+per (day, part of day). The windows two members share are `a & b`, and the earliest one is the
+lowest set bit. NumPy finds it with six passes (`x & (~x + 1)`, a conversion to floating point,
+a base-2 logarithm, rounding, a comparison); Rust asks the processor directly:
+`trailing_zeros` is a single instruction.
+
+**Measured** (medians; this machine is shared, so single runs vary by about 20%):
+
+| | Python | Rust | Faster |
+|---|---:|---:|---:|
+| `window_bits`, two members (one call) | 60.8 µs | 0.8 µs | 75× |
+| `earliest_common`, one against 200 (one call) | 9.1 µs | 3.1 µs | 3× |
+| `earliest_common`, one pair (one call) | 6.5 µs | 2.8 µs | 2× |
+| The app's daily lists, 400 members | 0.14 s | 0.07 s | 2.0× |
+| The app's daily lists, 2,000 members | 0.56 s | 0.35 s | 1.6× |
+| Test runs, three billing cycles, 400 members | 2.74 s | 2.17 s | 1.3× |
+
+**A lesson in measuring.** The first comparison of the test runs said Rust was *slower*. It had
+run first, with cold caches. Alternating the two versions four times showed the real 1.3×.
+
+**Proof the answers are the same:** random inputs for each function (negative days, empty
+windows, every input shape), and two end-to-end checks: a full day of the app's lists (windows,
+positions and match values) and a billing cycle of test runs come out identical with Rust and
+with Python (`tests/test_native.py`).
+
+**What's left in Python on purpose:** the photo exercise's bookkeeping (about 20% of a test
+zone's setup; members already get each answer in milliseconds) and the test harness's day loop
+(test-only code). Neither is worth a second copy to maintain yet.
+
+---
+
 ## Try it yourself
 
 ```bash

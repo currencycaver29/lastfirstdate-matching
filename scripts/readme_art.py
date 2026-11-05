@@ -57,6 +57,7 @@ RUST = [  # docs/sprints/rust-core.md: speed-up of each hot loop, Rust over Pyth
     ("Looks taste (calibration fits)", 3.6, "3.6×"),
     ("Fair daily lists", 10.0, "10×"),
     ("Ratio gate", 81.0, "28× to 81×"),
+    ("Date windows (per call)", 75.0, "2× to 75×"),  # rust-core.md, section 10
 ]
 PROMPTS = [  # workspace/process/03-test-runs/results-sprint-13.md: MiniLM cosine similarity
     ("rock climbing · bouldering", 0.67),

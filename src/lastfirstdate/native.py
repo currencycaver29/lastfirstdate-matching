@@ -13,7 +13,9 @@ The engine uses Rust whenever the compiled module is present.
 Rust is used for: the logistic fit behind the looks model, the forecast and learning
 (`looks.fit_logistic`); the uncertainty of many candidates and the pair search in
 calibration (`PersonalTaste.uncertainty`, `looks.select_pair`); the fair daily lists
-(`fairness.fair_day_lists`); and the ratio gate (`forecast.gate_decision`).
+(`fairness.fair_day_lists`); the ratio gate (`forecast.gate_decision`); and the date windows
+(`booking.window_bits`, `booking.earliest_common`, and the blocked days in
+`app.free_windows`).
 """
 
 from __future__ import annotations

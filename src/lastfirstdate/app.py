@@ -31,7 +31,7 @@ from zoneinfo import ZoneInfo
 
 import numpy as np
 
-from lastfirstdate import __version__
+from lastfirstdate import __version__, native
 from lastfirstdate.arrays import GENDERS, MemberArrays
 from lastfirstdate.billing import counts_toward_guarantee, credit, cycle_on, delivered, refill_bonus
 from lastfirstdate.booking import (
@@ -630,6 +630,19 @@ def free_windows(
     """Each member's free date windows over the booking horizon, as bits (FR-LM-37)."""
     bk = cfg.booking
     members = np.arange(len(market.members)) if members is None else np.asarray(members)
+    if native.enabled():
+        blocked = _blocked_days_rust(market, cap, signups, cfg, members)
+    else:
+        blocked = _blocked_days(market, cap, signups, cfg, members)
+    return window_bits(
+        market.arr.slots[members], market.today, bk.lead_days, bk.horizon_days, blocked
+    )
+
+
+def _blocked_days(market: Market, cap: Capacity, signups: np.ndarray, cfg: Config, members):
+    """(members, horizon) days a member can't date: a date that day, a full week, or a full
+    cap period. The reference loop; `_blocked_days_rust` is its twin."""
+    bk = cfg.booking
     blocked = np.zeros((members.size, bk.horizon_days), dtype=bool)
     for r, m in enumerate(members):
         limit = _date_cap(int(m), market, cfg)
@@ -640,8 +653,30 @@ def free_windows(
                 or cap.weeks[int(m), day // 7] >= cfg.dates.max_per_week
                 or cap.periods[int(m), _period(int(m), day, signups, cfg)] >= limit
             )
-    return window_bits(
-        market.arr.slots[members], market.today, bk.lead_days, bk.horizon_days, blocked
+    return blocked
+
+
+def _blocked_days_rust(market: Market, cap: Capacity, signups: np.ndarray, cfg: Config, members):
+    """`_blocked_days` in Rust: the dates already taken go over as flat arrays."""
+    pos = {int(m): r for r, m in enumerate(members)}
+    busy = [(pos[m], d) for m, days in cap.busy.items() if m in pos for d in days]
+    weeks = [(pos[m], w, c) for (m, w), c in cap.weeks.items() if m in pos]
+    periods = [(pos[m], p, c) for (m, p), c in cap.periods.items() if m in pos]
+
+    def cols(rows, k):
+        return [np.array([row[i] for row in rows], dtype=np.int64) for i in range(k)]
+
+    return native.core.blocked_days(
+        *cols(busy, 2),
+        *cols(weeks, 3),
+        *cols(periods, 3),
+        market.today,
+        cfg.booking.horizon_days,
+        cfg.dates.max_per_week,
+        cfg.billing.trial_days,
+        cfg.billing.cycle_days,
+        np.array([_date_cap(int(m), market, cfg) for m in members], dtype=np.int64),
+        np.ascontiguousarray(signups[members], dtype=np.int64),
     )
 
 

@@ -1,12 +1,19 @@
 """FR-LM-35: the Rust core gives the same answers as the Python reference."""
 
 import dataclasses
+import sqlite3
+from contextlib import nullcontext
+from datetime import date
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from lastfirstdate import native
+from lastfirstdate import app, native
+from lastfirstdate.app_fill import fill_database
 from lastfirstdate.arrays import MemberArrays
+from lastfirstdate.booking import earliest_common, window_bits
+from lastfirstdate.cycle_runs import CycleRun
 from lastfirstdate.fairness import fair_day_lists
 from lastfirstdate.filter import member_ok
 from lastfirstdate.forecast import ForecastModel, gate_decision
@@ -23,6 +30,7 @@ from lastfirstdate.looks import (
 )
 from lastfirstdate.member_behavior import Behavior
 from lastfirstdate.month_runs import run_month
+from lastfirstdate.synthetic import generate
 
 pytestmark = pytest.mark.skipif(
     not native.available(), reason="Rust core not built (pip install -e . builds it)"
@@ -202,3 +210,98 @@ def test_calibration_and_month_are_identical_on_both_backends(cfg, default_city)
         assert rust == python
     month_r, month_p = both(run_month, pop, cfg, 7, sc.mutual)
     np.testing.assert_array_equal(month_r.dates, month_p.dates)
+
+
+# ---------------------------------------------------------------- date windows (FR-LM-37)
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_window_bits_match_python(seed):
+    """FR-LM-35: free windows agree for random weekly slots, days (negative too), lead times,
+    horizons and blocked days."""
+    rng = np.random.default_rng(seed)
+    n = int(rng.integers(1, 60))
+    weekly = rng.integers(0, 1 << 21, n)
+    lead = int(rng.integers(0, 3))
+    horizon = int(rng.integers(lead + 1, 22))
+    today = int(rng.integers(-30, 400))
+    blocked = rng.random((n, horizon)) < 0.3
+    for mask in (None, blocked):
+        rust, python = both(window_bits, weekly, today, lead, horizon, mask)
+        np.testing.assert_array_equal(rust, python)
+        assert rust.dtype == python.dtype == np.uint64
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_earliest_common_matches_python(seed):
+    """FR-LM-35: the first shared window agrees one against many, pair by pair, for single
+    pairs and for every pair at once, including pairs with no window."""
+    rng = np.random.default_rng(seed)
+    n = int(rng.integers(1, 50))
+    bits = rng.integers(0, 1 << 63, n, dtype=np.uint64) & rng.integers(
+        0, 1 << 63, n, dtype=np.uint64
+    )
+    bits[rng.random(n) < 0.2] = 0
+    other = rng.integers(0, 1 << 63, n, dtype=np.uint64)
+    cases = [(bits[0], bits), (bits, other), (bits[0], other[0]), (bits[:, None], bits[None, :])]
+    for a, b in cases:
+        rust, python = both(earliest_common, a, b)
+        np.testing.assert_array_equal(rust, python)
+        assert np.shape(rust) == np.shape(python)
+
+
+@pytest.mark.parametrize("seed", range(6))
+def test_blocked_days_match_python(seed, p1cfg):
+    """FR-LM-35: days blocked by a date that day, a full week or a full cap period agree,
+    for members with and without a subscription, in their trial and in paid cycles."""
+    rng = np.random.default_rng(seed)
+    n = 40
+    market = SimpleNamespace(
+        today=int(rng.integers(0, 120)),
+        members=[
+            SimpleNamespace(
+                paying=bool(rng.random() < 0.5), gender=str(rng.choice(["man", "woman"]))
+            )
+            for _ in range(n)
+        ],
+    )
+    signups = np.where(rng.random(n) < 0.5, rng.integers(-60, 100, n), app.NO_SIGNUP)
+    cap = app.Capacity()
+    for _ in range(120):
+        m, day = int(rng.integers(0, n)), market.today + int(rng.integers(-10, 20))
+        cap.busy[m].add(day)
+        cap.weeks[m, day // 7] += 1
+        cap.periods[m, app._period(m, day, signups, p1cfg)] += 1
+    members = np.sort(rng.choice(n, size=25, replace=False))
+    rust = app._blocked_days_rust(market, cap, signups, p1cfg, members)
+    python = app._blocked_days(market, cap, signups, p1cfg, members)
+    np.testing.assert_array_equal(rust, python)
+    assert rust.any() and not rust.all()
+
+
+def test_a_day_of_lists_and_a_cycle_run_are_identical_on_both_backends(p1cfg):
+    """FR-LM-35: the app's daily lists (windows, positions, match values) and a billing cycle
+    of test runs come out the same with Rust and with Python."""
+    small = dataclasses.replace(
+        p1cfg, population=dataclasses.replace(p1cfg.population, n_members=160)
+    )
+    pop = generate(small, seed=11)
+    con = sqlite3.connect(":memory:")
+    con.execute("PRAGMA foreign_keys = ON")
+    filled = fill_database(con, pop, small, date(2026, 11, 4), 11)
+    market = app.load_market(con, small, app.Calendar(date(2026, 11, 2)), date(2026, 11, 4))
+    feats = app.photo_feature_matrix(pop.photo_embeddings, small)
+    tastes = app.fit_tastes(
+        market, feats, app.calibration_answers(con, market), small, start=filled.start
+    )
+    scores = app.nightly_scores(market, tastes, feats, small)
+    women = [int(market.ids[k]) for k, m in enumerate(market.members) if m.gender == "woman"]
+    rust, python = both(app.day_lists, con, market, scores, women, small)
+    assert rust and rust == python
+    one = dataclasses.replace(small, cycle_runs=dataclasses.replace(small.cycle_runs, cycles=1))
+    runs = [None, None]
+    for k, ctx in enumerate((nullcontext(), native.python_only())):
+        with ctx:
+            runs[k] = CycleRun(pop, one, 11, scores.mutual).run("check")
+    assert runs[0].states == runs[1].states and runs[0].picks == runs[1].picks
+    np.testing.assert_array_equal(runs[0].delivered, runs[1].delivered)

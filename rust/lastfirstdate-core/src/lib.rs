@@ -13,12 +13,14 @@
 //!   (Stage 2).
 //! - [`lists`]: round-robin daily lists under an exposure cap (Stage 6).
 //! - [`gate`]: the ratio gate, updated incrementally as men are admitted (FR-LM-34).
+//! - [`windows`]: free date windows, the first shared one, and blocked days (FR-LM-37).
 
 pub mod calibration;
 pub mod gate;
 pub mod linalg;
 pub mod lists;
 pub mod logistic;
+pub mod windows;
 
 /// The logistic function, with the input clipped to [-35, 35] exactly as in Python.
 pub fn sigmoid(z: f64) -> f64 {

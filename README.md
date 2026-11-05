@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.13.0" src="https://img.shields.io/badge/release-v0.13.0-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.13.1" src="https://img.shields.io/badge/release-v0.13.1-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -294,7 +294,7 @@ To refit the guarantee forecast after changing the settings, run
 <p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/speed-dark.svg">
-  <img src="docs/assets/charts/speed-light.svg" width="100%" alt="Rust core speed-up over Python: looks taste 3.6 times, fair daily lists 10 times, ratio gate 28 to 81 times">
+  <img src="docs/assets/charts/speed-light.svg" width="100%" alt="Rust core speed-up over Python: looks taste 3.6 times, fair daily lists 10 times, ratio gate 28 to 81 times, date windows 2 to 75 times per call">
 </picture>
 </p>
 
@@ -396,8 +396,8 @@ These rules are never broken, and tests enforce them:
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.13.0** (Sprint 13, the real photo and text models); v1.0.0 is planned for the
-Phase 1 launch.
+release is **v0.13.1** (the date windows in Rust, after Sprint 13's real photo and text models);
+v1.0.0 is planned for the Phase 1 launch.
 
 ## License
 

@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from lastfirstdate import native
 from lastfirstdate.models import PARTS_OF_DAY
 
 N_PARTS = len(PARTS_OF_DAY)
@@ -62,11 +63,17 @@ def window_bits(
 
     `weekly_slots` holds each member's free weekly slots as bits (slot = weekday * 3 + part,
     as in `MemberArrays.slots`); `blocked` (n, horizon_days) marks days a member cannot date.
-    Days before `lead_days` are never offered.
+    Days before `lead_days` are never offered. Rust when available (`native.py`); the loop
+    below is the same rule in Python.
     """
     if not 0 <= lead_days < horizon_days <= 21:
         raise ValueError("need 0 <= lead_days < horizon_days <= 21")
     weekly = np.asarray(weekly_slots, dtype=np.int64)
+    if native.enabled() and weekly.ndim == 1:
+        mask = None if blocked is None else np.ascontiguousarray(blocked, dtype=bool)
+        return native.core.window_bits(
+            np.ascontiguousarray(weekly), int(today), lead_days, horizon_days, mask
+        )
     out = np.zeros(weekly.shape, dtype=np.uint64)
     for k in range(lead_days, horizon_days):
         weekday = (today + k) % 7
@@ -80,9 +87,22 @@ def window_bits(
 def earliest_common(bits_a: np.ndarray, bits_b: np.ndarray) -> np.ndarray:
     """The earliest window free for both (an index into window_bits), or NO_WINDOW.
 
-    Broadcasts, so (n, 1) against (1, m) gives every pair at once.
+    Broadcasts, so (n, 1) against (1, m) gives every pair at once. Rust (one instruction per
+    pair: count the trailing zeros) when available and the inputs are one member against
+    many or pair by pair; the lines below are the same rule in NumPy.
     """
-    common = np.asarray(bits_a, dtype=np.uint64) & np.asarray(bits_b, dtype=np.uint64)
+    a, b = np.asarray(bits_a, dtype=np.uint64), np.asarray(bits_b, dtype=np.uint64)
+    if (
+        native.enabled()
+        and a.ndim <= 1
+        and b.ndim <= 1
+        and (1 in (a.size, b.size) or a.size == b.size)
+    ):
+        out = native.core.earliest_common(
+            np.ascontiguousarray(a.reshape(-1)), np.ascontiguousarray(b.reshape(-1))
+        )
+        return out.reshape(a.shape if a.size > b.size or b.ndim == 0 else b.shape)
+    common = a & b
     with np.errstate(over="ignore"):  # ~0 + 1 wraps to 0 on purpose
         lowest = common & (~common + np.uint64(1))  # keeps only the lowest set bit
     with np.errstate(divide="ignore"):

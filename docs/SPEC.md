@@ -367,8 +367,10 @@ Python dependency (so a future Rust service can reuse them), and `rust/lastfirst
 exposes them to Python. The engine uses Rust whenever the compiled module is present.
 Test: on random problems the Rust and Python versions agree (logistic fit weights and
 covariance to 1e-9, uncertainty, pair choice, daily lists and exposure cap, gate decisions
-for every stopping rule); members see the same calibration photos and a synthetic month
-books the same dates with either backend; the Rust crate passes its own tests and Clippy.
+for every stopping rule, date windows: free windows, the first shared window and blocked
+days); members see the same calibration photos, a synthetic month books the same dates, and a
+day of the app's lists and a billing cycle of test runs come out the same with either backend;
+the Rust crate passes its own tests and Clippy.
 
 ### Sprint 7: booking, billing, trust and geography
 
@@ -817,3 +819,7 @@ one passes.
   separates shared lifestyles only slightly better (AUC 0.888 against 0.869), because those
   prompts reuse a small vocabulary. The photo settings, tuned on synthetic embeddings, still
   need a consented pilot. Details: `docs/sprints/sprint-13.md`.
+- **Rust, round 2 (v0.13.1).** The date windows got Rust twins: each member's free windows,
+  the first window two members share (one instruction per pair) and the blocked-day loop in
+  `app.free_windows`. Identical answers on both backends; the app's daily lists run 1.6× to
+  2× faster and test runs about 1.3× faster. Details: `docs/sprints/rust-core.md`, section 10.
