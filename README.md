@@ -159,17 +159,53 @@ month; all three shape the next day's lists.
 
 ## Results
 
-All numbers come from synthetic members. They compare designs; they are not predictions.
+Ten fresh synthetic New York zones, run through the whole engine for three billing cycles each.
+Every member has hidden "true" tastes the engine never reads, so it can be graded honestly.
+These numbers compare designs; they are not predictions. Reproduce them with
+`python -m lastfirstdate.nyc_report`.
 
-| Question | Answer |
-|---|---|
-| How well does the looks model learn a member's taste? | AUC 0.844, against a ceiling of 0.875 |
-| Do fair lists spread attention? | Exposure Gini falls from 0.39 to 0.31 |
-| How many men get their 3 dates in the real booking flow? | About 82% with 300 women at 3 women per man; about 90% with 500 women |
-| Does the ratio gate protect the promise? | Yes: with 300 women it admits only the few men it can serve, where admitting 3:1 would deliver about 75% |
-| How much faster is the Rust core? | Looks taste 3.6×, daily lists 10×, the gate 28× to 81×, with identical results |
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/promise-dark.svg">
+  <img src="docs/assets/charts/promise-light.svg" width="100%" alt="Men who got their 3 dates per billing cycle: 300-woman zones 88%, 77%, 62%; 500-woman zones 96%, 91%, 84%; target 90%">
+</picture>
+</p>
 
-Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain these results and their limits.
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/ordering-dark.svg">
+  <img src="docs/assets/charts/ordering-light.svg" width="100%" alt="Chance both say yes in the top 10 of each list: random order 13%, personality only 18%, mutual 20%, looks only 21%, her taste only 21%">
+</picture>
+</p>
+
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/outcomes-dark.svg">
+  <img src="docs/assets/charts/outcomes-light.svg" width="100%" alt="What happened to booked dates: 67% went ahead, 12% someone didn't show, 12% the payment hold ran out, 8% cancelled">
+</picture>
+</p>
+
+<details>
+<summary><b>The numbers behind the charts</b></summary>
+
+<br/>
+
+| Measure | 300 women · 100 men | 500 women · 167 men |
+|---|---:|---:|
+| Men with 3 delivered dates, all cycles | 76% (70% to 84%) | 90% (86% to 93%) |
+| The engine's forecast before launch | 74% | 87% |
+| Credits, as a share of subscriptions | 16% | 7% |
+| Looks model ranks truly preferred faces higher | 93% of the time | 93% of the time |
+| Top 10, chance both say yes (mutual ordering) | 20.4% | 23.3% |
+| Women with no date in a 28-day period | 53% | 48% |
+| Bad actors caught after 6+ ratings | 41 of 44 | 64 of 66 |
+| Members wrongly flagged | 0 | 0 |
+
+The looks score is flattering: in the test harness, taste is a straight line in the photo
+vectors, like the model. Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain the
+results and their limits.
+
+</details>
 
 ## Quick start
 
@@ -244,14 +280,33 @@ To refit the guarantee forecast after changing the settings, run
 
 ## Tech stack
 
-| Layer | Tools |
-|---|---|
-| Engine | Python 3.11+, NumPy, SciPy |
-| Scheduling | Google OR-Tools |
-| Hot loops | Rust, called through PyO3 and built with maturin; a Python twin for each, with identical answers |
-| Models | ONNX Runtime on CPU: Google SigLIP (photos), MiniLM (prompts) |
-| Data | SQLite in tests, PostgreSQL in production |
-| Quality | pytest, ruff, rustfmt, Clippy, GitHub Actions on every push |
+| Layer | Built with | Why |
+|---|---|---|
+| **Engine** | <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white"> <img alt="NumPy" src="https://img.shields.io/badge/NumPy-013243?logo=numpy&logoColor=white"> <img alt="SciPy" src="https://img.shields.io/badge/SciPy-8CAAE6?logo=scipy&logoColor=white"> | Clear, testable maths for every stage |
+| **Scheduling** | <img alt="OR-Tools" src="https://img.shields.io/badge/OR--Tools-4285F4?logo=google&logoColor=white"> | Exact assignment of dates to weekly slots |
+| **Hot loops** | <img alt="Rust" src="https://img.shields.io/badge/Rust-B7410E?logo=rust&logoColor=white"> <img alt="PyO3" src="https://img.shields.io/badge/PyO3-555555"> | Up to 81× faster, with a Python twin giving identical answers |
+| **Models** | <img alt="ONNX Runtime" src="https://img.shields.io/badge/ONNX%20Runtime-005CED?logo=onnx&logoColor=white"> <img alt="SigLIP" src="https://img.shields.io/badge/SigLIP-4285F4?logo=google&logoColor=white"> <img alt="MiniLM" src="https://img.shields.io/badge/MiniLM-FFB000?logo=huggingface&logoColor=black"> | Real photo and text models on a normal CPU |
+| **Data** | <img alt="SQLite" src="https://img.shields.io/badge/SQLite-003B57?logo=sqlite&logoColor=white"> <img alt="PostgreSQL" src="https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white"> | SQLite in tests, PostgreSQL in production, one schema |
+| **Quality** | <img alt="pytest" src="https://img.shields.io/badge/pytest-0A9EDC?logo=pytest&logoColor=white"> <img alt="Ruff" src="https://img.shields.io/badge/Ruff-D7FF64?logo=ruff&logoColor=black"> <img alt="GitHub Actions" src="https://img.shields.io/badge/GitHub%20Actions-2088FF?logo=githubactions&logoColor=white"> | Every check on every push |
+
+### Under the hood
+
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/speed-dark.svg">
+  <img src="docs/assets/charts/speed-light.svg" width="100%" alt="Rust core speed-up over Python: looks taste 3.6 times, fair daily lists 10 times, ratio gate 28 to 81 times">
+</picture>
+</p>
+
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/prompts-dark.svg">
+  <img src="docs/assets/charts/prompts-light.svg" width="100%" alt="MiniLM similarity of made-up prompts: rock climbing and bouldering 0.67, Italian cooking and carbonara 0.52, settle down and long-term partner 0.45, Italian cooking and marathon 0.20, rock climbing and opera 0.13">
+</picture>
+</p>
+
+<sub>Banner and charts are drawn by [`scripts/readme_art.py`](scripts/readme_art.py) in
+[Inter](https://rsms.me/inter/) (SIL Open Font License), from the numbers above.</sub>
 
 ## Configuration
 
@@ -319,22 +374,22 @@ These rules are never broken, and tests enforce them:
 
 | Sprint | Focus | Status |
 |:-:|---|---|
-| 0 | Foundation: settings, member model, synthetic city, checks | Done |
-| 1 | A working matcher on personality alone | Done |
-| 2 | The looks model and the photo exercise | Done |
-| 3 | The 50/50 mutual score | Done |
-| 4 | Fair daily lists | Done |
-| 5 | Learning from dates | Done |
-| 6 | lastfirstdate's real rules, the guarantee forecast and the ratio gate | Done |
-| – | The Rust core for the hot loops | Done |
-| 7 | Booking, billing, trust, geography and the app's database | Done |
-| 8 | The forecast and the gate on delivered dates | Done |
-| 9 | Handoff to the app: the engine on the app's database, and the call sequence | Done |
-| 10 | Step-by-step photo exercise and a nightly cache | Done |
-| 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | Done |
-| 12 | Bug fixes before Phase 1: New York time, picks checked again, blocks, forgetting a member, list positions | Done |
-| 13 | The real models: Google SigLIP for photos and MiniLM for prompts, pinned and checked | Done |
-| 14 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | Next |
+| 0 | Foundation: settings, member model, synthetic city, checks | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 1 | A working matcher on personality alone | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 2 | The looks model and the photo exercise | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 3 | The 50/50 mutual score | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 4 | Fair daily lists | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 5 | Learning from dates | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 6 | lastfirstdate's real rules, the guarantee forecast and the ratio gate | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| – | The Rust core for the hot loops | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 7 | Booking, billing, trust, geography and the app's database | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 8 | The forecast and the gate on delivered dates | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 9 | Handoff to the app: the engine on the app's database, and the call sequence | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 10 | Step-by-step photo exercise and a nightly cache | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 12 | Bug fixes before Phase 1: New York time, picks checked again, blocks, forgetting a member, list positions | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 13 | The real models: Google SigLIP for photos and MiniLM for prompts, pinned and checked | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 14 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | <img alt="Next" src="https://img.shields.io/badge/Next-0969da?style=flat-square"> |
 
 ## Releases
 

@@ -43,6 +43,7 @@ TEST_ONLY = {
     "lastfirstdate.app_fill",
     "lastfirstdate.fixes_report",
     "lastfirstdate.models_report",
+    "lastfirstdate.nyc_report",
 }
 
 

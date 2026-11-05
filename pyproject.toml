@@ -23,6 +23,8 @@ dependencies = [
 dev = ["pytest>=8", "ruff>=0.5", "maturin>=1.9,<2.0", "pillow>=10"]
 # The production photo and text models (decision D20): python -m lastfirstdate.encoders download
 models = ["onnxruntime>=1.18", "tokenizers>=0.19", "pillow>=10"]
+# Redraw the README banner and charts: python scripts/readme_art.py
+docs = ["fonttools>=4.50", "uharfbuzz>=0.39"]
 
 # The Python package lives in src/; the Rust core (rust/) is compiled into
 # lastfirstdate._core when the package is installed (D16).
