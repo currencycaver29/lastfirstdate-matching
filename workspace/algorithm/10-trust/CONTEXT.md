@@ -40,10 +40,16 @@ FR-LM-39, FR-LM-42 (`tests/test_sprint7.py`).
   typical bad actor crosses the line at about the 6th poor rating, roughly two cycles.
 - With a small synthetic halo (raters kinder to people they find attractive), trust
   correlated +0.15 with looks. Audit real ratings by group.
+- **Abuse (Sprint 14):** a rating counts only for a completed booking between the two
+  (FR-LM-67). Ratings can't lift anyone above neutral, and one rater can't flag anyone
+  (FR-LM-69). 15 harsh raters wrongly flagged 1 honest man in three zones. Rings of 3 women
+  who always pick and low-rate one man (he always accepts) got him paused in 5 of 24 tries;
+  rings of 6 in 8 of 24.
 
 ## Open question
 
-Flag sooner, at the cost of reviewing more ordinary members? That is the owner's call.
+Flag sooner, at the cost of reviewing more ordinary members? And should a flag pause at once,
+or wait for a person (rings versus real bad actors)? Both are the owner's call.
 
 ## If you change it
 

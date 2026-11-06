@@ -180,7 +180,7 @@ def test_text_encoder_setting_selects_the_encoder(p1cfg, p1pop, cfg):
     arr = MemberArrays.from_members(m, p1cfg.values)
     w = p1cfg.personality
     expected = w.w_text * interest_similarity(
-        WordEncoder().encode(m)
+        WordEncoder().encode(m), center=w.center_text
     ) + w.w_values * values_compatibility(arr, p1cfg.values)
     np.testing.assert_allclose(personality_matrix(m, arr, p1cfg), expected, atol=1e-12)
     assert cfg.personality.text_encoder == "tags" and isinstance(TagEncoder(), TagEncoder)

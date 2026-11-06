@@ -12,6 +12,8 @@ w_text = 0.4
 w_values = 0.3
 w_big5 = 0.3
 text_encoder = "tags"        # "tags" (interest tags) or "words" (free-text prompts)
+center_text = false           # take out the zone's average prompt before comparing (D21); off keeps
+                              # the research results reproducible
 
 [mix]                         # Stage 5: S = looks_weight * V + (1 - looks_weight) * P
 looks_weight = 0.5
@@ -57,6 +59,8 @@ min_pool = 10                 # defer applicants with fewer possible matches tha
 at_risk_threshold = 0.5       # mid-cycle alert below this chance of reaching the guarantee
 forecast_l2 = 1.0             # penalty that keeps the forecast regressions stable
 forecast = "booked"           # the gate's forecast: booked dates (Sprint 6) or delivered (Sprint 8)
+silent_after_days = 14        # a woman with lists on this many days and no pick ever isn't
+                              # counted by the gate until she picks (D22)
 
 [fairness]                    # Exposure and fairness report (FR-LM-23)
 min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate

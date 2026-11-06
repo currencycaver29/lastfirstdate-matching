@@ -38,7 +38,7 @@ def zone(base):
     con.execute("PRAGMA foreign_keys = ON")
     market = app.load_market(con, base.cfg, app.Calendar(EPOCH), TODAY)
     feats = app.photo_feature_matrix(base.pop.photo_embeddings, base.cfg)
-    answers = app.calibration_answers(con, market)
+    answers = app.calibration_answers(con, market, base.cfg)
     tastes = app.fit_tastes(market, feats, answers, base.cfg, start=base.filled.start)
     scores = app.nightly_scores(market, tastes, feats, base.cfg)
     return SimpleNamespace(con=con, market=market, scores=scores, cfg=base.cfg)

@@ -17,31 +17,26 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
   one `#### FR-LM-NN · Title` block per requirement: a `Sprint: N` line, what it does in plain
   words, and a `Test:` line saying what will prove it.
 - `Current sprint: N` at the top of `docs/SPEC.md`.
-- New decisions, if any, as rows in the Decisions table (D21 onward).
+- New decisions, if any, as rows in the Decisions table (D24 onward).
 
-Numbering continues from FR-LM-63.
+Numbering continues from FR-LM-71.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 14 (not chosen yet: ask the owner)
+## Sprint 15 (not chosen yet: ask the owner)
 
-Sprint 13 plugged in the real models. Options:
+Sprint 14 did abuse testing (option (e) of the last list). Options now:
 
 - **(a) A consented pilot:** 30 to 100 volunteers do the photo exercise; recheck
   `calibration.pca_dim` and the penalties on SigLIP's real vectors (no data enters the repo).
-- **(b) The gate every cycle,** with the zone's age and recruitment as inputs.
+- **(b) The gate every cycle,** with the zone's age and recruitment as inputs (and the silent
+  rule's count, D22).
 - **(c) Readiness for the personality weights:** refit them on real "would meet again"
   answers (paper 9).
-- **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
-- **(e) Abuse testing (AI red team):** add synthetic attackers to the test runs and measure what
-  each gains: keyword-stuffed prompts, fake accounts inflating the ratio gate, coordinated
-  rating rings against the trust score, fake accounts poisoning the starting taste, attempts
-  to read a hidden "desirability" score from lists (R2), and malformed rows (code review
-  finding 2). Every attack that gains anything gets a rule, a fix and a test. Reading list:
-  `docs/research.md`, "Reading list: abuse testing". Complements, not replaces, the outside
-  pentest of the app before the beta.
+- **(d) The open code review findings** (1 and 3 to 9; finding 2 was fixed in Sprint 14).
+- **(e) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
 
-Numbering continues from FR-LM-63.
+Numbering continues from FR-LM-71. New decisions from D24.

@@ -98,7 +98,8 @@ CREATE TABLE photo_embeddings (
 );
 
 -- The photo exercise (FR-LM-16, FR-LM-32): a single photo (shown_b NULL, answer 1 = liked)
--- or a pair (answer 1 = chose shown_a).
+-- or a pair (answer 1 = chose shown_a). One account, one exercise (FR-LM-65): the engine reads
+-- at most calibration.n_profiles photos per member, each once, never their own photo.
 CREATE TABLE calibration_answers (
     member_id INTEGER NOT NULL REFERENCES members (id) ON DELETE CASCADE,
     position  INTEGER NOT NULL CHECK (position >= 0),
@@ -222,7 +223,15 @@ CREATE TABLE bookings (
     CHECK (member_a <> member_b),
     CHECK (cancelled_by IS NULL OR cancelled_by IN (member_a, member_b)),
     CHECK (state NOT IN ('confirmed', 'completed', 'no_show') OR venue_id IS NOT NULL),
-    CHECK ((source = 'event') = (event_id IS NOT NULL))
+    CHECK ((source = 'event') = (event_id IS NOT NULL)),
+    -- each state carries its facts (FR-LM-68): who cancelled and when; who came to a no-show
+    -- (not both); nobody marked absent from a completed date
+    CHECK (state = 'cancelled' OR cancelled_by IS NULL),
+    CHECK (state <> 'cancelled' OR (cancelled_by IS NOT NULL AND cancelled_at IS NOT NULL)),
+    CHECK (state <> 'no_show' OR (showed_a IS NOT NULL AND showed_b IS NOT NULL
+                                  AND showed_a + showed_b < 2)),
+    CHECK (state <> 'completed' OR (showed_a IS NULL AND showed_b IS NULL)
+           OR (showed_a IS NOT NULL AND showed_b IS NOT NULL AND showed_a = 1 AND showed_b = 1))
 );
 
 CREATE INDEX bookings_a_date ON bookings (member_a, date_on);
@@ -243,7 +252,9 @@ CREATE TABLE payments (
 -- ---------------------------------------------------------------- ratings and trust (FR-LM-39)
 
 -- Private: never shown to the person rated. Trust reads respect and accuracy only;
--- conversation and would_meet_again feed learning (Stage 8).
+-- conversation and would_meet_again feed learning (Stage 8). A rating counts only for a
+-- completed booking between rater and rated (FR-LM-67): the app must check it, and the engine
+-- ignores any other (app.check_rows lists them).
 CREATE TABLE ratings (
     booking_id       INTEGER NOT NULL REFERENCES bookings (id),
     rater_id         INTEGER NOT NULL REFERENCES members (id),

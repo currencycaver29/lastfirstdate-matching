@@ -78,7 +78,13 @@ FR-LM-43 to FR-LM-45 (`tests/test_sprint8.py`).
   with 300, the delivered gate admits only a handful of men at a 90% target.
 - **In large zones the gate is sensitive:** fulfilment is flat in the number of men, so 2 to 3
   points of forecast error move the stopping point by about 100 men.
-- Credits run about 7% of revenue in a 500-woman zone and 16% in a 300-woman zone at 3:1.
+- Credits run about 6% of revenue in a 500-woman zone and 15% in a 300-woman zone at 3:1
+  (NYC demo, Sprint 14).
+- **Fake women (Sprint 14, D22, FR-LM-66):** 50 fakes in a 300-woman zone made the gate sell 6.7
+  places instead of 3, and those men's 3-date share fell from 94% to 83%. `app.counted_women`
+  now counts only verified women who aren't silent (`gate.silent_after_days` list days and no
+  pick ever): after four weeks it drops 83% of fakes and 0.6% of honest women. At launch only
+  identity checks help.
 
 ## If you change it
 

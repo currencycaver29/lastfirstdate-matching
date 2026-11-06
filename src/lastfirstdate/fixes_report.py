@@ -46,7 +46,7 @@ def zone(cfg: Config, seed: int = 7):
     filled = fill_database(con, pop, cfg, TODAY, seed, subscribers=60)
     market = app.load_market(con, cfg, app.Calendar(EPOCH), TODAY)
     feats = app.photo_feature_matrix(pop.photo_embeddings, cfg)
-    answers = app.calibration_answers(con, market)
+    answers = app.calibration_answers(con, market, cfg)
     tastes = app.fit_tastes(market, feats, answers, cfg, start=filled.start)
     return pop, con, market, app.nightly_scores(market, tastes, feats, cfg)
 

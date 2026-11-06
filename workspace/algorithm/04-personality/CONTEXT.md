@@ -26,8 +26,8 @@ Scores how well two members fit on what they wrote and answered, apart from look
 
 ## Settings
 
-`[personality]`: `w_text`, `w_values`, `w_big5`, `text_encoder`; `[[values]]` questions with
-`mode`.
+`[personality]`: `w_text`, `w_values`, `w_big5`, `text_encoder`, `center_text`; `[[values]]`
+questions with `mode`.
 
 ## Tests
 
@@ -53,6 +53,11 @@ D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
   (AUC 0.888 against 0.869); real prompts vary far more. It changes about 2 of each member's
   top 10. Tests and test runs keep "words".
 - The weights are guesses until real dates exist (paper 9).
+- **Stuffed prompts (Sprint 14, D21, FR-LM-64):** a prompt full of the words everyone writes
+  climbed from the middle to the 67th percentile of women's personality rankings with word
+  counts; popular interests written as a prompt reached the 59th with MiniLM. With
+  `center_text` (on in Phase 1) the zone's average vector is taken out before comparing, and
+  no stuffing gains with either encoder. Honest matching is unchanged.
 
 ## If you change it
 

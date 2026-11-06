@@ -33,6 +33,7 @@ class PersonalityConfig:
     w_values: float
     w_big5: float
     text_encoder: str
+    center_text: bool  # compare prompts after taking out the zone's average (D21, FR-LM-64)
 
 
 @dataclass(frozen=True)
@@ -85,6 +86,7 @@ class GateConfig:
     at_risk_threshold: float
     forecast_l2: float
     forecast: str
+    silent_after_days: int  # list days with no pick ever before a woman stops counting (D22)
 
 
 @dataclass(frozen=True)
@@ -317,6 +319,8 @@ def validate(cfg: Config) -> None:
         raise ConfigError("personality weights must add up to 1")
     if p.text_encoder not in ("tags", "words", "sentence"):
         raise ConfigError("personality.text_encoder must be tags, words or sentence")
+    if not isinstance(p.center_text, bool):
+        raise ConfigError("personality.center_text must be true or false")
 
     _check_share("mix.looks_weight", cfg.mix.looks_weight)
     if not 0.0 < cfg.mix.chooser_weight < 1.0:
@@ -350,6 +354,8 @@ def validate(cfg: Config) -> None:
     _check_positive("gate.forecast_l2", gate.forecast_l2)
     if gate.min_pool < 0:
         raise ConfigError("gate.min_pool must not be negative")
+    if gate.silent_after_days < 1:
+        raise ConfigError("gate.silent_after_days must be at least 1")
     if gate.forecast not in ("booked", "delivered"):
         raise ConfigError("gate.forecast must be booked or delivered")
     learn = cfg.learning
@@ -642,6 +648,7 @@ _KEY_IMPACT = {
     "calibration.group_share_tolerance": BUSINESS,  # an audit threshold
     "gate.forecast": ENGINEERING,
     "gate.forecast_l2": ENGINEERING,
+    "gate.silent_after_days": TEST_FIRST,  # an abuse defence: rerun the attack report first
     "dates.weeks_per_month": ENGINEERING,  # the batch scheduler and booked forecast only
     "dates.date_value": ENGINEERING,
     "dates.late_month_bonus": ENGINEERING,

@@ -416,7 +416,9 @@ class CycleRun:
         now = self.period(everyone, np.full(n, today))
         full = (self.period_count[everyone, now] >= self.cap) | self.paused
         full |= self.join_day > today  # not joined yet
-        opened = (self.rng.random(n) < sim.open_app_rate) & self.matchable & ~full
+        opened = self.opens(
+            today, (self.rng.random(n) < sim.open_app_rate) & self.matchable & ~full
+        )
         bits = self.bits(today, everyone)
         order, avail = [], {}
         for i in (int(i) for i in self.rng.permutation(np.flatnonzero(opened))):
@@ -450,7 +452,7 @@ class CycleRun:
             if todays.size == 0:
                 continue
             self.last_shown[i, todays] = today
-            chosen = self.behavior.choose(i, todays, self.rng, self.passes[i, todays])
+            chosen = self.choose(i, todays, today)
             self.passes[i, np.setdiff1d(todays, chosen)] += 1
             for j in chosen:
                 if self.closed[i, j]:
@@ -458,6 +460,20 @@ class CycleRun:
                 self.closed[i, j] = self.closed[j, i] = True
                 self.count["picks"] += 1
                 self.book(i, int(j), today, "list")
+
+    # hooks: the abuse tests (attacks.py) replace these for their attackers
+
+    def opens(self, today: int, opened: np.ndarray) -> np.ndarray:
+        """(n,) who opens the app today and gets a list."""
+        return opened
+
+    def choose(self, i: int, todays: np.ndarray, today: int) -> list[int]:
+        """Profiles chooser i picks from today's list."""
+        return self.behavior.choose(i, todays, self.rng, self.passes[i, todays])
+
+    def accepts(self, chosen: int, chooser: int) -> bool:
+        """Does the chosen member accept the pick?"""
+        return self.behavior.accepts(chosen, chooser, self.rng)
 
     def events(self, today: int) -> None:
         cs = self.cfg.cycle_runs
@@ -491,7 +507,7 @@ class CycleRun:
             self.closed[a, b] = self.closed[b, a] = False
             return
         day, part = window_day_part(window, today)
-        if source == "list" and not self.behavior.accepts(b, a, self.rng):
+        if source == "list" and not self.accepts(b, a):
             self.count["declined"] += 1
             return
         bk = Booking(a, b, day, part) if source == "list" else event_booking(a, b, day, part)

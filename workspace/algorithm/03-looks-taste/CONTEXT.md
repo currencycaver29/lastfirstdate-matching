@@ -52,6 +52,11 @@ FR-LM-62 (`tests/test_sprint13.py`).
   embeddings; recheck `calibration.pca_dim` and the penalties on a consented pilot. SigLIP's
   vectors are all fairly alike (generated test patterns scored 0.93 with each other), which
   the photo compression handles by centring before it compresses.
+- **Abuse (Sprint 14, D23, FR-LM-65):** one account flooding the photo exercise lifted a target
+  man from 0.47 to 0.52 in women's looks rankings. Now each member counts for at most
+  `n_profiles` photos, each once, never their own, and only verified members fit w_0. 30
+  verified fakes (10% of women) still lift him to 0.54; a trimmed-mean fit halves that but costs
+  every honest member 0.016 AUC, so identity checks are the defence.
 
 ## If you change it
 

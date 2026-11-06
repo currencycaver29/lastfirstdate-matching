@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.13.1" src="https://img.shields.io/badge/release-v0.13.1-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.14.0" src="https://img.shields.io/badge/release-v0.14.0-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -167,21 +167,21 @@ These numbers compare designs; they are not predictions. Reproduce them with
 <p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/promise-dark.svg">
-  <img src="docs/assets/charts/promise-light.svg" width="100%" alt="Men who got their 3 dates per billing cycle: 300-woman zones 88%, 77%, 62%; 500-woman zones 96%, 91%, 84%; target 90%">
+  <img src="docs/assets/charts/promise-light.svg" width="100%" alt="Men who got their 3 dates per billing cycle: 300-woman zones 89%, 77%, 66%; 500-woman zones 97%, 91%, 84%; target 90%">
 </picture>
 </p>
 
 <p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/ordering-dark.svg">
-  <img src="docs/assets/charts/ordering-light.svg" width="100%" alt="Chance both say yes in the top 10 of each list: random order 13%, personality only 18%, mutual 20%, looks only 21%, her taste only 21%">
+  <img src="docs/assets/charts/ordering-light.svg" width="100%" alt="Chance both say yes in the top 10 of each list: random order 13%, personality only 17%, mutual 20%, looks only 21%, her taste only 21%">
 </picture>
 </p>
 
 <p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/outcomes-dark.svg">
-  <img src="docs/assets/charts/outcomes-light.svg" width="100%" alt="What happened to booked dates: 67% went ahead, 12% someone didn't show, 12% the payment hold ran out, 8% cancelled">
+  <img src="docs/assets/charts/outcomes-light.svg" width="100%" alt="What happened to booked dates: 66% went ahead, 13% someone didn't show, 13% the payment hold ran out, 8% cancelled">
 </picture>
 </p>
 
@@ -192,18 +192,40 @@ These numbers compare designs; they are not predictions. Reproduce them with
 
 | Measure | 300 women · 100 men | 500 women · 167 men |
 |---|---:|---:|
-| Men with 3 delivered dates, all cycles | 76% (70% to 84%) | 90% (86% to 93%) |
+| Men with 3 delivered dates, all cycles | 77% (70% to 85%) | 91% (86% to 93%) |
 | The engine's forecast before launch | 74% | 87% |
-| Credits, as a share of subscriptions | 16% | 7% |
+| Credits, as a share of subscriptions | 15% | 6% |
 | Looks model ranks truly preferred faces higher | 93% of the time | 93% of the time |
 | Top 10, chance both say yes (mutual ordering) | 20.4% | 23.3% |
-| Women with no date in a 28-day period | 53% | 48% |
-| Bad actors caught after 6+ ratings | 41 of 44 | 64 of 66 |
-| Members wrongly flagged | 0 | 0 |
+| Women with no date in a 28-day period | 52% | 48% |
+| Bad actors caught after 6+ ratings | 40 of 40 | 57 of 60 |
+| Members wrongly flagged | 0 | 1 |
 
 The looks score is flattering: in the test harness, taste is a straight line in the photo
 vectors, like the model. Each sprint's notes in [`docs/sprints/`](docs/sprints/) explain the
 results and their limits.
+
+</details>
+
+<details>
+<summary><b>Abuse testing: what synthetic attackers gained</b></summary>
+
+<br/>
+
+Sprint 14 added attackers to the test runs (`python -m lastfirstdate.attacks`, three zones of
+300 women and 100 men). Every attack that gained anything got a defence and a test.
+
+| Attack | Without the defence | With it |
+|---|---|---|
+| Prompt stuffed with words everyone writes | 67th percentile of women's personality rankings (honest: 49th) | 45th: prompts are compared without the zone's average |
+| One account flooding the photo exercise | target man up from 0.47 to 0.52 in women's looks rankings | 0.47: one account, one exercise |
+| 30 fake women (10%) steering the starting taste | target up to 0.54 | 0.47 if they can't pass identity checks; verified fakes are the limit |
+| 50 fake women counted by the ratio gate | 6.7 places sold instead of 3; 3-date share 83% instead of 94% | after 4 weeks of lists, 83% of fakes no longer count (0.6% of real women) |
+| Forged ratings, malformed booking rows | counted toward trust, or crashed the daily lists | ignored, or refused with the booking named |
+| 20 spy accounts reading their lists for a ranking | correlation with consensus looks 0.04 (0.14 with the exposure cap off) | already blocked by the exposure cap; a test keeps it so |
+
+Rating rings remain the owner's call: 3 colluding women got a target paused in 5 of 24 tries.
+Details in [`docs/sprints/sprint-14.md`](docs/sprints/sprint-14.md).
 
 </details>
 
@@ -261,6 +283,8 @@ Each report runs on synthetic members and prints what it found:
 .venv/bin/python -m lastfirstdate.gate_report       # the ratio gate in the real flow, two zone sizes
 .venv/bin/python -m lastfirstdate.fixes_report      # the Sprint 12 fixes, measured
 .venv/bin/python -m lastfirstdate.models_report     # the real photo and text models (needs .[models])
+.venv/bin/python -m lastfirstdate.nyc_report        # the NYC demo: ten zones, start to finish
+.venv/bin/python -m lastfirstdate.attacks           # synthetic attackers and what each gains
 ```
 
 To refit the guarantee forecast after changing the settings, run
@@ -389,14 +413,15 @@ These rules are never broken, and tests enforce them:
 | 11 | Ready for real data: outcomes from the app's records, recalibration, when to switch | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
 | 12 | Bug fixes before Phase 1: New York time, picks checked again, blocks, forgetting a member, list positions | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
 | 13 | The real models: Google SigLIP for photos and MiniLM for prompts, pinned and checked | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
-| 14 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | <img alt="Next" src="https://img.shields.io/badge/Next-0969da?style=flat-square"> |
+| 14 | Abuse testing: synthetic attackers, and a defence and a test for every attack that gained | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 15 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | <img alt="Next" src="https://img.shields.io/badge/Next-0969da?style=flat-square"> |
 
 ## Releases
 
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.13.1** (the date windows in Rust, after Sprint 13's real photo and text models);
+release is **v0.14.0** (Sprint 14's abuse testing and defences);
 v1.0.0 is planned for the Phase 1 launch.
 
 ## License

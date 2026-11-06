@@ -60,6 +60,15 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
   separate test and live keys. *Owner: Engineering.*
 - [ ] **Daily database backups**, with a tested restore. *Owner: Engineering.*
 - [ ] **A breach plan:** who decides, who is notified, and how fast. *Owner: Founder and Lawyer.*
+- [x] **Abuse testing of the engine** (Sprint 14): stuffed prompts, flooded photo answers, fake
+  women on the gate, forged ratings, malformed rows and spies reading lists were tried in the
+  test runs; each attack that gained has a defence and a test. *Owner: Engineering.*
+- [ ] **The app keeps the engine's data honest:** verify every woman before she counts for the
+  gate, accept ratings only from the two people on a completed date, store only the photo
+  answers the engine asks for, set `list_shows.picked` on every pick, and fix whatever
+  `app.check_rows` reports each night. *Owner: Engineering.*
+- [ ] **Decide what a trust flag does:** pause at once, or wait for a person (rings of 3
+  colluding women got a man paused in 5 of 24 test tries). *Owner: Founder.*
 
 ### Legal and public wording
 

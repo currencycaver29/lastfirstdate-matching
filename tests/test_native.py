@@ -292,7 +292,7 @@ def test_a_day_of_lists_and_a_cycle_run_are_identical_on_both_backends(p1cfg):
     market = app.load_market(con, small, app.Calendar(date(2026, 11, 2)), date(2026, 11, 4))
     feats = app.photo_feature_matrix(pop.photo_embeddings, small)
     tastes = app.fit_tastes(
-        market, feats, app.calibration_answers(con, market), small, start=filled.start
+        market, feats, app.calibration_answers(con, market, small), small, start=filled.start
     )
     scores = app.nightly_scores(market, tastes, feats, small)
     women = [int(market.ids[k]) for k, m in enumerate(market.members) if m.gender == "woman"]

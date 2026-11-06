@@ -42,6 +42,11 @@ What every stage reads: the settings files, the member model and the app's datab
   `engine_version`. Times follow D19: timestamps in UTC, dates in the zone's own time.
 - **Sprint 13:** `[models]` pins the production models (D20) by revision and sha256;
   `photo_embeddings.model` must equal `encoders.photo_model_id`.
+- **Sprint 14:** booking rows must carry their state's facts (schema checks, FR-LM-68);
+  `app.load_bookings` names a bad row; `app.check_rows` lists every row the engine refuses or
+  ignores (malformed bookings, strangers' payments, ratings not from a completed date between
+  the two, photo answers past one exercise). New settings: `personality.center_text`,
+  `gate.silent_after_days`.
 
 ## Tests
 

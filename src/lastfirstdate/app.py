@@ -263,15 +263,44 @@ def blocked_pairs(con, market: Market) -> np.ndarray:
 # ---------------------------------------------------------------- nightly: tastes and scores
 
 
-def calibration_answers(con, market: Market) -> dict[int, list[tuple[int, int | None, bool]]]:
-    """Each member's photo-exercise answers in order: (shown, other in a pair or None, answer)."""
+def calibration_answers(
+    con, market: Market, cfg: Config
+) -> dict[int, list[tuple[int, int | None, bool]]]:
+    """Each member's photo-exercise answers in order: (shown, other in a pair or None, answer).
+
+    One account, one exercise (FR-LM-65, D23): at most `calibration.n_profiles` photos per
+    member, in the order answered; each photo counts once (the first answer); an answer that
+    shows the member's own photo is ignored. A client that writes hundreds of answers then
+    counts as one member. `check_rows` lists what was left out.
+    """
+    return _exercise_rows(con, market, cfg)[0]
+
+
+def _exercise_rows(con, market: Market, cfg: Config):
+    """(answers kept, [(member id, position, why left out)])."""
     out: dict[int, list] = defaultdict(list)
+    seen: dict[int, set[int]] = defaultdict(set)
+    dropped = []
+    limit = cfg.calibration.n_profiles
     for r in sorted(
         read(con, "calibration_answers"), key=lambda r: (r["member_id"], r["position"])
     ):
+        v, a = market.row[r["member_id"]], market.row[r["shown_a"]]
         b = None if r["shown_b"] is None else market.row[r["shown_b"]]
-        out[market.row[r["member_id"]]].append((market.row[r["shown_a"]], b, bool(r["answer"])))
-    return dict(out)
+        photos = {a} if b is None else {a, b}
+        why = None
+        if v in photos:
+            why = "shows their own photo"
+        elif photos & seen[v]:
+            why = "repeats a photo already answered"
+        elif len(seen[v]) + len(photos) > limit:
+            why = "comes after the end of the exercise"
+        if why:
+            dropped.append((r["member_id"], r["position"], why))
+            continue
+        seen[v] |= photos
+        out[v].append((a, b, bool(r["answer"])))
+    return dict(out), dropped
 
 
 def check_photo_models(con, cfg: Config) -> None:
@@ -311,11 +340,14 @@ def starting_taste(
     answers: dict[int, list[tuple[int, int | None, bool]]],
     cfg: Config,
 ) -> StartingTaste:
-    """The starting taste w_0, fitted on everyone's single-photo answers."""
+    """The starting taste w_0, fitted on verified members' single-photo answers (D23): an
+    unverified account costs nothing to make, so it never shapes anyone else's taste."""
     g = market.arr.gender
+    verified = market.arr.verified
     swipes = [
         Swipe(int(g[v]), int(g[a]), features[a], liked)
         for v, rows in answers.items()
+        if verified[v]
         for a, b, liked in rows
         if b is None
     ]
@@ -405,7 +437,7 @@ def resume_calibration(
 ) -> CalibrationSession:
     """The member's photo exercise, continued from the answers stored so far."""
     session = start_calibration(market, features, member_id, start, cfg)
-    session.resume(calibration_answers(con, market).get(market.row[member_id], []))
+    session.resume(calibration_answers(con, market, cfg).get(market.row[member_id], []))
     return session
 
 
@@ -466,7 +498,7 @@ class MarketCache:
         if self.pca is None or refit_start:
             self.pca = _fit_pca(raw, cfg)
         features = with_intercept(self.pca.transform(raw))
-        answers = calibration_answers(con, market)
+        answers = calibration_answers(con, market, cfg)
         if self.start is None or refit_start:
             self.start = starting_taste(market, features, answers, cfg)
             self.tastes_by_id, self.answer_counts = {}, {}
@@ -510,14 +542,40 @@ class Bookings:
     ids: list[int]  # database id of each booking
 
 
+def booking_problem(r: dict) -> str | None:
+    """What's missing from a booking row for its state, or None (FR-LM-68). The schema's
+    checks refuse these rows; this guards databases without them."""
+    state = r["state"]
+    if r["cancelled_by"] is not None and state != "cancelled":
+        return f"says who cancelled but is {state}"
+    if state == "cancelled" and (r["cancelled_by"] is None or r["cancelled_at"] is None):
+        return "is cancelled without who cancelled and when"
+    shows = (r["showed_a"], r["showed_b"])
+    if state == "no_show" and (None in shows or shows == (1, 1)):
+        return "is a no-show without saying who came"
+    if state == "completed" and shows not in ((None, None), (1, 1)):
+        return "is completed but marks someone absent"
+    return None
+
+
 def load_bookings(con, market: Market) -> Bookings:
-    """Every booking as the engine's `Booking`, with its payments and outcome."""
+    """Every booking as the engine's `Booking`, with its payments and outcome.
+
+    Refuses a booking row whose state is missing its facts, naming it (FR-LM-68), and ignores
+    a payment from anyone not on the booking.
+    """
+    rows = sorted(read(con, "bookings"), key=lambda r: r["id"])
+    bad = [f"booking {r['id']} {why}" for r in rows if (why := booking_problem(r))]
+    if bad:
+        raise HandoffError("; ".join(bad))
+    pair = {r["id"]: {r["member_a"], r["member_b"]} for r in rows}
     venues = {r["id"]: r["name"] for r in read(con, "venues")}
     paid: dict[int, set[int]] = defaultdict(set)
     for r in read(con, "payments"):
-        paid[r["booking_id"]].add(market.row[r["member_id"]])
+        if r["member_id"] in pair.get(r["booking_id"], ()):
+            paid[r["booking_id"]].add(market.row[r["member_id"]])
     items, ids = [], []
-    for r in sorted(read(con, "bookings"), key=lambda r: r["id"]):
+    for r in rows:
         a, b = market.row[r["member_a"]], market.row[r["member_b"]]
         bk = Booking(
             a,
@@ -693,9 +751,13 @@ class ListEntry:
 
 
 def trust_from_db(con, market: Market, bookings: Bookings, cfg: Config) -> TrustBook:
-    """Ratings and attendance as a `TrustBook` (FR-LM-39)."""
+    """Ratings and attendance as a `TrustBook` (FR-LM-39). A rating counts only if it
+    belongs to a completed date between the rater and the person rated (FR-LM-67)."""
     book = TrustBook(len(market.members), cfg)
+    done = _completed(bookings)
     for r in read(con, "ratings"):
+        if not _rating_counts(r, done, market):
+            continue
         book.add_rating(
             Rating(
                 market.row[r["rater_id"]],
@@ -717,6 +779,50 @@ def trust_from_db(con, market: Market, bookings: Bookings, cfg: Config) -> Trust
         elif bk.state == "cancelled" and bk.hours_before < late:
             book.add_attendance(bk.cancelled_by, False)
     return book
+
+
+def _completed(bookings: Bookings) -> dict[int, Booking]:
+    return {
+        bid: bk
+        for bid, bk in zip(bookings.ids, bookings.items, strict=True)
+        if bk.state == "completed"
+    }
+
+
+def _rating_counts(r: dict, done: dict[int, Booking], market: Market) -> bool:
+    """Is this rating about a completed date, between exactly these two people?"""
+    bk = done.get(r["booking_id"])
+    rater, rated = market.row.get(r["rater_id"]), market.row.get(r["rated_id"])
+    return bk is not None and rater != rated and {rater, rated} == {bk.a, bk.b}
+
+
+def check_rows(con, market: Market, cfg: Config) -> list[str]:
+    """Rows the engine refuses or ignores, in words, for the app to fix (FR-LM-68): malformed
+    bookings, payments from someone not on the booking, ratings that don't belong to a
+    completed date between the two, and photo-exercise answers past one exercise. Empty when
+    the database is clean."""
+    out = []
+    rows = sorted(read(con, "bookings"), key=lambda r: r["id"])
+    out += [f"booking {r['id']} {why}" for r in rows if (why := booking_problem(r))]
+    pair = {r["id"]: {r["member_a"], r["member_b"]} for r in rows}
+    out += [
+        f"payment {r['id']} is from member {r['member_id']}, who isn't on booking {r['booking_id']}"
+        for r in read(con, "payments")
+        if r["member_id"] not in pair.get(r["booking_id"], ())
+    ]
+    if not any(booking_problem(r) for r in rows):
+        done = _completed(load_bookings(con, market))
+        out += [
+            f"rating by member {r['rater_id']} on booking {r['booking_id']} doesn't count: "
+            "not a completed date between the two"
+            for r in read(con, "ratings")
+            if not _rating_counts(r, done, market)
+        ]
+    out += [
+        f"photo-exercise answer {pos} of member {mid} is ignored: it {why}"
+        for mid, pos, why in _exercise_rows(con, market, cfg)[1]
+    ]
+    return out
 
 
 def missing_dates(
@@ -1019,10 +1125,10 @@ class SaleDecision:
 
 def gate_for_sale(con, market: Market, scores: NightlyScores, cfg: Config) -> SaleDecision:
     """How many waitlisted men to admit now (FR-LM-34, FR-LM-45), with the forecast chosen by
-    `gate.forecast`."""
+    `gate.forecast`. Only women who can really date are counted (FR-LM-66, D22)."""
     ok = member_ok(market.arr, cfg) & ~market.paused
     signups = signup_days(con, market, cfg)
-    women = np.flatnonzero(ok & (market.arr.gender == WOMAN))
+    women = np.flatnonzero(counted_women(con, market, cfg))
     current = np.flatnonzero(ok & (signups != NO_SIGNUP))
     waiting = sorted(
         (r for r in read(con, "waitlist") if r["status"] == "waiting"),
@@ -1039,6 +1145,33 @@ def gate_for_sale(con, market: Market, scores: NightlyScores, cfg: Config) -> Sa
         forecast=d.forecast,
         stopped_because=d.stopped_because,
     )
+
+
+def silent_members(con, market: Market, cfg: Config) -> np.ndarray:
+    """(n,) members who have had lists on at least `gate.silent_after_days` days and have never
+    picked anyone (FR-LM-66). A pick is a `list_shows` row marked picked, or a list booking
+    they chose."""
+    days: dict[int, set[str]] = defaultdict(set)
+    picked = np.zeros(len(market.members), dtype=bool)
+    for r in read(con, "list_shows"):
+        i = market.row[r["chooser_id"]]
+        days[i].add(r["shown_on"])
+        picked[i] |= bool(r["picked"])
+    for r in read(con, "bookings"):
+        if r["source"] == "list":
+            picked[market.row[r["member_a"]]] = True
+    silent = np.zeros(len(market.members), dtype=bool)
+    for i, d in days.items():
+        silent[i] = len(d) >= cfg.gate.silent_after_days and not picked[i]
+    return silent
+
+
+def counted_women(con, market: Market, cfg: Config) -> np.ndarray:
+    """(n,) the women the ratio gate counts (D22): verified, whatever `filter.require_verified`
+    says (a fake account must at least pass identity checks), active, not paused and not
+    silent. Fakes who never date drop out once they've had lists for a while."""
+    ok = member_ok(market.arr, cfg) & market.arr.verified & ~market.paused
+    return ok & (market.arr.gender == WOMAN) & ~silent_members(con, market, cfg)
 
 
 def nearest_neighbourhood_id(con, lat: float, lon: float) -> int:

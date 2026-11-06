@@ -4,7 +4,7 @@ members = ["lastfirstdate-core", "lastfirstdate-py"]
 resolver = "3"
 
 [workspace.package]
-version = "0.13.1"  # the same as pyproject.toml
+version = "0.14.0"  # the same as pyproject.toml
 edition = "2024"
 rust-version = "1.85"
 publish = false

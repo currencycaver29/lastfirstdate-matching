@@ -18,6 +18,7 @@ w_text = 0.55                 # free-text prompts
 w_values = 0.45               # the intent questions
 w_big5 = 0.0                  # no Big Five questions in the app's demo
 text_encoder = "words"        # "tags" (interest tags) or "words" (free-text prompts)
+center_text = true            # take out the zone's average prompt before comparing (D21)
 
 [mix]                         # Stage 5: S = looks_weight * V + (1 - looks_weight) * P
 looks_weight = 0.5
@@ -63,6 +64,8 @@ min_pool = 10                 # defer applicants with fewer possible matches tha
 at_risk_threshold = 0.5       # mid-cycle alert below this chance of reaching the guarantee
 forecast_l2 = 1.0             # penalty that keeps the forecast regressions stable
 forecast = "delivered"        # the gate's forecast: delivered dates in the real booking flow
+silent_after_days = 14        # a woman with lists on this many days and no pick ever isn't
+                              # counted by the gate until she picks (D22)
 
 [fairness]                    # Exposure and fairness report (FR-LM-23)
 min_rate_ratio = 0.8          # flag a group shown or dated at under 80% of the overall rate

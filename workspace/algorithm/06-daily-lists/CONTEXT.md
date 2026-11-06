@@ -64,6 +64,9 @@ D1, D3 (30 a day; a passed profile can return after 7 days), D7 (exposure cap 1Ã
 - Each `ListEntry` carries its position and match value; `app.list_show_row` stores them
   with the engine version, for learning without bias later (Sprint 12). Blocks are read
   fresh each morning.
+- **The exposure cap protects R2 (Sprint 14, FR-LM-70):** 20 spy accounts reading their lists
+  for two weeks rebuilt a "hotness" ranking that correlates with consensus looks at only 0.04
+  (0.14 with the cap off). Stuffed prompts moved men up rankings but not onto more lists.
 
 ## If you change it
 

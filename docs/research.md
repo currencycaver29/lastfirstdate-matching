@@ -34,7 +34,7 @@ used yet, closes the file.
 
 Not in the research doc. Platt scaling and the Brier score are used from Sprint 11, when the
 guarantee forecast was made ready for real data; SigLIP and MiniLM from Sprint 13, as the
-production models.
+production models; the abuse-testing methods from Sprint 14.
 
 | Method | Stage | Requirements | Sprint | What we take from it |
 |---|---|---|---|---|
@@ -42,6 +42,12 @@ production models.
 | Brier score: [*Verification of Forecasts Expressed in Terms of Probability*](https://doi.org/10.1175/1520-0493(1950)078%3C0001:VOFEIT%3E2.0.CO;2), Brier, Monthly Weather Review 78(1), 1950 | 9 | FR-LM-53 | 11 | Judge a probability forecast by the mean squared gap between forecast and outcome (the modern 0-to-1 form; Brier's original ran 0 to 2) |
 | SigLIP: [*Sigmoid Loss for Language Image Pre-Training*](https://arxiv.org/abs/2303.15343), Zhai, Mustafa, Kolesnikov, Beyer, ICCV 2023 | 3 | FR-LM-60 | 13 | The production photo model (decision D20): photo embeddings for each member's own looks taste |
 | MiniLM: [*MiniLM: Deep Self-Attention Distillation for Task-Agnostic Compression of Pre-Trained Transformers*](https://arxiv.org/abs/2002.10957), Wang et al., NeurIPS 2020 | 4 | FR-LM-61 | 13 | The production text model (all-MiniLM-L6-v2, trained as a Sentence-BERT model, paper 8): prompts that mean similar things score as similar |
+| Centring: [*All-but-the-Top: Simple and Effective Postprocessing for Word Representations*](https://arxiv.org/abs/1702.01417), Mu, Bhat, Viswanath, ICLR 2018; on sentence models, [*How Contextual are Contextualized Word Representations?*](https://arxiv.org/abs/1909.00512), Ethayarajh, EMNLP 2019 | 4 | FR-LM-64 | 14 | Take the average vector out before comparing two texts, so what everyone writes counts for nothing (sentence models also put one shared direction in every vector) |
+| The average attack: *Shilling Recommender Systems for Fun and Profit*, Lam and Riedl, WWW 2004 ([doi](https://doi.org/10.1145/988672.988726)); *Toward Trustworthy Recommender Systems*, Mobasher, Burke, Bhaumik, Williams, ACM TOIT 7(4), 2007 ([dblp](https://dblp.org/rec/journals/toit/MobasherBBW07)) | 4, 6 | FR-LM-63, FR-LM-64 | 14 | A fake profile built to look like the average ranks well with everyone; a prompt stuffed with popular or shared words is the text version |
+| Sybil attacks: *The Sybil Attack*, Douceur, IPTPS 2002 ([doi](https://doi.org/10.1007/3-540-45748-8_24)) | 3, 9 | FR-LM-65, FR-LM-66 | 14 | Without an identity check one attacker can be many accounts: only verified accounts teach the starting taste or count for the gate, one exercise each |
+| Data poisoning: [*Certified Defenses for Data Poisoning Attacks*](https://arxiv.org/abs/1706.03691), Steinhardt, Koh, Liang, NeurIPS 2017; [*Data Poisoning Attacks on Factorization-Based Collaborative Filtering*](https://arxiv.org/abs/1608.08182), Li, Wang, Singh, Vorobeychik, NeurIPS 2016 | 3 | FR-LM-65 | 14 | How far coordinated fake answers move a model fitted on everyone, and what a statistical defence costs: a trimmed fit halved the gain but lost 0.016 AUC for everyone, so identity checks are the defence |
+| Unfair ratings: *Immunizing Online Reputation Reporting Systems Against Unfair Ratings and Discriminatory Behavior*, Dellarocas, ACM EC 2000 ([dblp](https://dblp.org/rec/conf/sigecom/Dellarocas00)) | 10 | FR-LM-67, FR-LM-69 | 14 | Bound what any rater can do: ratings only from real dates, the shrinkage prior, behaviour-only fields, no boost above neutral |
+| Inference from recommendations: *"You Might Also Like:" Privacy Risks of Collaborative Filtering*, Calandrino, Kilzer, Narayanan, Felten, Shmatikov, IEEE S&P 2011 ([doi](https://doi.org/10.1109/SP.2011.40)) | 6 | FR-LM-70 | 14 | What a system shows can leak what it learned: spies reading their lists must not be able to rebuild a ranking of who is most attractive (R2) |
 
 ## Reading order by sprint
 
@@ -56,12 +62,17 @@ production models.
 - **Sprint 5:** paper 17.
 - **Sprint 11:** Platt scaling and the Brier score (under [Methods added since](#methods-added-since)).
 - **Sprint 13:** SigLIP and MiniLM, the production models, with paper 8.
+- **Sprint 14:** Lam and Riedl, then Douceur, Steinhardt et al., Dellarocas, Calandrino et al.
+  and Mu et al. (under [Methods added since](#methods-added-since)); the rest of the abuse-testing
+  reading list for later.
 
-## Reading list: abuse testing (not used yet)
+## Reading list: abuse testing
 
-Papers for a possible abuse-testing sprint (Sprint 14 option (e)): synthetic attackers added to
-the test runs, each trying to game or exploit the engine, with a rule and a test for every attack
-that gains anything. None of these methods is built yet.
+Sprint 14 (option (e)) built synthetic attackers from the first, second, third and fifth rows,
+with a rule and a test for every attack that gained anything (see
+[Methods added since](#methods-added-since)). Finding a member's location, attacks on the
+models' privacy, fooling the photo and text models with doctored inputs, and strategic
+classification are still reading for later.
 
 | Attack on the engine | Papers | What they'd add |
 |---|---|---|

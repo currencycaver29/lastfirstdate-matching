@@ -44,6 +44,7 @@ TEST_ONLY = {
     "lastfirstdate.fixes_report",
     "lastfirstdate.models_report",
     "lastfirstdate.nyc_report",
+    "lastfirstdate.attacks",
 }
 
 

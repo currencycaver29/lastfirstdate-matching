@@ -64,14 +64,17 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 14, not chosen yet. Options include a consented pilot to recheck the
-  photo settings and abuse testing with synthetic attackers (option (e)); or wait for the app
-  and real Phase 1 data. Ask the owner in process stage 01.
-- **Last finished:** Sprint 13 (v0.13.0), the real models: Google SigLIP for photos and MiniLM
-  for prompts (D20), pinned and checked, run with ONNX Runtime on a CPU.
+- **Current sprint:** 15, not chosen yet. Options include a consented pilot to recheck the
+  photo settings, the gate every cycle, or waiting for the app and real Phase 1 data. Ask the
+  owner in process stage 01.
+- **Last finished:** Sprint 14 (v0.14.0), abuse testing: synthetic attackers in the test runs
+  (`attacks.py`) and a defence for every attack that gained. Prompts are compared without the
+  zone's average (D21); the gate counts only verified women who aren't silent (D22); one
+  account, one photo exercise, and only verified members teach the starting taste (D23);
+  ratings count only for completed dates; malformed booking rows are refused by name.
 - **Where the engine stands:**
   - all ten stages are built and tested;
-  - the real booking flow delivers about 82% at 3:1 in a 300-woman zone;
+  - the real booking flow delivers about 77% to 82% at 3:1 in a 300-woman zone (NYC demo 77%);
   - the zone's size matters more than the ratio (about 500 women for a 90% promise);
   - the Phase 1 gate uses the delivered forecast;
   - the app calls the engine through `src/lastfirstdate/app.py` (see `docs/handoff/`);
@@ -89,7 +92,7 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Decisions already made (don't reopen without the owner)
 
-D1 to D20 in `docs/SPEC.md`. The most relevant now:
+D1 to D23 in `docs/SPEC.md`. The most relevant now:
 - women choose (D1);
 - 50/50 looks and personality (D2);
 - the Phase 1 settings profile (D14);
@@ -98,7 +101,10 @@ D1 to D20 in `docs/SPEC.md`. The most relevant now:
 - his own absence counts as delivered (D17, pending the lawyer);
 - forgetting a member keeps an anonymous record (D18, pending the lawyer);
 - timestamps in UTC, dates in the zone's own time (D19);
-- SigLIP and MiniLM as the production models (D20).
+- SigLIP and MiniLM as the production models (D20);
+- prompts compared without the zone's average (D21);
+- the gate counts verified, non-silent women (D22);
+- one account, one photo exercise; verified members teach the starting taste (D23).
 
 ## Questions the owner hasn't answered yet (ask, don't assume)
 
@@ -109,3 +115,7 @@ D1 to D20 in `docs/SPEC.md`. The most relevant now:
 5. Which show-up tools are acceptable (reminders, fees, deposits)?
 6. Can Phase 1 recruit about 500 committed women before selling subscriptions?
 7. Keep the 90% gate target, or use 85% to 88% in large zones, where the gate is sensitive?
+8. Should a trust flag pause a man at once, or wait for a person? (Rings of 3 colluding women
+   got a man paused in 5 of 24 tries; waiting protects against that, pausing against real bad
+   actors.)
+9. Code review findings 1 and 3 to 9 are still open (finding 2 was fixed in Sprint 14).

@@ -9,7 +9,7 @@ engine never imports these modules or reads `GroundTruth` (FR-LM-03, FR-LM-11, e
 - **Synthetic population:** `synthetic.generate(cfg, seed)` makes profiles, photo embeddings
   and hidden truth (`GroundTruth`: true taste, looks weight, pickiness), from the
   `[population]` settings.
-- **Synthetic people:** `test harness.Behavior` makes their choices (choose, accept, show up,
+- **Synthetic people:** `member_behavior.Behavior` makes their choices (choose, accept, show up,
   rate) from the hidden truth only.
 - **A month, batch flow:** `month_runs.run_month` runs Sprints 1 to 6's flow (daily lists, picks,
   weekly batch scheduling) and returns `MonthReport`.
@@ -17,8 +17,11 @@ engine never imports these modules or reads `GroundTruth` (FR-LM-03, FR-LM-11, e
   (windows, payment holds, cancellations, no-shows, events, ratings, trust, new women
   arriving). `cycle_runs.compare` runs every scenario over several markets.
 - **Reports:** `looks_report`, `mutual_report` (`build_scores`), `fairness_report`,
-  `learning_report`, `phase1_report`, `forecast_fit`, `cycle_runs`. Each is a
-  `python -m lastfirstdate.<name>`.
+  `learning_report`, `phase1_report`, `forecast_fit`, `cycle_runs`, `nyc_report`, `attacks`.
+  Each is a `python -m lastfirstdate.<name>`.
+- **Attackers (Sprint 14):** `attacks.py` adds stuffed prompts, answer floods, fake accounts,
+  fake women on the gate, harsh raters, rating rings and spies. `attacks.AttackedRun` plugs them
+  into `CycleRun` through its hooks (`opens`, `choose`, `accepts`, `rate`).
 
 ## How to measure honestly
 
@@ -40,3 +43,5 @@ engine never imports these modules or reads `GroundTruth` (FR-LM-03, FR-LM-11, e
 - The fake people's yes rates and show-ups decide every number. They compare designs; they
   are not predictions.
 - Women's commitment and the $10 fee don't change the fake people's behaviour.
+- Fake women pick on true appeal with no position bias, so a better place on a list is worth
+  less here than to real people (Sprint 14).

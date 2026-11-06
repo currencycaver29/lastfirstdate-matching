@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 13
+Current sprint: 14
 
 ## Goal
 
@@ -63,6 +63,9 @@ dates, and dates are scheduled into time both people have free.
 | D20 | Production models | Photos: Google SigLIP base (`google/siglip-base-patch16-224`, Apache 2.0), from a pinned ONNX export; text: `sentence-transformers/all-MiniLM-L6-v2` (Apache 2.0, English), ONNX. Both run with ONNX Runtime on a normal server's CPU, with every file pinned by revision and sha256 (`[models]`). Tests keep offline stand-ins (R4) | Chosen by the owner (Sprint 13). Licences allow commercial use (OpenAI CLIP's model card puts deployed use out of scope); small installs, no graphics card |
 | D16 | Languages | Python for the engine, the test harness and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the test harness in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
+| D21 | Prompt similarity | Prompts are compared after taking out the zone's average prompt (`personality.center_text`, on in the Phase 1 profile, off in the research profile so its results stay reproducible) | Sprint 14: a stuffed prompt climbed from the middle to the 67th percentile of women's personality rankings with word counts, and to the 59th with MiniLM; centred, it gains nothing with either, and honest matching is unchanged |
+| D22 | Who the gate counts | A woman counts toward the ratio gate only if she is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and no pick ever | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch; after four weeks of lists the rule stops counting 83% of fakes and 0.6% of honest women |
+| D23 | Who teaches the starting taste | One account, one photo exercise: at most `calibration.n_profiles` photos per member, each photo once, never their own; only verified members' answers fit w_0 | Sprint 14: without it, one client writing twenty exercises' worth of answers lifted a target man from the 47th to the 52nd percentile of women's looks rankings; 30 verified fake accounts (10% of women) still lift him to the 54th, and a robust fit that halves that costs everyone 0.016 AUC |
 
 ## Requirements by sprint
 
@@ -685,6 +688,90 @@ the starting taste).
 Test: a mismatched `photo_embeddings.model` stops the refresh with a clear error; a matching
 one passes.
 
+### Sprint 14: abuse testing
+
+The owner chose option (e). Synthetic attackers join the test runs, each trying to game or
+exploit the engine, and the sprint measures what each one gains. Every attack that gains
+anything gets a rule, a fix and a test; an attack that gains nothing gets a test that keeps it
+that way. This covers the engine only: sign-up checks, rate limits and the app's own API belong
+to the outside pentest before the beta. The papers are in `docs/research.md`, "Abuse testing".
+
+#### FR-LM-63 · Attackers in the test runs
+Sprint: 14
+`attacks.py` (test runs only) adds attackers to a Phase 1 zone and measures what each gains,
+with and without the engine's defence: keyword-stuffed prompts, flooded photo-exercise answers,
+fake accounts steering the starting taste, fake women inflating the ratio gate, rating rings
+and harsh raters against trust, and accounts that read their lists to rebuild a ranking.
+`python -m lastfirstdate.attacks` prints the table.
+Test: on a small zone, the stuffed prompt and the answer flood each gain without the defence
+and lose that gain with it.
+
+#### FR-LM-64 · Prompts compared without the zone's common words
+Sprint: 14
+With `personality.center_text = true`, the engine takes the zone's average prompt vector away
+from each member's before comparing two prompts. Words and themes everyone writes then count for
+nothing, and only what two people share beyond the average makes them similar. A prompt stuffed
+with popular words, or with the words in everyone's prompt, sits near the zone's middle and
+gains nothing. An empty prompt still scores 0.
+Test: five men with stuffed prompts climb in women's personality percentiles without centring
+and gain at most 0.03 with it; an empty prompt scores 0; with the setting off, every earlier
+result is unchanged.
+
+#### FR-LM-65 · One account, one photo exercise
+Sprint: 14
+The engine learns from at most `calibration.n_profiles` photos per member, in the order they
+were answered. It counts each photo once per member (the first answer), ignores answers about
+the member's own photo, and fits the starting taste only on verified members' answers. A client
+that writes hundreds of answers, or likes one photo thirty times, then counts as one member.
+Test: rows past the exercise, repeats and answers about oneself change no taste; an unverified
+member's answers don't change the starting taste; a normal exercise is read exactly as before.
+
+#### FR-LM-66 · The gate counts women who can really date
+Sprint: 14
+`app.gate_for_sale` counts a woman only if she is verified (whatever `filter.require_verified`
+says), active and not paused, and she isn't silent. Silent means she has had lists on at least
+`gate.silent_after_days` days and has never picked anyone; she counts again once she picks.
+Fake women who never date stop inflating the gate about two weeks after the zone starts sending
+lists. At launch, before anyone has had a list, only identity checks stop them.
+Test: silent and unverified women aren't counted, so the gate admits fewer men; a woman who
+picked once, or who has had fewer list days, still counts.
+
+#### FR-LM-67 · Only real dates count toward trust
+Sprint: 14
+A rating counts toward trust only if its booking is completed and the rater and the person
+rated are that booking's two members. The engine ignores any other rating, and `app.check_rows`
+lists them.
+Test: a rating on a cancelled booking, from someone not on the booking, or naming the wrong
+person changes no one's trust; a rating on a completed date does.
+
+#### FR-LM-68 · Malformed rows are refused
+Sprint: 14
+The schema refuses booking rows whose state is missing its facts: cancelled without who and
+when, a no-show without who came (or with both coming), or completed with someone marked absent.
+`app.load_bookings` refuses such rows with an error that names the booking, instead of crashing
+partway through, and ignores payments from anyone not on the booking. `app.check_rows` lists
+every row the engine ignores or refuses. This fixes code review finding 2.
+Test: the schema refuses each malformed row; in a database without these checks the engine
+names the booking; a clean database has nothing to report.
+
+#### FR-LM-69 · Rating attacks stay bounded
+Sprint: 14
+No engine change. The test runs show that a ring of colluding women needs at least 3 real
+dates with the same man, rated low before his honest dates add up, to get him flagged. Harsh
+raters can't flag anyone on their own. Two choices bound the rest, and both are the owner's:
+how many ratings come before a flag (question 3), and whether a flag pauses at once or waits
+for a person. The tests pin the protections the trust score already has.
+Test: perfect ratings never raise anyone's ranking factor above 1, so nobody can buy rank;
+fewer than `trust.flag_min_ratings` ratings never flag, whatever they say.
+
+#### FR-LM-70 · Lists don't reveal a ranking
+Sprint: 14
+Accounts that never pick but read their lists every day can't rebuild a ranking of who is most
+attractive (R2). The exposure cap (D7) spreads attention, so the order in which an account sees
+men follows the zone's consensus looks only weakly.
+Test: on a small zone, the ranking read from spy accounts' lists over two weeks correlates with
+consensus looks below 0.2.
+
 ## Changes to this plan
 
 - **Sprint 1.** The test run showed two problems with the plan as first written. (1) "Never
@@ -823,3 +910,16 @@ one passes.
   the first window two members share (one instruction per pair) and the blocked-day loop in
   `app.free_windows`. Identical answers on both backends; the app's daily lists run 1.6× to
   2× faster and test runs about 1.3× faster. Details: `docs/sprints/rust-core.md`, section 10.
+- **Sprint 14.** Option (e), abuse testing: synthetic attackers joined the test runs
+  (`attacks.py`). Four attacks gained something and now have a defence. A prompt stuffed with
+  the words everyone writes climbed to the 67th percentile of women's personality rankings; prompts
+  are now compared without the zone's average (D21). One account flooding the photo exercise
+  steered everyone's starting taste; one account now counts as one exercise, and only verified
+  members teach it (D23). 50 fake women made the gate sell twice the places in a 300-woman zone
+  and cut those men's 3-date share from 94% to 83%; the gate now counts only verified women who
+  have picked or are new (D22), though at launch only identity checks stop fakes. Forged ratings
+  and malformed booking rows (code review finding 2) are ignored or refused by name. Reading a
+  ranking from lists was already blocked by the exposure cap (Spearman 0.04), and ratings
+  can't buy rank; tests now keep both so. Rating rings remain bounded, not stopped: whether a
+  flag pauses at once is the owner's call. With centring on, the NYC demo's 3-date share is
+  77% (300 women) and 91% (500 women). Details: `docs/sprints/sprint-14.md`.

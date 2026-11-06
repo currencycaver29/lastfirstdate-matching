@@ -37,7 +37,7 @@ def world():
     filled = fill_database(con, pop, cfg, TODAY, 7, subscribers=60)
     market = app.load_market(con, cfg, app.Calendar(EPOCH), TODAY)
     feats = app.photo_feature_matrix(pop.photo_embeddings, cfg)
-    answers = app.calibration_answers(con, market)
+    answers = app.calibration_answers(con, market, cfg)
     tastes = app.fit_tastes(market, feats, answers, cfg, start=filled.start)
     scores = app.nightly_scores(market, tastes, feats, cfg)
     return SimpleNamespace(

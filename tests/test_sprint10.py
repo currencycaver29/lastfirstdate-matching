@@ -209,7 +209,7 @@ def test_the_cache_refits_only_what_changed_and_matches_a_full_rebuild(zone):
     con.executemany("INSERT INTO calibration_answers VALUES (?, ?, ?, ?, ?, ?)", saved)
     scores = cache.refresh(con, TODAY, zone.pop.photo_embeddings)
     assert cache.last_refitted == [member]
-    answers = app.calibration_answers(con, cache.market)
+    answers = app.calibration_answers(con, cache.market, cfg)
     full = app.fit_tastes(cache.market, cache.features, answers, cfg, start=cache.start)
     assert set(full) == {cache.market.row[m] for m in cache.tastes_by_id}
     for v, taste in full.items():

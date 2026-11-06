@@ -35,10 +35,11 @@ Everything below is tested on a database filled with fake members
 | **She picks** | `app.recheck_pick`, then `app.propose` with the entry it returns, in one transaction | bookings, payments, subscriptions, blocks, venues | the window (unchanged, or the next one both can make, or None), then a `Booking` and the fair venue's id | if None, tells her he is no longer available; if the window moved, shows the new one; saves the booking with `app.booking_row`; sets `list_shows.picked = 1`; asks him |
 | **He accepts** | `app.recheck_pick` with the booking's id, then `Booking.hold`, then `Booking.pay` for each $10 payment, in one transaction | bookings, payments, subscriptions, blocks | the window still free (or not), then confirmed, or expired after 15 minutes | saves `app.booking_row` and the `payments`; reveals the venue |
 | **A cancellation or the date itself** | `Booking.cancel`, `Booking.finish`, `billing.fee_refunds` | (in memory) | the new state; refunds per person | updates the booking and payments |
-| **After a date** | `app.trust_from_db`, then `TrustBook.flagged` and `TrustBook.ranking_factor` | ratings, bookings | who to review | sets `paused_for_review`; adds a `trust_reviews` row |
+| **After a date** | `app.trust_from_db`, then `TrustBook.flagged` and `TrustBook.ranking_factor` | ratings, bookings | who to review (a rating counts only for a completed date between the two) | accepts a rating only from the two people on a completed booking; sets `paused_for_review`; adds a `trust_reviews` row |
 | **Every week** | `app.weekly_alerts` | bookings, subscriptions | men likely to miss their 3 dates, and every man's chance | gives them priority, an event invite or a message |
 | **Cycle end** | `app.close_cycle` | bookings, subscriptions | delivered dates and the credit in dollars | writes `cycles.delivered` and `credit_cents`; credits him |
-| **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions | men to admit (in waitlist order), deferrals, the forecast and why it stopped | admits them; logs `gate_decisions` |
+| **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions, list_shows, bookings | men to admit (in waitlist order), deferrals, the forecast and why it stopped. It counts only verified women who aren't silent (`app.counted_women`) | admits them; logs `gate_decisions` |
+| **Every night, after the refresh** | `app.check_rows` | bookings, payments, ratings, calibration_answers | rows the engine refused or ignored, in words | fixes what wrote them; an empty list means the database is clean |
 | **An event connection** | `app.recheck_pick`, then `app.propose` with `source="event"` | bookings, blocks, venues | a `Booking` | saves it with the `event_id`; same hold and payments |
 | **A member blocks someone** | `app.upcoming_between` | bookings | bookings still ahead between them | inserts a `blocks` row; cancels those bookings. The block counts at once: lists, the photo exercise and `recheck_pick` read it immediately |
 | **A member deletes their account** | `app.forget_statements` | (none) | the SQL that forgets them (decision D18) | deletes their photo files from storage; runs the statements in one transaction; from then on passes a zero embedding for them each night |
@@ -128,6 +129,34 @@ are pinned in `[models]` by revision and sha256.
   a later version learn without bias and be tested on past lists. They can't be added later
   for lists already shown.
 
+### Abuse defences (Sprint 14)
+
+The engine now defends itself against the attacks Sprint 14 tested. Most need nothing from the
+app beyond keeping the data honest; these do:
+
+- **Rows must carry their facts.** The schema refuses a cancelled booking without
+  `cancelled_by` and `cancelled_at`, a no-show without `showed_a` and `showed_b` (and not
+  both 1), a completed date with someone marked absent, and `cancelled_by` on any other state.
+  On a database without these checks, `app.load_bookings` stops with an error naming the
+  booking rather than crashing partway. Run `app.check_rows` each night and fix whatever it
+  lists.
+- **Ratings only from real dates.** Let a member rate only the other person on a completed
+  booking. The engine ignores any other rating, so a forged one changes nothing, but it shows
+  up in `check_rows` as a sign of a bug or abuse.
+- **One photo exercise per account.** Store only the answers to the questions
+  `CalibrationSession` asks. The engine reads at most `calibration.n_profiles` photos per
+  member, each once, never their own, and fits the starting taste on verified members only;
+  rows beyond that are ignored and listed by `check_rows`.
+- **Picks in `list_shows`.** The gate stops counting a woman who has had lists on
+  `gate.silent_after_days` days (14) and has never picked anyone, so set `list_shows.picked`
+  on every pick. Identity checks are the only defence against fake women before the first
+  lists go out.
+- **Not the engine's job:** sign-up checks, rate limits, API authorisation and storage
+  security belong to the app and the outside pentest. A flag pauses a member for review in the
+  current flow; whether it should wait for a person first is an owner decision.
+
+`app.calibration_answers` now takes the settings: `calibration_answers(con, market, cfg)`.
+
 ## Refitting on real cycles
 
 The guarantee forecast was fitted on synthetic markets. Once Phase 1 has finished some
@@ -176,7 +205,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 
 **Test first: rerun the reports and check fulfilment before changing**
 
-`filter.require_verified`, `filter.active_within_days`, `filter.min_shared_slots`, `personality.w_text`, `personality.w_values`, `mix.looks_weight`, `mix.chooser_weight`, `calibration.n_profiles`, `calibration.n_variety`, `calibration.n_pairs`, `lists.daily_size`, `lists.reshow_after_days`, `lists.policy`, `lists.exposure_multiple`, `lists.guarantee_priority`, `lists.hide_booked`, `lists.nsw_epsilon`, `lists.holdback_yeses`, `lists.exploration_share`, `learning.months`, `learning.taste_date_weight`, `learning.lambda_date_weight`, `learning.lambda_choice_weight`, `learning.lambda_prior_slope`, `learning.lambda_prior_strength`, `learning.lambda_min`, `learning.lambda_max`, `trust.prior_mean`, `trust.prior_strength`, `trust.reliability_weight`, `trust.ranking_weight`
+`filter.require_verified`, `filter.active_within_days`, `filter.min_shared_slots`, `personality.w_text`, `personality.w_values`, `personality.center_text`, `mix.looks_weight`, `mix.chooser_weight`, `calibration.n_profiles`, `calibration.n_variety`, `calibration.n_pairs`, `lists.daily_size`, `lists.reshow_after_days`, `lists.policy`, `lists.exposure_multiple`, `lists.guarantee_priority`, `lists.hide_booked`, `lists.nsw_epsilon`, `lists.holdback_yeses`, `lists.exploration_share`, `learning.months`, `learning.taste_date_weight`, `learning.lambda_date_weight`, `learning.lambda_choice_weight`, `learning.lambda_prior_slope`, `learning.lambda_prior_strength`, `learning.lambda_min`, `learning.lambda_max`, `gate.silent_after_days`, `trust.prior_mean`, `trust.prior_strength`, `trust.reliability_weight`, `trust.ranking_weight`
 
 **Refit the forecast: python -m lastfirstdate.forecast_fit --delivered, then rerun the tests**
 

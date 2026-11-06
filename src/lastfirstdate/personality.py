@@ -4,7 +4,8 @@
 
 - t: interest similarity, the cosine of two interest vectors (FR-LM-05). The vectors come
   from interest tags, from word counts of free-text prompts, or in production from MiniLM, a
-  Sentence-BERT model (paper 8, `encoders.SentenceEncoder`, FR-LM-61).
+  Sentence-BERT model (paper 8, `encoders.SentenceEncoder`, FR-LM-61). With
+  `personality.center_text` the zone's average vector is taken out first (FR-LM-64).
 - A: share of values questions where each answer is one the other accepts (FR-LM-06).
 - p: Big Five similarity, 1 - distance / sqrt(5) (FR-LM-07).
 
@@ -141,9 +142,28 @@ def text_encoder_for(cfg: Config) -> TextEncoder:
     return ENCODERS[cfg.personality.text_encoder]()
 
 
-def interest_similarity(vectors: np.ndarray) -> np.ndarray:
-    """(n, n) t_ij: cosine similarity of unit interest vectors, clipped to 0..1."""
-    return np.clip(vectors @ vectors.T, 0.0, 1.0)
+def interest_similarity(vectors: np.ndarray, center: bool = False) -> np.ndarray:
+    """(n, n) t_ij: cosine similarity of unit interest vectors, clipped to 0..1.
+
+    With `center` (FR-LM-64, D21) the zone's average vector is taken away from every member's
+    first, and the rows are scaled back to length 1:
+
+        t_ij = cos(x_i - mean, x_j - mean)
+
+    What everyone writes then counts for nothing, and only what two people share beyond the
+    zone's average makes them similar. So a prompt stuffed with popular words lands near the
+    middle and gains nothing (the text version of the "average attack" on recommenders; the
+    centring is Mu and Viswanath's "all-but-the-top", which also removes the common direction
+    sentence models put in every vector). Empty texts stay zero vectors and score 0.
+    """
+    x = np.asarray(vectors, dtype=float)
+    if center:
+        has = np.linalg.norm(x, axis=1) > 0
+        if has.any():
+            x = np.where(has[:, None], x - x[has].mean(axis=0), 0.0)
+            norms = np.linalg.norm(x, axis=1, keepdims=True)
+            x = x / np.where(norms == 0, 1.0, norms)
+    return np.clip(x @ x.T, 0.0, 1.0)
 
 
 def values_compatibility(
@@ -182,7 +202,7 @@ def personality_matrix(
     """(n, n) P_i(j). Symmetric, between 0 and 1."""
     w = cfg.personality
     encoder = encoder or text_encoder_for(cfg)
-    t = interest_similarity(encoder.encode(members))
+    t = interest_similarity(encoder.encode(members), center=w.center_text)
     a = values_compatibility(arr, cfg.values)
     p = big5_similarity(arr)
     return w.w_text * t + w.w_values * a + w.w_big5 * p
