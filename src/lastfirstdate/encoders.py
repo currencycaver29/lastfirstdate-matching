@@ -131,11 +131,15 @@ class PhotoModel:
         return cls(_session(_require(m, "photo")), m.photo_size)
 
     def pixels(self, image) -> np.ndarray:
-        """(1, 3, size, size) float32: RGB, resized (bicubic), each colour scaled to -1..1.
-        `image` is a path, raw bytes, a PIL image, or an (h, w, 3) uint8 array."""
+        """(1, 3, size, size) float32: upright, RGB, resized (bicubic), each colour scaled to
+        -1..1. `image` is a path, raw bytes, a PIL image, or an (h, w, 3) uint8 array.
+
+        Phones save many portrait photos sideways with an EXIF orientation tag; the photo is
+        turned upright from the tag first (FR-LM-72), as any photo viewer would show it.
+        """
         from io import BytesIO
 
-        from PIL import Image
+        from PIL import Image, ImageOps
 
         if isinstance(image, (str, Path)):
             image = Image.open(image)
@@ -143,6 +147,7 @@ class PhotoModel:
             image = Image.open(BytesIO(image))
         elif isinstance(image, np.ndarray):
             image = Image.fromarray(np.asarray(image, dtype=np.uint8))
+        image = ImageOps.exif_transpose(image)
         rgb = image.convert("RGB").resize((self.size, self.size), Image.Resampling.BICUBIC)
         x = np.asarray(rgb, dtype=np.float32) / 255.0
         x = (x - SIGLIP_MEAN) / SIGLIP_STD
@@ -159,13 +164,18 @@ class PhotoModel:
 class SentenceEncoder:
     """MiniLM sentence embeddings as a `TextEncoder`: the average of the model's token vectors
     over the real (unpadded) tokens, scaled to length 1, in 64-bit floats like the other
-    encoders (so scores stay within 0..1). Remembers texts it has seen."""
+    encoders (so scores stay within 0..1).
+
+    Keeps the vectors of the texts it was last asked about (FR-LM-78): unchanged prompts aren't
+    re-read night to night, and edited or forgotten prompts are dropped at the next call, so
+    memory doesn't grow and old text isn't kept."""
 
     def __init__(self, session, tokenizer, max_tokens: int, batch: int = 32):
         self.session, self.tokenizer, self.batch = session, tokenizer, batch
         tokenizer.enable_truncation(max_length=max_tokens)
         tokenizer.enable_padding()
         self.seen: dict[str, np.ndarray] = {}
+        self.dim = 0  # vector length, once known
 
     @classmethod
     def from_settings(cls, m: ModelsConfig) -> SentenceEncoder:
@@ -189,13 +199,17 @@ class SentenceEncoder:
         return mean / np.linalg.norm(mean, axis=1, keepdims=True)
 
     def embed_texts(self, texts: Sequence[str]) -> np.ndarray:
-        new = sorted({t for t in texts if t.strip() and t not in self.seen})
+        wanted = {t for t in texts if t.strip()}
+        kept = {t: v for t, v in self.seen.items() if t in wanted}
+        new = sorted(wanted - kept.keys())
         for k in range(0, len(new), self.batch):
             chunk = new[k : k + self.batch]
-            self.seen.update(zip(chunk, self._run(chunk), strict=True))
-        dim = next(iter(self.seen.values())).shape[0] if self.seen else 0
-        return np.array([self.seen[t] if t.strip() else np.zeros(dim) for t in texts]).reshape(
-            len(texts), dim
+            kept.update(zip(chunk, self._run(chunk), strict=True))
+        self.seen = kept
+        if kept:
+            self.dim = next(iter(kept.values())).shape[0]
+        return np.array([kept[t] if t.strip() else np.zeros(self.dim) for t in texts]).reshape(
+            len(texts), self.dim
         )
 
     def encode(self, members: Sequence[Member]) -> np.ndarray:

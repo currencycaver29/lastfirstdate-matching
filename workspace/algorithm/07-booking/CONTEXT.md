@@ -63,6 +63,11 @@ delivered), D19 (timestamps in UTC, date windows in the zone's own time).
   pending pick holds its day for both. When every woman in a test zone picked her top profile
   at once, 160 picks would have landed on a taken window; with the check, none double-booked
   (90 kept, 135 moved, 61 refused).
+- **Sprint 15:** the pending-pick hold lives in `app.capacity`, so the morning's lists don't
+  offer an evening a pick is waiting on (FR-LM-75). `recheck_pick` reads only the two members'
+  rows: 2 ms per check with 40,000 other bookings, against 423 ms before (FR-LM-76). A booking
+  dated before a member's current signup uses none of his cycles' dates (FR-LM-71). The row
+  writers refuse times without a zone (D25).
 
 ## If you change it
 

@@ -334,7 +334,7 @@ def test_forgetting_a_subscriber_ends_his_subscription(base):
     z = zone(base)
     man = base.filled.subscribers[0]
     with z.con:
-        for sql, params in app.forget_statements(man, datetime(2026, 11, 4, 16)):
+        for sql, params in app.forget_statements(man, datetime(2026, 11, 4, 16, tzinfo=UTC)):
             z.con.execute(sql, params)
     status = z.con.execute("SELECT status FROM subscriptions WHERE member_id = ?", (man,))
     assert status.fetchone()[0] == "cancelled"

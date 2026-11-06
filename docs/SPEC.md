@@ -1,6 +1,6 @@
 # lastfirstdate matching engine: spec and sprint plan
 
-Current sprint: 14
+Current sprint: 15
 
 ## Goal
 
@@ -66,6 +66,8 @@ dates, and dates are scheduled into time both people have free.
 | D21 | Prompt similarity | Prompts are compared after taking out the zone's average prompt (`personality.center_text`, on in the Phase 1 profile, off in the research profile so its results stay reproducible) | Sprint 14: a stuffed prompt climbed from the middle to the 67th percentile of women's personality rankings with word counts, and to the 59th with MiniLM; centred, it gains nothing with either, and honest matching is unchanged |
 | D22 | Who the gate counts | A woman counts toward the ratio gate only if she is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and no pick ever | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch; after four weeks of lists the rule stops counting 83% of fakes and 0.6% of honest women |
 | D23 | Who teaches the starting taste | One account, one photo exercise: at most `calibration.n_profiles` photos per member, each photo once, never their own; only verified members' answers fit w_0 | Sprint 14: without it, one client writing twenty exercises' worth of answers lifted a target man from the 47th to the 52nd percentile of women's looks rankings; 30 verified fake accounts (10% of women) still lift him to the 54th, and a robust fit that halves that costs everyone 0.016 AUC |
+| D24 | Forgetting and the shared fits | When a member has been forgotten since the last refresh, the nightly refresh refits the photo compression and the starting taste, as the weekly refit does, so nothing fitted on their photo or answers survives the night | D18 deletes what describes a member; the shared fits were the one place their data lingered (until the weekly refit) |
+| D25 | Writing times | The engine's row writers (`booking_row`, `answer_row`, `forget_statements`) take only datetimes with a time zone, and store them in UTC with `+00:00`; a time without a zone is refused. Reading stays as D19 (no offset = UTC) | A New York server's `datetime.now()` has no zone; stored as is, it read 4 to 5 hours wrong (code review finding 5) |
 
 ## Requirements by sprint
 
@@ -772,6 +774,75 @@ men follows the zone's consensus looks only weakly.
 Test: on a small zone, the ranking read from spy accounts' lists over two weeks correlates with
 consensus looks below 0.2.
 
+### Sprint 15: the code review findings
+
+The owner chose option (d): fix the eight findings still open from the full review after
+Sprint 13 (finding 2 was fixed in Sprint 14). Each fix comes with a test that fails without it.
+The test runs' results must not move.
+
+#### FR-LM-71 · A date from before a subscription doesn't crash the lists
+Sprint: 15
+A booking that falls before a member's current signup (an event date before he subscribed, or
+a date before he let his subscription lapse and joined again) uses no date from his billing
+cycles. Its cancellation counts against nothing, and the daily lists, `recheck_pick` and the
+weekly alerts run as usual. `close_cycle` for a day before the signup is refused with a clear
+error. This fixes finding 1.
+Test: with a cancelled booking dated before a subscriber's signup, the day's lists are built;
+the rest of his capacity is unchanged.
+
+#### FR-LM-72 · Photos the right way up
+Sprint: 15
+`encoders.PhotoModel` turns a photo upright from its EXIF orientation tag before resizing, as
+phone cameras save portrait shots sideways with a tag. This fixes finding 3.
+Test (offline, a stand-in model): a photo saved sideways with an orientation tag gives exactly
+the pixels of the upright photo.
+
+#### FR-LM-73 · The cache notices every changed answer, and forgets the forgotten
+Sprint: 15
+`MarketCache` refits a member's taste when any stored answer changes, not only when the number
+of answers does, and drops the taste of a member who no longer has answers. When a member has
+been forgotten since the last refresh, it refits the shared photo compression and starting
+taste (D24). This fixes finding 4.
+Test: replacing one answer with another refits that member; a forgotten member's taste is gone
+after the next refresh, and the shared fits equal a fresh fit without them.
+
+#### FR-LM-74 · Times written with their time zone
+Sprint: 15
+`booking_row`, `answer_row` and `forget_statements` refuse a datetime without a time zone and
+store every time in UTC with `+00:00` (D25). This fixes finding 5.
+Test: a time without a zone is refused; a New York time is stored as the same instant in UTC.
+
+#### FR-LM-75 · A pending pick holds his day in the lists too
+Sprint: 15
+The rule that a pending pick holds its day for both people now lives in `app.capacity`, so the
+morning's lists no longer offer a man for an evening another woman's pick is waiting on, and
+`recheck_pick` uses the same rule. This fixes finding 6.
+Test: with a pick waiting for his answer, no list offers him that day; his other days are
+still offered; when he accepts, his own pending booking doesn't block itself.
+
+#### FR-LM-76 · Checking a pick reads only the two members' rows
+Sprint: 15
+`recheck_pick` and `upcoming_between` read only the two members' bookings, payments,
+subscriptions and blocks, instead of every row and a members-by-members grid, so a pick takes
+the same time in a zone of any size. The queries filter on whole-number ids only, so they stay
+portable. This fixes finding 7.
+Test: the answers equal the full-table version on many picks; the time per check stays flat as
+other members' bookings are added.
+
+#### FR-LM-77 · The model check reads no embeddings
+Sprint: 15
+`check_photo_models` asks the database for the distinct model names only, and never reads an
+embedding. This fixes finding 8.
+Test: the check passes and fails as before, and reads no `encrypted_vector`.
+
+#### FR-LM-78 · The text model forgets old prompts
+Sprint: 15
+`SentenceEncoder` keeps only the vectors for the texts it was last asked about. Unchanged
+prompts are still not re-read night to night, and memory no longer grows with every edited or
+forgotten prompt. This fixes finding 9.
+Test (offline, a stand-in model): after a second call without an old text, that text is no
+longer held; a text in both calls isn't run through the model again.
+
 ## Changes to this plan
 
 - **Sprint 1.** The test run showed two problems with the plan as first written. (1) "Never
@@ -923,3 +994,12 @@ consensus looks below 0.2.
   can't buy rank; tests now keep both so. Rating rings remain bounded, not stopped: whether a
   flag pauses at once is the owner's call. With centring on, the NYC demo's 3-date share is
   77% (300 women) and 91% (500 women). Details: `docs/sprints/sprint-14.md`.
+- **Sprint 15.** Option (d): the eight open code review findings, each fixed with a test that
+  fails on the old code. One cancelled date from before a man's subscription had stopped every
+  woman's list; it now counts against none of his cycles. Sideways phone photos are turned
+  upright before the photo model. The nightly cache refits on any changed answer, not a changed
+  count, and the night after a member is forgotten it refits the shared fits too (D24). The row
+  writers refuse times without a time zone (D25). A pending pick holds his evening in the lists
+  as well as at pick time. Checking a pick reads only the two members' rows: 423 ms to 2 ms with
+  40,000 other bookings. The model check reads no embeddings, and the text model keeps only
+  current prompts. No test-run result moves. Details: `docs/sprints/sprint-15.md`.

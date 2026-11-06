@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.14.0" src="https://img.shields.io/badge/release-v0.14.0-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.0" src="https://img.shields.io/badge/release-v0.15.0-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -414,14 +414,15 @@ These rules are never broken, and tests enforce them:
 | 12 | Bug fixes before Phase 1: New York time, picks checked again, blocks, forgetting a member, list positions | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
 | 13 | The real models: Google SigLIP for photos and MiniLM for prompts, pinned and checked | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
 | 14 | Abuse testing: synthetic attackers, and a defence and a test for every attack that gained | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
-| 15 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | <img alt="Next" src="https://img.shields.io/badge/Next-0969da?style=flat-square"> |
+| 15 | The code review findings: a crash fixed, photos upright, a tighter cache, times with their zone, faster pick checks | <img alt="Done" src="https://img.shields.io/badge/Done-2ea44f?style=flat-square"> |
+| 16 | A consented pilot to recheck the photo settings, then real Phase 1 data and monthly recalibration | <img alt="Next" src="https://img.shields.io/badge/Next-0969da?style=flat-square"> |
 
 ## Releases
 
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.14.0** (Sprint 14's abuse testing and defences);
+release is **v0.15.0** (Sprint 15's fixes for the code review findings);
 v1.0.0 is planned for the Phase 1 launch.
 
 ## License

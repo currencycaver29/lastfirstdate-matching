@@ -58,6 +58,9 @@ photos).
   When a member is forgotten, everyone's answers about their photo are deleted, so those
   members' models refit with fewer answers; the photo compression is fitted only on members
   who still have a photo.
+- **Sprint 15:** the nightly cache refits a member on any changed answer, not a changed count,
+  and the night after someone is forgotten it refits the photo compression and the starting
+  taste (D24, FR-LM-73).
 
 ## If you change it
 

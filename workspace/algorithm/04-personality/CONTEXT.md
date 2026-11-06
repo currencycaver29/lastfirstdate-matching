@@ -58,6 +58,8 @@ D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
   counts; popular interests written as a prompt reached the 59th with MiniLM. With
   `center_text` (on in Phase 1) the zone's average vector is taken out before comparing, and
   no stuffing gains with either encoder. Honest matching is unchanged.
+- **Memory (Sprint 15, FR-LM-78):** `SentenceEncoder` keeps only the prompts of its last call,
+  so a long-running server doesn't keep old or forgotten members' prompts.
 
 ## If you change it
 

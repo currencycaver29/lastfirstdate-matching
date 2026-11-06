@@ -64,14 +64,13 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Current state
 
-- **Current sprint:** 15, not chosen yet. Options include a consented pilot to recheck the
+- **Current sprint:** 16, not chosen yet. Options include a consented pilot to recheck the
   photo settings, the gate every cycle, or waiting for the app and real Phase 1 data. Ask the
   owner in process stage 01.
-- **Last finished:** Sprint 14 (v0.14.0), abuse testing: synthetic attackers in the test runs
-  (`attacks.py`) and a defence for every attack that gained. Prompts are compared without the
-  zone's average (D21); the gate counts only verified women who aren't silent (D22); one
-  account, one photo exercise, and only verified members teach the starting taste (D23);
-  ratings count only for completed dates; malformed booking rows are refused by name.
+- **Last finished:** Sprint 15 (v0.15.0), the code review findings: a crash from a date before
+  a subscription, sideways photos, the cache, times without a zone (D25), pending picks in the
+  lists, two-member pick checks, the model check and the text model's memory. Forgetting a
+  member refits the shared fits the next night (D24). Before that, Sprint 14's abuse testing.
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 77% to 82% at 3:1 in a 300-woman zone (NYC demo 77%);
@@ -92,7 +91,7 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Decisions already made (don't reopen without the owner)
 
-D1 to D23 in `docs/SPEC.md`. The most relevant now:
+D1 to D25 in `docs/SPEC.md`. The most relevant now:
 - women choose (D1);
 - 50/50 looks and personality (D2);
 - the Phase 1 settings profile (D14);
@@ -104,7 +103,9 @@ D1 to D23 in `docs/SPEC.md`. The most relevant now:
 - SigLIP and MiniLM as the production models (D20);
 - prompts compared without the zone's average (D21);
 - the gate counts verified, non-silent women (D22);
-- one account, one photo exercise; verified members teach the starting taste (D23).
+- one account, one photo exercise; verified members teach the starting taste (D23);
+- forgetting a member refits the shared fits the next night (D24);
+- the row writers take only times with a time zone (D25).
 
 ## Questions the owner hasn't answered yet (ask, don't assume)
 
@@ -118,4 +119,5 @@ D1 to D23 in `docs/SPEC.md`. The most relevant now:
 8. Should a trust flag pause a man at once, or wait for a person? (Rings of 3 colluding women
    got a man paused in 5 of 24 tries; waiting protects against that, pausing against real bad
    actors.)
-9. Code review findings 1 and 3 to 9 are still open (finding 2 was fixed in Sprint 14).
+9. Should a pending pick hold his whole week, not just the evening? How long may he take to
+   accept?

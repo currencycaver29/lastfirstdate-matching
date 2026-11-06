@@ -21,7 +21,10 @@ Everything below is tested on a database filled with fake members
 - **Times (D19):** store timestamps (the `_at` columns) in UTC, best with an offset, for
   example `2026-11-05T23:30:00+00:00`; a timestamp without one is read as UTC. Dates and date
   windows are New York time (`[booking] timezone`). The engine converts before comparing, so a
-  cancellation 26 hours ahead counts as early whatever the clocks do.
+  cancellation 26 hours ahead counts as early whatever the clocks do. The engine's row writers
+  (`booking_row`, `answer_row`, `forget_statements`) take only times with a time zone, for
+  example `datetime.now(UTC)`, and refuse a time without one (D25): a New York server's plain
+  `datetime.now()` would otherwise be stored 4 to 5 hours wrong.
 
 ## The call sequence
 
@@ -65,12 +68,14 @@ check they match to the last digit.
 
 `cache = app.MarketCache(cfg, calendar)` lives in the app's server process.
 `cache.refresh(con, today, embeddings)` each night:
-- refits only the members whose answers changed;
+- refits only the members whose answers changed in any way (not just in number), and drops
+  the taste of anyone with no answers left;
 - recomputes the scores;
 - if nothing changed at all, returns the cached scores in a fraction of a second.
 
 Once a week, `refresh(..., refit_start=True)` refits the photo compression and the starting
-taste, and with them every taste model.
+taste, and with them every taste model. The night after a member is forgotten, the refresh does
+this by itself (D24), so nothing fitted on their photo or answers survives.
 
 | Zone size | Full rebuild | One member's answers changed | Nothing changed | Scores in memory |
 |---|---:|---:|---:|---:|
@@ -118,7 +123,9 @@ are pinned in `[models]` by revision and sha256.
   both can still make, else None. A pending pick holds its day for both people. Run the check
   and the insert in **one transaction** (on PostgreSQL, `SERIALIZABLE` or a row lock on the
   two members), so two picks at the same instant can't both win. Check again, with the
-  booking's id, when he accepts.
+  booking's id, when he accepts. The check reads only the two members' rows, so it takes about
+  2 ms however big the zone gets. A pending pick also holds his day in the next morning's
+  lists, so other women aren't offered an evening he may already be taking.
 - **Blocks** take effect at once. Insert the `blocks` row, then cancel what
   `app.upcoming_between` returns.
 - **Leaving.** `app.forget_statements` deletes what describes the member and keeps an

@@ -1,7 +1,7 @@
 """FR-LM-49 and FR-LM-50: step-by-step calibration, and the nightly cache."""
 
 import sqlite3
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from types import SimpleNamespace
 
 import numpy as np
@@ -180,7 +180,9 @@ def test_the_app_resumes_an_exercise_from_the_database(zone):
     q = session.next_question()
     expected = tuple(x for x in stored[15][1:3] if x is not None)
     assert app.question_photo_ids(market, q) == expected
-    row = app.answer_row(market, member, 15, q, bool(stored[15][3]), datetime(2026, 11, 4, 9))
+    row = app.answer_row(
+        market, member, 15, q, bool(stored[15][3]), datetime(2026, 11, 4, 9, tzinfo=UTC)
+    )
     con.execute(
         "INSERT INTO calibration_answers VALUES (:member_id, :position, :shown_a, "
         ":shown_b, :answer, :asked_at)",

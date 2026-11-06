@@ -17,18 +17,18 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
   one `#### FR-LM-NN · Title` block per requirement: a `Sprint: N` line, what it does in plain
   words, and a `Test:` line saying what will prove it.
 - `Current sprint: N` at the top of `docs/SPEC.md`.
-- New decisions, if any, as rows in the Decisions table (D24 onward).
+- New decisions, if any, as rows in the Decisions table (D26 onward).
 
-Numbering continues from FR-LM-71.
+Numbering continues from FR-LM-79.
 
 ## Done when
 
 The owner has agreed to the scope in chat. (`scripts/trace.py` will fail until stage 02 adds a
 test for each new requirement; that is expected.)
 
-## Sprint 15 (not chosen yet: ask the owner)
+## Sprint 16 (not chosen yet: ask the owner)
 
-Sprint 14 did abuse testing (option (e) of the last list). Options now:
+Sprint 15 fixed the code review findings. Options now:
 
 - **(a) A consented pilot:** 30 to 100 volunteers do the photo exercise; recheck
   `calibration.pca_dim` and the penalties on SigLIP's real vectors (no data enters the repo).
@@ -36,7 +36,6 @@ Sprint 14 did abuse testing (option (e) of the last list). Options now:
   rule's count, D22).
 - **(c) Readiness for the personality weights:** refit them on real "would meet again"
   answers (paper 9).
-- **(d) The open code review findings** (1 and 3 to 9; finding 2 was fixed in Sprint 14).
-- **(e) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
+- **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
 
-Numbering continues from FR-LM-71. New decisions from D24.
+Numbering continues from FR-LM-79. New decisions from D26.

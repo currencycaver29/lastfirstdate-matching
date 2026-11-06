@@ -57,6 +57,8 @@ FR-LM-62 (`tests/test_sprint13.py`).
   `n_profiles` photos, each once, never their own, and only verified members fit w_0. 30
   verified fakes (10% of women) still lift him to 0.54; a trimmed-mean fit halves that but costs
   every honest member 0.016 AUC, so identity checks are the defence.
+- **Sideways photos (Sprint 15, FR-LM-72):** phones save many portraits sideways with an EXIF
+  tag; `PhotoModel` turns them upright before SigLIP sees them.
 
 ## If you change it
 

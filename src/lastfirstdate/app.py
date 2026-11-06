@@ -3,8 +3,9 @@
 Everything here reads the tables in `db/schema.sql` and never the test harness. `docs/handoff/`
 says when the app calls each function.
 
-Reading: functions take a DB-API connection and only run `SELECT * FROM <table>`, so the same
-code works on PostgreSQL and SQLite. Writing stays with the app: functions return engine
+Reading: functions take a DB-API connection and only run `SELECT * FROM <table>`, sometimes
+with a WHERE on whole-number ids (built from integers, never from text), so the same code works
+on PostgreSQL and SQLite. Writing stays with the app: functions return engine
 objects (for example a `Booking`) and `booking_row` turns one into column values.
 
 Days: the engine counts days from a Monday, `Calendar.epoch` (day 0), because weekly free
@@ -85,11 +86,28 @@ class HandoffError(ValueError):
 # ---------------------------------------------------------------- reading rows
 
 
-def read(con, table: str) -> list[dict]:
-    """Every row of a table as dicts (works with any DB-API connection)."""
-    cur = con.execute(f"SELECT * FROM {table}")
+def read(con, table: str, where: str = "") -> list[dict]:
+    """Every row of a table as dicts (works with any DB-API connection). `where` must be built
+    with `ids_in`, so it holds only whole numbers."""
+    cur = con.execute(f"SELECT * FROM {table}" + (f" WHERE {where}" if where else ""))
     names = [d[0] for d in cur.description]
     return [dict(zip(names, row, strict=True)) for row in cur.fetchall()]
+
+
+def ids_in(column: str, ids) -> str:
+    """`column IN (1, 2, ...)` from whole-number ids: portable, and nothing but digits gets in."""
+    return f"{column} IN ({', '.join(str(int(i)) for i in ids) or 'NULL'})"
+
+
+def utc_text(when: datetime) -> str:
+    """A time for the database: UTC with `+00:00` (D25). A time without a time zone is refused,
+    because the engine can't know which clock it was read from."""
+    if not isinstance(when, datetime) or when.utcoffset() is None:
+        raise HandoffError(
+            "give times with a time zone, for example datetime.now(UTC); "
+            "a time without one is ambiguous (D25)"
+        )
+    return when.astimezone(UTC).isoformat(timespec="seconds")
 
 
 @dataclass(frozen=True)
@@ -254,6 +272,17 @@ def _blocked(con, row: dict[int, int], n: int) -> np.ndarray:
     return out
 
 
+def pair_blocked(con, member_a: int, member_b: int) -> bool:
+    """Did either of these two members (database ids) block the other? Reads only their rows."""
+    pair = (member_a, member_b)
+    return any(
+        r["blocker_id"] != r["blocked_id"]
+        for r in read(
+            con, "blocks", f"{ids_in('blocker_id', pair)} AND {ids_in('blocked_id', pair)}"
+        )
+    )
+
+
 def blocked_pairs(con, market: Market) -> np.ndarray:
     """(n, n) pairs where either member blocked the other, read now (FR-LM-56): a block
     counts at once, before the next nightly refresh."""
@@ -309,7 +338,9 @@ def check_photo_models(con, cfg: Config) -> None:
     from lastfirstdate.encoders import photo_model_id
 
     want = photo_model_id(cfg.models)
-    found = {r["model"] for r in read(con, "photo_embeddings")}
+    found = {  # the names only: no embedding is read (FR-LM-77)
+        row[0] for row in con.execute("SELECT DISTINCT model FROM photo_embeddings").fetchall()
+    }
     if found - {want}:
         others = ", ".join(sorted(found - {want}))
         raise HandoffError(f"photo embeddings from {others}; the settings name {want}")
@@ -451,14 +482,14 @@ def answer_row(
     market: Market, member_id: int, position: int, q: Question, value: bool, asked_at: datetime
 ) -> dict:
     """Column values for `calibration_answers` (answer 1: liked the photo, or chose the
-    first photo of a pair)."""
+    first photo of a pair). `asked_at` must carry a time zone (D25)."""
     return {
         "member_id": member_id,
         "position": position,
         "shown_a": int(market.ids[q.a]),
         "shown_b": None if q.b is None else int(market.ids[q.b]),
         "answer": int(bool(value)),
-        "asked_at": asked_at.isoformat(timespec="seconds"),
+        "asked_at": utc_text(asked_at),
     }
 
 
@@ -471,8 +502,10 @@ class MarketCache:
     The photo features' compression (PCA) and the starting taste are frozen until
     `refresh(..., refit_start=True)` (for example once a week), because refitting either one
     changes every taste model. In between, a refresh refits only the members whose answers
-    changed and recomputes the scores; if neither the members nor any answers changed, it
-    returns the cached scores.
+    changed in any way, and drops the taste of anyone with no answers left; if neither the
+    members nor any answers changed, it returns the cached scores (FR-LM-73). A member
+    forgotten since the last refresh makes it refit the compression and the starting taste too,
+    so nothing fitted on their photo or answers survives the night (D24).
     """
 
     def __init__(self, cfg: Config, calendar: Calendar):
@@ -483,7 +516,8 @@ class MarketCache:
         self.features: np.ndarray | None = None
         self.scores: NightlyScores | None = None
         self.tastes_by_id: dict[int, PersonalTaste] = {}
-        self.answer_counts: dict[int, int] = {}
+        self.answer_keys: dict[int, tuple] = {}  # each member's answers, as database ids
+        self.forgotten_ids: set[int] = set()
         self.last_refitted: list[int] = []  # database ids refitted by the last refresh
 
     def refresh(
@@ -494,6 +528,10 @@ class MarketCache:
         cfg = self.cfg
         check_photo_models(con, cfg)
         market = load_market(con, cfg, self.calendar, today)
+        forgotten = {int(m) for m in market.ids[market.forgotten]}
+        if self.market is not None and forgotten - self.forgotten_ids:
+            refit_start = True  # D24: someone left; refit what was fitted on them
+        self.forgotten_ids = forgotten
         raw = np.asarray(embeddings)
         if self.pca is None or refit_start:
             self.pca = _fit_pca(raw, cfg)
@@ -501,12 +539,22 @@ class MarketCache:
         answers = calibration_answers(con, market, cfg)
         if self.start is None or refit_start:
             self.start = starting_taste(market, features, answers, cfg)
-            self.tastes_by_id, self.answer_counts = {}, {}
+            self.tastes_by_id, self.answer_keys = {}, {}
+
+        def key(rows) -> tuple:
+            ids = market.ids
+            return tuple((int(ids[a]), None if b is None else int(ids[b]), c) for a, b, c in rows)
+
         changed = {
             v: rows
             for v, rows in answers.items()
-            if self.answer_counts.get(int(market.ids[v])) != len(rows)
+            if self.answer_keys.get(int(market.ids[v])) != key(rows)
         }
+        with_answers = {int(market.ids[v]) for v in answers}
+        gone = [m for m in self.answer_keys if m not in with_answers]
+        for m in gone:  # no answers left (forgotten, or their answers deleted)
+            self.answer_keys.pop(m)
+            self.tastes_by_id.pop(m, None)
         same_members = (
             self.market is not None
             and market.ids.tolist() == self.market.ids.tolist()
@@ -516,20 +564,26 @@ class MarketCache:
             )
             and np.array_equal(market.blocked, self.market.blocked)
         )
-        if not changed and same_members and not refit_start and self.scores is not None:
+        if (
+            not changed
+            and not gone
+            and same_members
+            and not refit_start
+            and self.scores is not None
+        ):
             self.market, self.last_refitted = market, []
             return self.scores  # nothing changed since the last refresh
         fresh = fit_tastes(market, features, changed, cfg, start=self.start)
         for v, rows in changed.items():
             mid = int(market.ids[v])
-            self.answer_counts[mid] = len(rows)
+            self.answer_keys[mid] = key(rows)
             self.tastes_by_id.pop(mid, None)
             if v in fresh:
                 self.tastes_by_id[mid] = fresh[v]
         tastes = {market.row[m]: t for m, t in self.tastes_by_id.items() if m in market.row}
         self.market, self.features = market, features
         self.scores = nightly_scores(market, tastes, features, cfg)
-        self.last_refitted = sorted(int(market.ids[v]) for v in changed)
+        self.last_refitted = sorted({int(market.ids[v]) for v in changed} | set(gone))
         return self.scores
 
 
@@ -558,20 +612,34 @@ def booking_problem(r: dict) -> str | None:
     return None
 
 
-def load_bookings(con, market: Market) -> Bookings:
-    """Every booking as the engine's `Booking`, with its payments and outcome.
+def load_bookings(con, market: Market, members=None) -> Bookings:
+    """Every booking as the engine's `Booking`, with its payments and outcome; with `members`
+    (database ids), only the bookings that involve them (FR-LM-76).
 
     Refuses a booking row whose state is missing its facts, naming it (FR-LM-68), and ignores
     a payment from anyone not on the booking.
     """
-    rows = sorted(read(con, "bookings"), key=lambda r: r["id"])
+    if members is None:
+        rows = read(con, "bookings")
+    else:
+        rows = read(
+            con, "bookings", f"{ids_in('member_a', members)} OR {ids_in('member_b', members)}"
+        )
+    rows.sort(key=lambda r: r["id"])
     bad = [f"booking {r['id']} {why}" for r in rows if (why := booking_problem(r))]
     if bad:
         raise HandoffError("; ".join(bad))
     pair = {r["id"]: {r["member_a"], r["member_b"]} for r in rows}
     venues = {r["id"]: r["name"] for r in read(con, "venues")}
     paid: dict[int, set[int]] = defaultdict(set)
-    for r in read(con, "payments"):
+    payments = (
+        read(con, "payments")
+        if members is None
+        else read(con, "payments", ids_in("booking_id", pair))
+        if pair
+        else []
+    )
+    for r in payments:
         if r["member_id"] in pair.get(r["booking_id"], ()):
             paid[r["booking_id"]].add(market.row[r["member_id"]])
     items, ids = [], []
@@ -623,11 +691,12 @@ def list_history(con, market: Market, bookings: Bookings) -> tuple[np.ndarray, n
     return last, closed
 
 
-def signup_days(con, market: Market, cfg: Config) -> np.ndarray:
+def signup_days(con, market: Market, cfg: Config, members=None) -> np.ndarray:
     """(n,) the day each subscriber signed up (may be before day 0), or NO_SIGNUP. Cycles
-    follow `[billing]`."""
+    follow `[billing]`. With `members` (database ids), only theirs are read."""
     out = np.full(len(market.members), NO_SIGNUP, dtype=np.int64)
-    for r in read(con, "subscriptions"):
+    where = "" if members is None else ids_in("member_id", members)
+    for r in read(con, "subscriptions", where):
         if (r["trial_days"], r["cycle_days"]) != (cfg.billing.trial_days, cfg.billing.cycle_days):
             raise HandoffError(f"subscription {r['member_id']} doesn't match [billing]")
         if r["status"] in ("trial", "active"):
@@ -643,8 +712,8 @@ def _counts_against(bk: Booking, m: int, market: Market, signups: np.ndarray, cf
     if bk.state in ("proposed", "expired"):
         return False
     if bk.state == "cancelled":
-        if signups[m] == NO_SIGNUP:
-            return False
+        if signups[m] == NO_SIGNUP or bk.day < signups[m]:
+            return False  # not one of his cycles' dates (FR-LM-71)
         return counts_toward_guarantee(bk, m, cycle_on(m, int(signups[m]), bk.day, cfg), cfg)
     if bk.state == "no_show":
         return not bk.showed[m]  # whoever was stood up gets the slot back
@@ -666,9 +735,13 @@ class Capacity:
 
 
 def capacity(bookings: Bookings, market: Market, signups: np.ndarray, cfg: Config) -> Capacity:
+    """Each member's days, weeks and cap periods already taken. A pending pick (a proposed
+    booking) holds its day for both people, in the lists as at pick time (FR-LM-55, FR-LM-75)."""
     cap = Capacity()
     for bk in bookings.items:
         for m in bk.members:
+            if bk.state == "proposed":
+                cap.busy[m].add(bk.day)
             if _counts_against(bk, m, market, signups, cfg):
                 cap.busy[m].add(bk.day)
                 cap.weeks[m, bk.day // 7] += 1
@@ -958,21 +1031,18 @@ def recheck_pick(
     """
     a, b = market.row[chooser_id], market.row[chosen_id]
     ok = member_ok(market.arr, cfg) & ~market.paused
-    if not (ok[a] and ok[b]) or blocked_pairs(con, market)[a, b]:
+    if not (ok[a] and ok[b]) or pair_blocked(con, chooser_id, chosen_id):
         return None
-    every = load_bookings(con, market)
+    pair = (chooser_id, chosen_id)  # only their rows are read (FR-LM-76)
+    every = load_bookings(con, market, members=pair)
     others = Bookings(
         [bk for bid, bk in zip(every.ids, every.items, strict=True) if bid != booking_id],
         [bid for bid in every.ids if bid != booking_id],
     )
     if (min(a, b), max(a, b)) in dated_pairs(others.items):
         return None
-    signups = signup_days(con, market, cfg)
-    cap = capacity(others, market, signups, cfg)
-    for bk in others.items:  # a pending pick holds its day for both people
-        if bk.state == "proposed":
-            for m in bk.members:
-                cap.busy[m].add(bk.day)
+    signups = signup_days(con, market, cfg, members=pair)
+    cap = capacity(others, market, signups, cfg)  # pending picks hold their days
     bits = free_windows(market, cap, signups, cfg, members=[a, b])
     common = int(bits[0]) & int(bits[1])
     k = (market.calendar.day(entry.day) - market.today) * N_PARTS + PARTS_OF_DAY.index(entry.part)
@@ -991,7 +1061,7 @@ def upcoming_between(con, market: Market, member_a: int, member_b: int) -> list[
     """Database ids of bookings still ahead between two members, for the app to cancel when
     one blocks the other (FR-LM-56)."""
     pair = {market.row[member_a], market.row[member_b]}
-    every = load_bookings(con, market)
+    every = load_bookings(con, market, members=(member_a, member_b))
     return [
         bid
         for bid, bk in zip(every.ids, every.items, strict=True)
@@ -1007,9 +1077,9 @@ def forget_statements(member_id: int, when: datetime) -> list[tuple[str, tuple]]
     Deleted: photos, photo embeddings, prompts, intent answers, free slots, their photo-exercise
     answers and everyone's answers about their photo. Kept, under the same id: the member row
     (birth year only, marked forgotten), bookings, payments, ratings, blocks, list history.
+    `when` must carry a time zone (D25). The next nightly refresh refits the shared fits (D24).
     """
-    stamp = (when if when.tzinfo else when.replace(tzinfo=UTC)).astimezone(UTC)
-    at = stamp.isoformat(timespec="seconds")
+    at = utc_text(when)  # D25
     m = (member_id,)
     return [
         ("DELETE FROM photo_embeddings WHERE member_id = ?", m),
@@ -1058,7 +1128,7 @@ def booking_row(
     proposed_at: datetime,
     event_id: int | None = None,
 ) -> dict:
-    """Column values for the `bookings` table."""
+    """Column values for the `bookings` table. `proposed_at` must carry a time zone (D25)."""
     keep_venue = bk.state in ("confirmed", "completed", "no_show", "cancelled")
     return {
         "member_a": int(market.ids[bk.a]),
@@ -1068,7 +1138,7 @@ def booking_row(
         "date_on": market.calendar.date(bk.day).isoformat(),
         "part": PARTS_OF_DAY[bk.part],
         "state": bk.state,
-        "proposed_at": proposed_at.isoformat(timespec="seconds"),
+        "proposed_at": utc_text(proposed_at),
         "venue_id": venue_id if keep_venue else None,
         "cancelled_by": None if bk.cancelled_by is None else int(market.ids[bk.cancelled_by]),
         "showed_a": None if not bk.showed else int(bk.showed[bk.a]),
@@ -1109,6 +1179,8 @@ def close_cycle(con, market: Market, member_id: int, day: date, cfg: Config) -> 
     m = market.row[member_id]
     if signups[m] == NO_SIGNUP:
         raise HandoffError(f"member {member_id} has no subscription")
+    if market.calendar.day(day) < signups[m]:
+        raise HandoffError(f"member {member_id} hadn't signed up by {day}")
     cyc = cycle_on(m, int(signups[m]), market.calendar.day(day), cfg)
     got = delivered([bk for bk in bookings.items if m in bk.members], m, cyc, cfg)
     return got, credit(max(0, cfg.dates.guaranteed_per_month_paying - got), cyc, cfg)

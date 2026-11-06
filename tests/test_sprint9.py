@@ -4,7 +4,7 @@ import dataclasses
 import importlib
 import re
 import sqlite3
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -165,7 +165,7 @@ def test_a_full_day_runs_from_rows(world):
     bk.hold(0.0)
     assert bk.pay(bk.a, 1.0, cfg.booking.hold_minutes)
     assert bk.pay(bk.b, 4.0, cfg.booking.hold_minutes, venue=bk.venue)
-    row = app.booking_row(bk, market, venue_id, datetime(2026, 11, 4, 19))
+    row = app.booking_row(bk, market, venue_id, datetime(2026, 11, 4, 19, tzinfo=UTC))
     booking_id = insert(con, "bookings", row)
     for member in (woman, entry.member_id):
         insert(
