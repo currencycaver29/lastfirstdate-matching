@@ -1,0 +1,29 @@
+# Dependabot: a weekly check for newer versions of every dependency, opened as pull requests
+# that the checks run on. Security alerts are a separate switch in the repository's settings
+# (Settings -> Code security -> Dependabot alerts and Dependabot security updates).
+version: 2
+updates:
+  - package-ecosystem: "pip"  # pyproject.toml: NumPy, SciPy, OR-Tools, Pillow, ONNX Runtime, ...
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      python-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "cargo"  # rust/Cargo.toml and Cargo.lock: PyO3, rust-numpy
+    directory: "/rust"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      rust-minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"  # .github/workflows/checks.yml
+    directory: "/"
+    schedule:
+      interval: "monthly"

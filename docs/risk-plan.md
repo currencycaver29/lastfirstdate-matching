@@ -177,5 +177,10 @@ Owners: **Founder** (business decisions), **Engineering** (whoever builds the ap
 - [ ] **Explain decisions for appeals** (the intent check promises "you can always appeal").
   *Owner: Engineering.*
 - [ ] **Keep dependencies updated** and review security alerts weekly. *Owner: Engineering.*
+  Scanned 7 Nov 2026: no known vulnerabilities in the installed Python libraries (pip-audit) or
+  the 26 Rust crates (cargo audit). The minimum versions in `pyproject.toml` now exclude every
+  version with a known advisory (Pillow, which reads members' photos, had 51 below 13.0).
+  Dependabot checks for updates weekly (`.github/dependabot.yml`); Dependabot alerts still need
+  switching on in the repository's settings. *Owner: Founder (the switch).*
 - [ ] **Watch the dashboard:** guarantee fulfilment, credit rate, women's commitment rate, women with
   empty months, no-show rate, month-1 churn. *Owner: Founder.*

@@ -13,18 +13,21 @@ classifiers = [
     "License :: Other/Proprietary License",
     "Private :: Do Not Upload",  # the public package index refuses this: never publish
 ]
+# Minimum versions are the oldest with no known security advisories (pip-audit, 7 Nov 2026).
 dependencies = [
     "numpy>=2.0",
     "scipy>=1.11",
-    "ortools>=9.10",
+    "ortools>=9.15",
+    "protobuf>=6.33.5",  # pulled in by OR-Tools; older versions have two denial-of-service bugs
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.5", "maturin>=1.9,<2.0", "pillow>=10"]
+dev = ["pytest>=9.0.3", "ruff>=0.5", "maturin>=1.9,<2.0", "pillow>=13.0"]
 # The production photo and text models (decision D20): python -m lastfirstdate.encoders download
-models = ["onnxruntime>=1.18", "tokenizers>=0.19", "pillow>=10"]
+# Pillow decodes members' photos (untrusted files): versions before 13.0 have known exploits.
+models = ["onnxruntime>=1.18", "tokenizers>=0.19", "pillow>=13.0"]
 # Redraw the README banner and charts: python scripts/readme_art.py
-docs = ["fonttools>=4.50", "uharfbuzz>=0.39"]
+docs = ["fonttools>=4.60.2", "uharfbuzz>=0.39"]
 
 # The Python package lives in src/; the Rust core (rust/) is compiled into
 # lastfirstdate._core when the package is installed (D16).
