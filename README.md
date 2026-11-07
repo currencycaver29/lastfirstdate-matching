@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.0" src="https://img.shields.io/badge/release-v0.15.0-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.1" src="https://img.shields.io/badge/release-v0.15.1-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -422,7 +422,7 @@ These rules are never broken, and tests enforce them:
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.15.0** (Sprint 15's fixes for the code review findings);
+release is **v0.15.1** (Sprint 15's fixes, and the gate counting only women who seek men);
 v1.0.0 is planned for the Phase 1 launch.
 
 ## License

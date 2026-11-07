@@ -120,6 +120,19 @@ grew with every edit, and forgotten members' prompts stayed in memory. It now ke
 prompts of its last call. Each night's call includes every current prompt, so unchanged prompts
 are still not re-read.
 
+## 8b. After the sprint: the gate and women who seek only women (v0.15.1)
+
+You spotted a loophole. The ratio gate counted every woman as supply for the men it sells places
+to, including women who seek only women. In a zone where 7% of members are gay and 3% bisexual,
+that was 25 of 286 women. It was also a hole in Sprint 14's fake-account defence: a fake set to
+"woman seeking women" is never shown to a man, and with a pool of about 8 she rarely gets a
+list, so she never reaches the 14 list days the silent rule needs. The gate and the weekly
+alerts now count only women who seek men, and the gate counts only subscribers who seek women
+as the men competing for them (FR-LM-79). Applicants who seek only men were already safe: they
+have no pool among these women, so the gate defers them. In three 400-member test zones the
+gate sold nothing either way (the forecast stops it below 90%), so the fix changes its inputs,
+19 to 25 fewer women counted, rather than that day's decision.
+
 ## 9. What changed in the plan
 
 - Two decisions: D24 and D25.

@@ -19,7 +19,7 @@ Turn the sprint's goal into numbered requirements the owner agrees to, before an
 - `Current sprint: N` at the top of `docs/SPEC.md`.
 - New decisions, if any, as rows in the Decisions table (D26 onward).
 
-Numbering continues from FR-LM-79.
+Numbering continues from FR-LM-80.
 
 ## Done when
 
@@ -38,4 +38,4 @@ Sprint 15 fixed the code review findings. Options now:
   answers (paper 9).
 - **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
 
-Numbering continues from FR-LM-79. New decisions from D26.
+Numbering continues from FR-LM-80. New decisions from D26.

@@ -85,6 +85,10 @@ FR-LM-43 to FR-LM-45 (`tests/test_sprint8.py`).
   now counts only verified women who aren't silent (`gate.silent_after_days` list days and no
   pick ever): after four weeks it drops 83% of fakes and 0.6% of honest women. At launch only
   identity checks help.
+- **Women who seek only women (v0.15.1, FR-LM-79):** the gate counted them as supply for men (25
+  of 286 in a zone with 7% gay and 3% bisexual members), and a fake set that way escaped the
+  silent rule. Now it counts only women who seek men, and only subscribers who seek women.
+  Applicants who seek only men have no pool among these women and are deferred.
 
 ## If you change it
 

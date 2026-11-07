@@ -1,5 +1,6 @@
 """FR-LM-71 to FR-LM-78: the code review findings, fixed."""
 
+import dataclasses
 import io
 import sqlite3
 from datetime import UTC, date, datetime
@@ -393,3 +394,64 @@ def test_the_text_model_forgets_old_prompts():
     np.testing.assert_array_equal(second[0], first[1])
     assert second.shape == (3, 8) and not second[2].any()
     assert enc.embed_texts(["", ""]).shape == (2, 8)
+
+
+# ---------------------------------------------------------------- FR-LM-79
+
+
+@pytest.fixture(scope="module")
+def mixed():
+    """A Phase 1 zone in SQLite where 7% of members are gay and 3% bisexual, with its scores."""
+    cfg = load("config/phase1.toml")
+    population = dataclasses.replace(
+        cfg.population, orientation={"straight": 0.90, "gay": 0.07, "bi": 0.03}
+    )
+    cfg = dataclasses.replace(cfg, population=population)
+    pop = generate(cfg, seed=7)
+    con = sqlite3.connect(":memory:")
+    con.execute("PRAGMA foreign_keys = ON")
+    filled = fill_database(con, pop, cfg, TODAY, 7, subscribers=60)
+    return zone(SimpleNamespace(cfg=cfg, pop=pop, con=con, filled=filled)), filled
+
+
+def test_the_gate_counts_only_women_who_can_date_the_men(mixed):
+    """FR-LM-79: no woman who seeks only women is counted, even with lists on some days; the
+    sale equals the gate on women who seek men and subscribers who seek women; applicants who
+    seek only men are deferred."""
+    z, filled = mixed
+    m, cfg = z.market, z.cfg
+    is_woman = m.arr.gender == app.WOMAN
+    only_women = is_woman & ~app.seeks(m, "man")
+    assert only_women.sum() >= 5  # the zone has some
+    fake = int(m.ids[np.flatnonzero(only_women)[0]])
+    for k in range(3):  # a few list days, as a rarely-shown fake would have
+        insert(
+            z.con,
+            "list_shows",
+            {
+                "chooser_id": fake,
+                "candidate_id": int(m.ids[np.flatnonzero(only_women)[1]]),
+                "shown_on": f"2026-10-{20 + 7 * k}",
+                "picked": 0,
+            },
+        )
+    counted = app.counted_women(z.con, m, cfg)
+    assert counted.any() and not (counted & only_women).any()
+    assert (counted == (is_woman & app.seeks(m, "man") & counted)).all()
+
+    sale = app.gate_for_sale(z.con, m, z.scores, cfg)
+    ok = member_ok(m.arr, cfg) & ~m.paused
+    signups = app.signup_days(z.con, m, cfg)
+    current = np.flatnonzero(ok & (signups != app.NO_SIGNUP) & app.seeks(m, "woman"))
+    applicants = m.rows(filled.waitlist)
+    d = app.gate_decision(
+        app.gate_model(cfg), z.scores.eligible, np.flatnonzero(counted), current, applicants, cfg
+    )
+    assert sale.admit == [int(m.ids[r]) for r in d.admit]
+    assert sale.deferred_small_pool == [int(m.ids[r]) for r in d.deferred_small_pool]
+    only_men = [r for r in applicants if not app.seeks(m, "woman")[r]]
+    assert only_men and not set(m.ids[only_men].tolist()) & set(sale.admit)
+    first = app.gate_decision(  # reached first in the queue, they are deferred, never sold
+        app.gate_model(cfg), z.scores.eligible, np.flatnonzero(counted), current, only_men, cfg
+    )
+    assert first.admit == [] and first.deferred_small_pool == only_men

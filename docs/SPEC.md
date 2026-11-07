@@ -64,7 +64,7 @@ dates, and dates are scheduled into time both people have free.
 | D16 | Languages | Python for the engine, the test harness and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the test harness in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 | D21 | Prompt similarity | Prompts are compared after taking out the zone's average prompt (`personality.center_text`, on in the Phase 1 profile, off in the research profile so its results stay reproducible) | Sprint 14: a stuffed prompt climbed from the middle to the 67th percentile of women's personality rankings with word counts, and to the 59th with MiniLM; centred, it gains nothing with either, and honest matching is unchanged |
-| D22 | Who the gate counts | A woman counts toward the ratio gate only if she is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and no pick ever | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch; after four weeks of lists the rule stops counting 83% of fakes and 0.6% of honest women |
+| D22 | Who the gate counts | A woman counts toward the ratio gate only if she seeks men (FR-LM-79), is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and no pick ever. Men already sold places count only if they seek women | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch; after four weeks of lists the rule stops counting 83% of fakes and 0.6% of honest women |
 | D23 | Who teaches the starting taste | One account, one photo exercise: at most `calibration.n_profiles` photos per member, each photo once, never their own; only verified members' answers fit w_0 | Sprint 14: without it, one client writing twenty exercises' worth of answers lifted a target man from the 47th to the 52nd percentile of women's looks rankings; 30 verified fake accounts (10% of women) still lift him to the 54th, and a robust fit that halves that costs everyone 0.016 AUC |
 | D24 | Forgetting and the shared fits | When a member has been forgotten since the last refresh, the nightly refresh refits the photo compression and the starting taste, as the weekly refit does, so nothing fitted on their photo or answers survives the night | D18 deletes what describes a member; the shared fits were the one place their data lingered (until the weekly refit) |
 | D25 | Writing times | The engine's row writers (`booking_row`, `answer_row`, `forget_statements`) take only datetimes with a time zone, and store them in UTC with `+00:00`; a time without a zone is refused. Reading stays as D19 (no offset = UTC) | A New York server's `datetime.now()` has no zone; stored as is, it read 4 to 5 hours wrong (code review finding 5) |
@@ -843,6 +843,19 @@ forgotten prompt. This fixes finding 9.
 Test (offline, a stand-in model): after a second call without an old text, that text is no
 longer held; a text in both calls isn't run through the model again.
 
+#### FR-LM-79 · The gate counts only women who can date the men
+Sprint: 15
+Found after the sprint, in v0.15.1. The ratio gate and the weekly alerts count only women who
+seek men, and the gate counts only subscribers who seek women as the men competing for them.
+Before, a woman who seeks only women counted as supply for men: 25 of 286 women in a zone where
+7% of members are gay and 3% bisexual. A fake account set to "woman seeking women" was
+never shown to a man and, with a pool of about 8, rarely got a list, so the silent rule (D22)
+couldn't catch her. Applicants who seek only men were already deferred: they have no pool among
+these women.
+Test: in a zone with gay and bisexual members, no woman who seeks only women is counted, even
+with lists on some days; the sale equals the gate on women who seek men and subscribers who seek
+women; applicants who seek only men are deferred.
+
 ## Changes to this plan
 
 - **Sprint 1.** The test run showed two problems with the plan as first written. (1) "Never
@@ -1003,3 +1016,8 @@ longer held; a text in both calls isn't run through the model again.
   as well as at pick time. Checking a pick reads only the two members' rows: 423 ms to 2 ms with
   40,000 other bookings. The model check reads no embeddings, and the text model keeps only
   current prompts. No test-run result moves. Details: `docs/sprints/sprint-15.md`.
+- **v0.15.1.** A loophole found after Sprint 15: the ratio gate counted women who seek only women
+  as supply for the men it sells places to (25 of 286 in a zone with 7% gay and 3% bisexual
+  members), and a fake set to "woman seeking women" escaped the silent rule because she rarely
+  got a list. The gate and the weekly alerts now count only women who seek men, and only
+  subscribers who seek women as the men competing for them (FR-LM-79).

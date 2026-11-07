@@ -33,7 +33,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 
 from lastfirstdate import __version__, native
-from lastfirstdate.arrays import GENDERS, MemberArrays
+from lastfirstdate.arrays import GENDER_BIT, GENDERS, MemberArrays
 from lastfirstdate.billing import counts_toward_guarantee, credit, cycle_on, delivered, refill_bonus
 from lastfirstdate.booking import (
     N_PARTS,
@@ -1156,7 +1156,7 @@ def weekly_alerts(con, market: Market, scores: NightlyScores, cfg: Config):
     signups = signup_days(con, market, cfg)
     ok = member_ok(market.arr, cfg) & ~market.paused
     men = np.flatnonzero(ok & (signups != NO_SIGNUP) & (signups <= market.today))
-    women = np.flatnonzero(ok & (market.arr.gender == WOMAN))
+    women = np.flatnonzero(ok & (market.arr.gender == WOMAN) & seeks(market, "man"))
     mf = market_features(scores.eligible, women, men)
     n = len(market.members)
     done, upcoming, left = np.zeros(n), np.zeros(n), np.ones(n)
@@ -1197,11 +1197,14 @@ class SaleDecision:
 
 def gate_for_sale(con, market: Market, scores: NightlyScores, cfg: Config) -> SaleDecision:
     """How many waitlisted men to admit now (FR-LM-34, FR-LM-45), with the forecast chosen by
-    `gate.forecast`. Only women who can really date are counted (FR-LM-66, D22)."""
+    `gate.forecast`. Only women who can really date these men are counted (FR-LM-66,
+    FR-LM-79, D22)."""
     ok = member_ok(market.arr, cfg) & ~market.paused
     signups = signup_days(con, market, cfg)
     women = np.flatnonzero(counted_women(con, market, cfg))
-    current = np.flatnonzero(ok & (signups != NO_SIGNUP))
+    # the men already sold places who compete for these women (FR-LM-79); an applicant who seeks
+    # only men has no pool among them and is deferred, never sold a place on their numbers
+    current = np.flatnonzero(ok & (signups != NO_SIGNUP) & seeks(market, "woman"))
     waiting = sorted(
         (r for r in read(con, "waitlist") if r["status"] == "waiting"),
         key=lambda r: (r["applied_at"], r["member_id"]),
@@ -1238,12 +1241,20 @@ def silent_members(con, market: Market, cfg: Config) -> np.ndarray:
     return silent
 
 
+def seeks(market: Market, gender: str) -> np.ndarray:
+    """(n,) members looking for `gender`."""
+    return (market.arr.seeking & GENDER_BIT[gender]) != 0
+
+
 def counted_women(con, market: Market, cfg: Config) -> np.ndarray:
-    """(n,) the women the ratio gate counts (D22): verified, whatever `filter.require_verified`
-    says (a fake account must at least pass identity checks), active, not paused and not
-    silent. Fakes who never date drop out once they've had lists for a while."""
+    """(n,) the women the ratio gate counts (D22): women who seek men (FR-LM-79: a woman who
+    seeks only women can't date the men being sold places), verified whatever
+    `filter.require_verified` says (a fake account must at least pass identity checks), active,
+    not paused and not silent. Fakes who never date drop out once they've had lists for a while;
+    a fake must claim to seek men to be counted, which puts her on men's lists."""
     ok = member_ok(market.arr, cfg) & market.arr.verified & ~market.paused
-    return ok & (market.arr.gender == WOMAN) & ~silent_members(con, market, cfg)
+    women = ok & (market.arr.gender == WOMAN) & seeks(market, "man")
+    return women & ~silent_members(con, market, cfg)
 
 
 def nearest_neighbourhood_id(con, lat: float, lon: float) -> int:
