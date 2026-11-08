@@ -12,10 +12,9 @@ gate would sell 95 subscriptions there that deliver about 75%. The new gate refu
 plans 300 to 500 women before 100 subscriptions: this sprint says **aim for the top of that
 range**.
 
-**Papers used.** Like Sprint 6, this is logistic regression applied to your business rule.
-Paper 15 (Kanoria and Saban) and paper 16 (Arnosti, Johari, Kanoria) explain why market
-balance and congestion matter; this sprint measures what actually limits fulfilment in your
-flow.
+**Methods used.** Like Sprint 6, this is logistic regression applied to your business rule.
+Market balance and congestion are known to matter; this sprint measures what actually limits
+fulfilment in your flow.
 
 ---
 

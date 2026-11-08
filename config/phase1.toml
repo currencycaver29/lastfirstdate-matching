@@ -43,7 +43,7 @@ guarantee_priority = 1.0      # list bonus per missing guaranteed date, divided 
 hide_booked = false           # hide members whose dates plus waiting yeses fill the month
                               # (tested in Sprint 4: it removes options and hurts; off)
 nsw_epsilon = 0.1             # Nash social welfare: smaller = stronger push to spread attention
-holdback_yeses = 0            # paper 14 hold-back: hide after this many yeses in 7 days (0 = off)
+holdback_yeses = 0            # hold-back: hide after this many yeses in 7 days (0 = off)
 exploration_share = 0.10      # share of slots spent on profiles the model is unsure about
 
 [learning]                    # Stage 8: learning from dates and list choices
@@ -89,7 +89,7 @@ min_pool_for_guarantee = 10   # paying members with fewer possible matches are r
 open_app_rate = 0.6           # chance a member opens the app on a given day
 picks_per_day = 3             # most profiles a chooser picks in one day
 personality_signal = 0.5      # how closely true fit follows the measured personality score
-                              # (paper 9: traits measured before meeting predict it weakly)
+                              # (traits measured before meeting predict it weakly)
 like_threshold = 1.0          # true appeal, in standard deviations, where a chooser is 50/50
 accept_threshold = 0.0        # the same, for accepting a pick
 again_threshold = 0.5         # the same, for wanting a second date after meeting

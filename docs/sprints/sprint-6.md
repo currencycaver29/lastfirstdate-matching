@@ -13,19 +13,19 @@ test runs the gate works: with more men waiting than there are women, the men it
 3 dates **92% to 96%** of the time. Admitting everyone would give **12.5%**. Along the way the
 first version of the forecast failed badly in a way worth understanding (section 9).
 
-**Papers used**
+**Ideas used**
 
-| Paper | What we took from it | Where in the code |
+| Idea | What we took from it | Where in the code |
 |---|---|---|
-| 1. Brochu, de Freitas, Ghosh, *Active Preference Learning with Discrete Choice Data* | Learning taste from "A or B?" choices, and asking the most informative pair next | `looks.PersonalTaste.add_pair`, `looks.select_pair` |
-| 3. Chu, Ghahramani, *Preference Learning with Gaussian Processes* | A pair answer is evidence about the *difference* between two items, learned in the same model as single answers | `looks.PersonalTaste.add_pair` |
-| 8. Reimers, Gurevych, *Sentence-BERT* | Free text becomes a vector so similar text scores as similar. Sprint 6 uses an offline word-count stand-in behind the same interface | `personality.WordEncoder` |
-| 15. Kanoria, Saban, *Facilitating the Search for Partners on Matching Platforms* | Market balance decides outcomes: the short side's capacity limits everyone | Why the gate watches women per man |
-| 16. Arnosti, Johari, Kanoria, *Managing Congestion in Matching Markets* | Limiting how many people compete for the same partners raises the share who succeed | The gate limits men per zone, the way caps limit applications |
+| Learning from choices | Learning taste from "A or B?" choices, and asking the most informative pair next | `looks.PersonalTaste.add_pair`, `looks.select_pair` |
+| Pairwise preferences | A pair answer is evidence about the *difference* between two items, learned in the same model as single answers | `looks.PersonalTaste.add_pair` |
+| Sentence embeddings | Free text becomes a vector so similar text scores as similar. Sprint 6 uses an offline word-count stand-in behind the same interface | `personality.WordEncoder` |
+| Market balance | The short side's capacity limits everyone | Why the gate watches women per man |
+| Caps cut congestion | Limiting how many people compete for the same partners raises the share who succeed | The gate limits men per zone, the way caps limit applications |
 
-The forecast and the gate themselves don't come from a paper. They are ordinary logistic
-regression applied to your business rule. Papers 15 and 16 explain *why* the ratio matters so
-much; the test run measures *how much*.
+The forecast and the gate themselves are ordinary logistic regression applied to your business
+rule. Research on matching markets explains *why* the ratio matters so much; the test run
+measures *how much*.
 
 ---
 
@@ -87,8 +87,8 @@ hard filters). The values score A is the average closeness over the questions, a
 
 ## 4. Free-text prompts (FR-LM-31)
 
-Your profiles use written prompts, not interest tags. The production plan is Sentence-BERT
-(paper 8), but tests must run offline with no model downloads (rule R4). So Sprint 6 adds a
+Your profiles use written prompts, not interest tags. The production plan is a sentence model,
+but tests must run offline with no model downloads (rule R4). So Sprint 6 adds a
 stand-in, `WordEncoder`, using **TF-IDF**:
 
 1. Split each bio into words and drop common words ("the", "and", "looks").
@@ -98,7 +98,7 @@ stand-in, `WordEncoder`, using **TF-IDF**:
 3. Each bio becomes a vector of TF × IDF, scaled to length 1. The similarity of two bios is
    the dot product of their vectors (cosine similarity).
 
-The setting `personality.text_encoder = "words"` selects it. Swapping in Sentence-BERT later
+The setting `personality.text_encoder = "words"` selects it. Swapping in a sentence model later
 changes one class, not the engine.
 
 ---
@@ -117,8 +117,8 @@ A pair question "Who are you more drawn to, A or B?" is a **Bradley–Terry** co
 
 So a pair is simply one more example for the same logistic model, with the feature vector
 x_A − x_B and the label "chose A". That is why it fits into the existing taste model with one
-line (`add_pair` calls `add_label` on the difference). Papers 1 and 3 both learn from exactly
-this kind of data.
+line (`add_pair` calls `add_label` on the difference). Preference-learning methods learn from
+exactly this kind of data.
 
 **Which pair to ask?** Among the 30 profiles the model is least sure about, take the pair whose
 answer is most informative: the largest log(1 + p(1 − p) · dᵀΣd), where d = x_A − x_B, p is the
@@ -164,7 +164,7 @@ For each paying man j, at the start of a cycle: the chance he reaches 3 dates.
 
 | Feature | Plain words | Why |
 |---|---|---|
-| r, women per man | committed women ÷ paying men in the zone | the market balance (papers 15 and 16) |
+| r, women per man | committed women ÷ paying men in the zone | the market balance |
 | pool_j | how many women he *could* be matched with (passes the filter both ways) | more options, more chances of mutual yeses |
 | share_j | his expected share of women's attention: for each woman in his pool, 1 ÷ (number of men she could be matched with), summed | a woman with 3 possible men gives him more of her 3 dates than one with 60 |
 | log(min(r, 1)) | 0 while there's at least one woman per man; negative below that | below 1:1 the women's date caps run out and success collapses (section 9) |
@@ -349,7 +349,7 @@ on, and anything that acts on it should refuse to act outside that range.**
 - **The forecast doesn't know about seasons, events, or marketing pushes**, only the market's
   shape. Real data will add features.
 - **Pair questions' real advantage** (immune to threshold drift) isn't modelled.
-- **TF-IDF reads words, not meaning:** "rock climbing" and "bouldering" don't match. Sentence-BERT
+- **TF-IDF reads words, not meaning:** "rock climbing" and "bouldering" don't match. A sentence model
   will fix that in production.
 - **One zone.** Phase 2's multiple zones would need the gate per zone, with members' travel
   limits deciding who belongs where.

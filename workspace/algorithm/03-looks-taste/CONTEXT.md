@@ -36,11 +36,10 @@ attractive someone is in general (R2).
 FR-LM-13 to FR-LM-15 (`tests/test_looks.py`), FR-LM-35 (`tests/test_native.py`), FR-LM-60 and
 FR-LM-62 (`tests/test_sprint13.py`).
 
-## Papers
+## Methods
 
-- 3, Chu and Ghahramani; 4, Ren et al.; 5, Rothe et al.: a general model plus a personal
-  correction.
-- 6 and 7, Neve and McConville: photo-based reciprocal matching.
+- A general model plus a small personal correction (logistic regression with a prior).
+- Photo embeddings carry most of the preference signal.
 
 ## What we know
 

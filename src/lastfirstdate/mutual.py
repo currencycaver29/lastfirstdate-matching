@@ -12,7 +12,7 @@
 
        S(i -> j) = looks_weight * pct_i(V_i(j)) + (1 - looks_weight) * pct_i(P_i(j))
 
-3. Mutual score (FR-LM-20, papers 6 and 10). A date needs both people to say yes, so
+3. Mutual score (FR-LM-20, Pizzato et al. 2010). A date needs both people to say yes, so
    combine the two directions with the harmonic mean:
 
        M(i, j) = 2 * S(i -> j) * S(j -> i) / (S(i -> j) + S(j -> i))

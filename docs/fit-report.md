@@ -66,7 +66,7 @@ arithmetic; they are not predictions of real behavior.
 | Two-way matches | The mutual score M (Stage 5) | Yes |
 | The photo exercise teaches your type; no attractiveness scores | Calibration plus personal taste (Stages 2 and 3); rule R2 | Yes, but see pairs and 30 photos in section 4 |
 | Intent questions: values, lifestyle, timelines, dealbreakers | Values questions with accepted answers and dealbreakers | Partly: the site uses single answers |
-| Shared interests from prompts | Interest tags; Sentence-BERT plugs in later | Partly: prompts are free text |
+| Shared interests from prompts | Interest tags; a sentence model plugs in later | Partly: prompts are free text |
 | Learns from ratings and "would meet again" | Stage 8 (Sprint 5) | Built, but no measurable gain in test runs yet |
 | Guarantee for every subscriber, at-risk alerts trigger priority matching | Guarantee bonus on lists and urgency in the scheduler | Yes, but the earlier test runs assumed only half of men pay |
 | Women commit to 3 dates | Not modeled | Gap |
@@ -124,9 +124,9 @@ per month, or 13% to 27% of subscription revenue.
 
 | The app (from the demo) | The engine today | Change |
 |---|---|---|
-| 30 photos, single and **pairs** | 50 single like/pass swipes | Support pair comparisons (P(A over B) = sigmoid(w · (x_A − x_B))), which fits papers 1 and 3 even better, and a 30-photo calibration |
+| 30 photos, single and **pairs** | 50 single like/pass swipes | Support pair comparisons (P(A over B) = sigmoid(w · (x_A − x_B))), which preference learning handles well, and a 30-photo calibration |
 | Intent questions with one answer each | Members also list accepted answers | Compatibility from closeness of answers; some combinations as dealbreakers (for example "Want them" with "Not for me") |
-| Free-text prompts | Interest tags | A text encoder: Sentence-BERT in production, a word-level offline encoder for tests |
+| Free-text prompts | Interest tags | A text encoder: a sentence model in production, a word-level offline encoder for tests |
 | No Big Five in the demo | Big Five is 30% of P | Add personality questions, or reweight to text plus intent |
 | Neighborhood, venue at the location midpoint | Exact coordinates and straight-line distance | Neighborhood centers; distance matters little in a one-zone beta |
 | A proposed date window with each profile; 15-minute payment hold | Weekly batch scheduling | Propose a window per candidate at list time; needs members' available evenings |

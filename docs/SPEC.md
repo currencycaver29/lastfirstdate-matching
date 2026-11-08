@@ -11,16 +11,18 @@ dates, and dates are scheduled into time both people have free.
 
 ## The eight stages
 
-| Stage | What it does | Papers (see `docs/research.md`) | Sprint |
-|---|---|---|---|
-| 1. Filter | Removes anyone who fails a hard rule | none, plain engineering | 1 |
-| 2. Calibration profiles | Chooses the ~50 profiles a new member swipes on | 1, 2, 3 | 2 |
-| 3. Photo taste | Learns how much member i likes how member j looks: V_i(j) | 3, 4, 5, 6, 7 | 2 |
-| 4. Personality score | How well i and j fit on interests, values and personality: P_i(j) | 8, 9 | 1 |
-| 5. Mix and make mutual | 50/50 mix S(i to j), then mutual score M(i, j) | 6, 10 | 3 |
-| 6. Daily list | Up to 30 profiles a day, spread fairly | 11, 12, 13, 14, 16 | 1 (basic), 4 (fair) |
-| 7. Scheduling | Weekly assignment of dates into shared free slots | 15, 16 | 1 |
-| 8. Learning | Retunes everything from how real dates go | 17 | 5 |
+| Stage | What it does | Sprint |
+|---|---|---|
+| 1. Filter | Removes anyone who fails a hard rule | 1 |
+| 2. Calibration profiles | Chooses the ~50 profiles a new member swipes on | 2 |
+| 3. Photo taste | Learns how much member i likes how member j looks: V_i(j) | 2 |
+| 4. Personality score | How well i and j fit on interests, values and personality: P_i(j) | 1 |
+| 5. Mix and make mutual | 50/50 mix S(i to j), then mutual score M(i, j) (Pizzato et al. 2010) | 3 |
+| 6. Daily list | Up to 30 profiles a day, spread fairly (Singh and Joachims 2018) | 1 (basic), 4 (fair) |
+| 7. Scheduling | Weekly assignment of dates into shared free slots | 1 |
+| 8. Learning | Retunes everything from how real dates go | 5 |
+
+The two papers named here are in `docs/research.md`.
 
 ## Rules (never broken)
 
@@ -34,7 +36,7 @@ dates, and dates are scheduled into time both people have free.
   embeddings count as biometric data: in production they are encrypted, stored apart from
   the profile and deleted when a member leaves.
 - **R4 Tests run offline.** No model downloads or network calls in tests. Real models
-  (CLIP, Sentence-BERT) sit behind interfaces with offline stand-ins.
+  (photo and text models) sit behind interfaces with offline stand-ins.
 - **R5 Every tunable number lives in `config/lastfirstdate.toml`.**
 - **R6 Dealbreakers are hard filters**, never soft score penalties.
 - **R7 Same seed, same result.** All randomness goes through a seeded generator.
@@ -43,18 +45,18 @@ dates, and dates are scheduled into time both people have free.
 
 | # | Decision | Default | Why |
 |---|---|---|---|
-| D1 | Who chooses | Women pick from their daily list; men accept or decline. Same-gender pairs: both get lists, whoever picks first, the other accepts. | Paper 15: letting the short side initiate can raise welfare |
+| D1 | Who chooses | Women pick from their daily list; men accept or decline. Same-gender pairs: both get lists, whoever picks first, the other accepts. | Letting the short side of the market initiate can raise everyone's welfare |
 | D2 | Looks vs personality | 50 / 50 (`mix.looks_weight`) | Your brief. Sprint 5 can learn a personal split. |
-| D3 | Daily list size | Up to 30. Someone passed over can reappear after 7 days (`lists.reshow_after_days`). If fewer eligible people are available, show fewer; never pad with people who failed the filter. | Your brief; paper 16 on caps; Sprint 1 test run |
+| D3 | Daily list size | Up to 30. Someone passed over can reappear after 7 days (`lists.reshow_after_days`). If fewer eligible people are available, show fewer; never pad with people who failed the filter. | Your brief; caps cut wasted effort; Sprint 1 test run |
 | D4 | Dates per month | 3 guaranteed for paying members; nobody gets more than 4 | Your brief |
-| D5 | Calibration set | 50 profiles: 20 picked for variety, 30 for uncertainty | Papers 1 and 2 |
-| D6 | Personality split | 0.4 interests text, 0.3 values, 0.3 Big Five | Starting guess; paper 9 says retune from outcomes |
-| D7 | Exposure cap | Automatic: no one on more lists per day than a fair share (`lists.exposure_multiple` = 1.0) | Paper 12; Sprint 4 found 1x spreads attention most at no clear cost |
+| D5 | Calibration set | 50 profiles: 20 picked for variety, 30 for uncertainty | Varied first, then the most informative |
+| D6 | Personality split | 0.4 interests text, 0.3 values, 0.3 Big Five | Starting guess: traits measured before meeting predict attraction weakly, so retune from outcomes |
+| D7 | Exposure cap | Automatic: no one on more lists per day than a fair share (`lists.exposure_multiple` = 1.0) | Singh and Joachims (2018); Sprint 4 found 1x spreads attention most at no clear cost |
 | D8 | Guarantee target | 95% of paying members with at least 10 possible matches reach 3 dates in the synthetic month. Checked from Sprint 4 (FR-LM-21). | Measurable version of the promise |
 | D9 | Distance | Straight-line km within both people's max distance. Replaced by the original SQL query's route rule once that query is added to `db/`. | The SQL query is not in this repo yet |
-| D10 | Exploration | 10% of list slots go to profiles the model is unsure about | Paper 17 |
+| D10 | Exploration | 10% of list slots go to profiles the model is unsure about | You only learn about options you try |
 | D11 | Test population | 1,000 synthetic NYC members, seed 7. Settings are tuned on a different fake city (seed 101) so tuning cannot flatter the results. | Fast and big enough to see effects |
-| D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Paper 10 and the research doc. Sprint 3's test run found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
+| D13 | Chooser weight in M | 0.5: the plain harmonic mean, both sides equal (`mix.chooser_weight`) | Pizzato et al. (2010). Sprint 3's test run found a weight near 0.8 gives about 1 point more mutual yeses because choosers are the pickier side; kept at 0.5 until real data says otherwise (Sprint 5 can learn it) |
 | D14 | Settings profiles | `config/lastfirstdate.toml` holds the research defaults the Sprint 1 to 5 results use; `config/phase1.toml` holds lastfirstdate's real Phase 1 rules from its website (every man pays, women free, 3-date cap, man-woman only, one zone, 100 men and 300 women, 30-photo calibration with pairs, single-answer intent questions, free-text prompts) | Keeps earlier results reproducible while matching the real app |
 | D15 | Calibration length | Count answers, not photos: a pair question teaches about as much as one single swipe but shows two photos (Sprint 6) | Sprint 6 test run |
 | D17 | His own absence | His own late cancellation (under 24 hours) or no-show counts as one of his 3 delivered dates: no credit, no refill. Her cancellation or no-show never counts against him and his slot is refilled. In either case the person who wasn't at fault gets the $10 fee back (`billing.own_absence_counts`) | The site says "no-shows and cancellations don't count"; counting his own absences as delivered stops credits being gamed. To confirm with the lawyer (risk plan) |
@@ -115,7 +117,7 @@ Test: symmetric; each rule removes its counterexample; matches a brute-force ref
 #### FR-LM-05 · Interest similarity t (Stage 4)
 Sprint: 1
 Cosine similarity of interest tags, weighted so rare shared interests count more than
-common ones. Behind a `TextEncoder` interface so Sentence-BERT (paper 8) can replace it
+common ones. Behind a `TextEncoder` interface so a sentence model can replace it
 later without changing callers; tests use the tag encoder only (R4).
 Test: identical interests give 1, no overlap gives 0, always between 0 and 1.
 
@@ -172,29 +174,29 @@ stays at or above the Sprint 1 baseline floor (75%). The 95% target moved to FR-
 Sprint: 2
 A `PhotoEncoder` interface: production uses a pretrained image model such as CLIP; tests use
 the synthetic embeddings (R4). Embeddings are shrunk to `calibration.pca_dim` numbers with
-PCA fitted on the population. Papers 4 to 7 all start from embeddings like these.
+PCA fitted on the population.
 Test: output shape; PCA keeps most of the variance on synthetic data.
 
 #### FR-LM-14 · Starting taste w_0 (Stage 3)
 Sprint: 2
 One starting taste per orientation group, fitted by logistic regression on pooled swipes.
-Used only as the starting point for a member's own taste (R2). Papers 4 and 5.
+Used only as the starting point for a member's own taste (R2).
 Test: never exposed as a ranking; improves on a coin flip for a brand-new member.
 
 #### FR-LM-15 · Personal taste V_i(j) (Stage 3)
 Sprint: 2
 V_i(j) = sigmoid((w_0 + delta_i) . x_j + b_i), where delta_i is member i's personal
 correction, learned from their swipes with an L2 penalty that keeps it small until they
-have swiped enough. Also reports how sure it is, for Stage 2. Papers 3, 4, 5.
+have swiped enough. Also reports how sure it is, for Stage 2.
 Test: recovers a synthetic member's hidden taste better than w_0 alone.
 
 #### FR-LM-16 · Calibration profiles (Stage 2)
 Sprint: 2
-Profiles 1 to 20: the most varied set by greedy selection for a determinantal point process
-(paper 2): each next profile is the one least explained by those already chosen. Profiles
+Profiles 1 to 20: the most varied set by greedy selection for a determinantal point process:
+each next profile is the one least explained by those already chosen. Profiles
 21 to 50: each next one is the profile with the most expected information,
 log(1 + p(1 - p) s^2), where p is the predicted like chance and s^2 the model's
-uncertainty (papers 1 and 3). The pool follows D12.
+uncertainty. The pool follows D12.
 Test (acceptance): on synthetic members, taste learned from these 50 predicts held-out
 likes better than taste learned from 50 random profiles (paired, by more than two standard
 errors); the first 20 cover more look types than 20 random profiles.
@@ -220,8 +222,8 @@ Test: weight applied from config.
 
 #### FR-LM-20 · Mutual score M (Stage 5)
 Sprint: 3
-M(i, j) = harmonic mean of S(i to j) and S(j to i): high only when both are high. Papers 6
-and 10. `mix.chooser_weight` generalizes it to a weighted harmonic mean (D13); at 0.5 it is
+M(i, j) = harmonic mean of S(i to j) and S(j to i): high only when both are high (Pizzato et
+al. 2010). `mix.chooser_weight` generalizes it to a weighted harmonic mean (D13); at 0.5 it is
 the plain harmonic mean and M is symmetric.
 Test: symmetric at 0.5; zero if either side is zero; between the two sides. Acceptance, judged
 by the test harness's hidden truth on the top 10 of each chooser's list: candidates ranked by
@@ -235,7 +237,7 @@ one-sided S.
 Sprint: 4
 Lists filled round-robin by M (plus a bonus for paying members still below their guarantee)
 under an exposure cap per profile per day (D7); members with no dates left are removed.
-Papers 12 and 16. The scheduler's urgency bonus also rises to 1.0 (`dates.late_month_bonus`).
+Singh and Joachims (2018). The scheduler's urgency bonus also rises to 1.0 (`dates.late_month_bonus`).
 Optional switches, off by default after testing: hide members whose waiting yeses fill their
 month (`lists.hide_booked`), and a monthly cap for free members (`dates.cap_per_month_free`).
 Test (acceptance): no one exceeds the cap; on the default city the fair policy beats Sprint 3
@@ -247,7 +249,7 @@ expected failure in `tests/test_fairness.py`.
 #### FR-LM-22 · Nash social welfare allocation (Stage 6)
 Sprint: 4
 Alternative allocation (`lists.policy = "nsw"`) that greedily maximizes the sum of
-log(epsilon + expected matches) over choosers and candidates (paper 11). Paper 13's point,
+log(epsilon + expected matches) over choosers and candidates. The point
 that a candidate's capacity limits the value of showing them, is covered by the guarantee
 bonus and tested via `lists.hide_booked`.
 Test: on a day with a few very popular candidates, exposure is spread more evenly than top-k
@@ -265,7 +267,7 @@ Test: report flags a deliberately biased allocation and not a fair one.
 
 #### FR-LM-24 · Hold-back experiment (Stage 6)
 Sprint: 4
-Optional experiment from paper 14 (`lists.holdback_yeses`): hide members who received many
+Optional experiment (`lists.holdback_yeses`): hide members who received many
 mutual yeses in the last 7 days. Report only; switched off by default.
 Test: experiment runs and reports the difference.
 
@@ -292,7 +294,7 @@ Test: learned lambda correlates with synthetic members' hidden looks weight.
 Sprint: 5
 `lists.exploration_share` of the profiles actually shown are reserved, before the rest of the
 list is filled by score, for the candidates the member's looks model is least sure about,
-under the same daily exposure cap. Paper 17.
+under the same daily exposure cap.
 Test: share respected (within 3 points) with no cap breaches. The claim that exploration
 raises second dates was **not met** in test runs and is a strict expected failure.
 
@@ -330,7 +332,7 @@ one-pair filter; "accepts" questions unchanged.
 #### FR-LM-31 · Free-text prompts
 Sprint: 6
 `WordEncoder` turns free-text prompts into TF-IDF word vectors offline (R4), selected by
-`personality.text_encoder`; Sentence-BERT replaces it in production through the same
+`personality.text_encoder`; a sentence model replaces it in production through the same
 interface.
 Test: shared words raise similarity, stop words are ignored, rows have length 1; the setting
 selects the encoder.
@@ -696,7 +698,7 @@ The owner chose option (e). Synthetic attackers join the test runs, each trying 
 exploit the engine, and the sprint measures what each one gains. Every attack that gains
 anything gets a rule, a fix and a test; an attack that gains nothing gets a test that keeps it
 that way. This covers the engine only: sign-up checks, rate limits and the app's own API belong
-to the outside pentest before the beta. The papers are in `docs/research.md`, "Abuse testing".
+to the outside pentest before the beta.
 
 #### FR-LM-63 · Attackers in the test runs
 Sprint: 14

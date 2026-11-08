@@ -16,9 +16,8 @@ five:
 Earlier results don't move: with no blocks and no forgotten members, everything is exactly as
 before.
 
-**Papers used.** None new. The list log prepares for two papers on the reading list:
-Schnabel et al. (2016), *Recommendations as Treatments*, and Joachims, Swaminathan and
-Schnabel (2017), *Unbiased Learning-to-Rank with Biased Feedback*.
+**Methods used.** None new. The list log prepares for learning without bias from logged lists
+(counterfactual evaluation and unbiased learning to rank).
 
 ---
 
@@ -174,7 +173,7 @@ version.
 Why now? Learning from Phase 1 has a trap, the one Sprint 5 hit: people can only pick
 profiles they were shown, and profiles near the top get picked more just for being near the
 top. To learn what members really want, a later version needs to know where each profile was
-shown and how the engine scored it, and then correct for that (the two papers above). This
+shown and how the engine scored it, and then correct for that. This
 can't be added later for lists already shown.
 
 ---

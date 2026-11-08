@@ -11,7 +11,7 @@ changing it requires. The tests fill a database with a fake Phase 1 zone and che
 engine on those rows gives the same answers as the engine on the original profiles, down to
 the last decimal.
 
-**Papers used.** None new: this sprint is engineering. It puts the earlier sprints' research
+**Methods used.** None new: this sprint is engineering. It puts the earlier sprints' research
 into a form an app can call.
 
 ---

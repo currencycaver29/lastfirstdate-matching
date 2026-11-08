@@ -11,9 +11,8 @@ than the forecast assumed, the forecast said 83% while 76% of men got their date
 recalibrated forecast said 76%, and the switch rule recommended it. On the way it found that
 **fulfilment drifts as a zone ages**, so recalibration has to be repeated, about monthly.
 
-**Papers used.** None from the original 17. The method is Platt scaling (Platt, 1999), the
-standard way to correct a classifier's probabilities on new data, and the Brier score (Brier,
-1950) judges the forecasts. Both are listed in `docs/research.md` under "Methods added since".
+**Methods used.** Platt scaling, the standard way to correct a classifier's probabilities on
+new data, and the Brier score, which judges the forecasts.
 
 ---
 
@@ -142,7 +141,7 @@ docstring says why the median split fails.
 - **Market features use today's profiles,** not profiles as they were then; old preferences
   and pauses aren't stored.
 - **Only the guarantee forecast is refitted.** The personality weights and the looks starting
-  taste also deserve refitting on real outcomes (paper 9); the looks starting taste already
+  taste also deserve refitting on real outcomes; the looks starting taste already
   refits weekly in the cache. The personality weights need real "would meet again" answers,
   which only the real app can collect.
 

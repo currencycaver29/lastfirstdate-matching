@@ -4,14 +4,14 @@
 
 - t: interest similarity, the cosine of two interest vectors (FR-LM-05). The vectors come
   from interest tags, from word counts of free-text prompts, or in production from MiniLM, a
-  Sentence-BERT model (paper 8, `encoders.SentenceEncoder`, FR-LM-61). With
+  sentence model (`encoders.SentenceEncoder`, FR-LM-61). With
   `personality.center_text` the zone's average vector is taken out first (FR-LM-64).
 - A: share of values questions where each answer is one the other accepts (FR-LM-06).
 - p: Big Five similarity, 1 - distance / sqrt(5) (FR-LM-07).
 
 All three run from 0 to 1, so P does too. The 0.4 / 0.3 / 0.3 weights are a starting
-guess: paper 9 found traits measured before meeting predict attraction to one specific
-person only weakly, so Sprint 5 retunes them from real date outcomes.
+guess: traits measured before meeting predict attraction to one specific person only
+weakly, so Sprint 5 retunes them from real date outcomes.
 """
 
 from __future__ import annotations
@@ -106,8 +106,8 @@ class WordEncoder:
 
     The lastfirstdate app collects free-text prompts ("A perfect Sunday looks like…"). This
     is a simple stand-in that tests can run offline (R4): each member's text becomes a vector
-    of word counts times idf = log((1 + N) / (1 + df)) + 1, scaled to length 1. Sentence-BERT
-    (paper 8) replaces it in production through the same TextEncoder interface; it also
+    of word counts times idf = log((1 + N) / (1 + df)) + 1, scaled to length 1. A sentence
+    model (MiniLM) replaces it in production through the same TextEncoder interface; it also
     understands that "hiking" and "trail runs" mean similar things, which word counts cannot.
     """
 
@@ -152,9 +152,9 @@ def interest_similarity(vectors: np.ndarray, center: bool = False) -> np.ndarray
 
     What everyone writes then counts for nothing, and only what two people share beyond the
     zone's average makes them similar. So a prompt stuffed with popular words lands near the
-    middle and gains nothing (the text version of the "average attack" on recommenders; the
-    centring is Mu and Viswanath's "all-but-the-top", which also removes the common direction
-    sentence models put in every vector). Empty texts stay zero vectors and score 0.
+    middle and gains nothing (the text version of the "average attack" on recommenders;
+    centring also removes the common direction sentence models put in every vector). Empty
+    texts stay zero vectors and score 0.
     """
     x = np.asarray(vectors, dtype=float)
     if center:

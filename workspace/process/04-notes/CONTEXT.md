@@ -12,7 +12,7 @@ Explain the sprint so the owner can study it, then hand over for review.
 
 1. `docs/sprints/sprint-N.md`, in plain words:
    - a one-paragraph summary;
-   - the papers used and how;
+   - the methods used, in plain words (name no papers except the two in `docs/research.md`);
    - what was built;
    - the maths, explained step by step;
    - the results, as tables;

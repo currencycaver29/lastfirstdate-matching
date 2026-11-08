@@ -12,10 +12,7 @@ real on made-up texts and generated images, MiniLM scores "rock climbing" and "b
 0.67 where word counts scored 0, and SigLIP turns a photo into 768 numbers in about 0.1
 seconds.
 
-**Papers used.**
-- **Paper 8**, Sentence-BERT: MiniLM is trained as a Sentence-BERT model.
-- **Zhai et al. (2023), SigLIP**, and **Wang et al. (2020), MiniLM:** both now listed in
-  `docs/research.md`.
+**Models used.** Google SigLIP for photos and MiniLM, a sentence-embedding model, for prompts.
 
 ---
 
@@ -137,7 +134,7 @@ test runs keep `"words"`, which needs no model files.
   MiniLM is a settings change away.
 - **The personality weights were set with word counts.** MiniLM gives higher similarities
   overall (unrelated prompts score about 0.1 to 0.2 instead of 0). Rankings within a member's
-  list are what matter, but the weights should be retuned on real outcomes (paper 9).
+  list are what matter, but the weights should be retuned on real outcomes.
 - **Looks models can carry bias.** Image models learn from internet photos and can encode
   stereotypes. Your matching uses each member's own taste on top (rule R2: no attractiveness
   score), but the fairness audits ([#16](https://github.com/currencycaver29/lastfirstdate-matching/issues/16))

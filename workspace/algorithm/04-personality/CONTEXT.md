@@ -12,7 +12,7 @@ Scores how well two members fit on what they wrote and answered, apart from look
     P = w_text · t + w_values · A + w_big5 · p
 
 - **t:** text similarity. TF-IDF cosine over prompt words (`WordEncoder`) or interest tags
-  (`TagEncoder`); Sentence-BERT replaces these in production through the `TextEncoder`
+  (`TagEncoder`); MiniLM replaces these in production through the `TextEncoder`
   interface.
 - **A:** values compatibility. "Accepts" questions, or closeness questions:
   1 − |rank_i − rank_j| / (options − 1).
@@ -34,11 +34,11 @@ questions with `mode`.
 FR-LM-05 to FR-LM-08 (`tests/test_personality.py`), FR-LM-30, FR-LM-31
 (`tests/test_phase1.py`), FR-LM-61 (`tests/test_sprint13.py`).
 
-## Papers
+## Methods
 
-- 8, Sentence-BERT.
-- 9, Joel et al.: traits measured before meeting barely predict desire for one specific
-  person, so treat the weights as guesses and retune them from outcomes.
+- Sentence embeddings (MiniLM in production).
+- Traits measured before meeting barely predict desire for one specific person, so treat the
+  weights as guesses and retune them from outcomes.
 
 ## Decisions
 
@@ -52,7 +52,7 @@ D6 (the research split 0.4 / 0.3 / 0.3); Phase 1 uses 0.55 text and 0.45 values.
   prompts, which reuse a small vocabulary, it separates shared lifestyles only a little better
   (AUC 0.888 against 0.869); real prompts vary far more. It changes about 2 of each member's
   top 10. Tests and test runs keep "words".
-- The weights are guesses until real dates exist (paper 9).
+- The weights are guesses until real dates exist.
 - **Stuffed prompts (Sprint 14, D21, FR-LM-64):** a prompt full of the words everyone writes
   climbed from the middle to the 67th percentile of women's personality rankings with word
   counts; popular interests written as a prompt reached the 59th with MiniLM. With

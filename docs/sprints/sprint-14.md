@@ -23,20 +23,18 @@ One attack is your call: a ring of 3 colluding women got a man paused in 5 of 24
 not a pentest. The app's logins, API and servers still need the outside pentest before the
 beta.
 
-**Papers used** (all in `docs/research.md`, "Methods added since"):
-- **Lam and Riedl (2004), Mobasher et al. (2007):** the "average attack" on recommenders, a
-  fake profile made to look like everyone. A stuffed prompt is the text version.
-- **Mu, Bhat and Viswanath (2018), Ethayarajh (2019):** take the average vector out before
-  comparing texts, so what everyone shares counts for nothing. This is the fix for the average
-  attack.
-- **Douceur (2002), the Sybil attack:** without an identity check, one attacker can be any
-  number of accounts. That is why only verified accounts teach the starting taste or count for
-  the gate.
-- **Steinhardt, Koh and Liang (2017); Li et al. (2016):** how far coordinated fake data moves a
-  fitted model, and what statistical defences cost.
-- **Dellarocas (2000):** unfair ratings and how to bound any rater's influence.
-- **Calandrino et al. (2011):** what a recommender shows can leak what it learned. This is the
-  spies test.
+**Ideas used:**
+- **The "average attack" on recommenders:** a fake profile made to look like everyone. A
+  stuffed prompt is the text version.
+- **Centring:** take the average vector out before comparing texts, so what everyone shares
+  counts for nothing. This is the fix for the average attack.
+- **The Sybil attack:** without an identity check, one attacker can be any number of accounts.
+  That is why only verified accounts teach the starting taste or count for the gate.
+- **Data poisoning:** how far coordinated fake data moves a fitted model, and what statistical
+  defences cost.
+- **Unfair ratings:** how to bound any rater's influence.
+- **Inference from recommendations:** what a recommender shows can leak what it learned. This
+  is the spies test.
 
 ---
 
@@ -80,8 +78,8 @@ or lower. An empty prompt stays a zero vector and scores 0.
 
 This is the same move the photo side already makes: the photo compression (PCA) centres the
 photo vectors first, because SigLIP's vectors are all fairly alike (Sprint 13). Sentence models
-like MiniLM put one shared direction in every vector (Ethayarajh), and Mu et al. showed that
-taking out the mean improves similarity.
+like MiniLM put one shared direction in every vector, and taking out the mean is known to
+improve similarity.
 
 **Results** (ten attackers in each of three zones; mean percentile in women's personality
 rankings, 0.5 is the middle):
@@ -140,7 +138,7 @@ bottom quarter of each weight (a trimmed mean). Fakes then count as members, not
 can only shift the middle of the distribution. It halves their gain, but every honest member
 loses 0.016 AUC, because one member's 30 answers make a noisy fit. That cost falls on everyone,
 every day, against an attack that needs thirty real, verified identities. So the engine doesn't
-use it. Identity checks are the defence (Douceur), and the numbers above show what is left if
+use it. Identity checks are the defence, and the numbers above show what is left if
 someone gets past them.
 
 ## 4. The gate counts women who can really date (FR-LM-66)
@@ -213,7 +211,7 @@ and personal by design. Two choices bound the harm, and both are yours (question
 
 ## 7. Lists don't reveal a ranking (FR-LM-70)
 
-**The attack** (Calandrino et al.). Lists are ordered partly by looks, and the starting taste
+**The attack.** Lists are ordered partly by looks, and the starting taste
 is everyone's average taste. So could someone read lists to rebuild a "hotness" ranking, which
 rule R2 forbids? 20 accounts per zone that never pick read their lists daily for two weeks.
 They ranked men by the day, then the position, each first appeared, pooled over all the
@@ -257,8 +255,8 @@ order an observer can use. A test keeps the correlation below 0.2.
 3. **Robust statistics.** The median and the trimmed mean versus the plain mean. The breakdown
    point: what share of bad data an estimator can take before it moves without limit. Why
    robustness costs efficiency on clean data.
-4. **The Sybil attack.** Douceur's argument for why only an identity authority, not any
-   statistic, stops one person posing as many.
+4. **The Sybil attack.** Why only an identity authority, not any statistic, stops one person
+   posing as many.
 5. **Shrinkage in the trust score.** Why a prior worth k ratings bounds what any n raters can
    do: conduct = (k * prior + sum) / (k + n).
 

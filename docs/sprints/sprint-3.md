@@ -11,13 +11,12 @@ picks as it gains in his acceptances. And in a city of 1,000 members, **the rank
 changes the month**, because members see almost everyone in their pool anyway. The
 algorithm's quality starts to matter with bigger pools or shorter lists.
 
-**Papers used**
+**Research used**
 
-| Paper | What we took from it | Where in the code |
+| Source | What we took from it | Where in the code |
 |---|---|---|
-| 10. Pizzato et al., *Reciprocal Recommender System for Online Dating* (RECON) | Score both directions, then combine them with the harmonic mean | `mutual.mutual_score` |
-| 6. Neve and McConville, *ImRec* | Both people's photo preferences feed one mutual score: his looks score for her and hers for him both enter M | `mutual.looks_scores`, `mutual.directional_score` |
-| 7. Neve and McConville, *Photos Are All You Need* | Supporting evidence that photos alone carry much of the signal; our looks-only ranking beats personality-only on mutual yeses | comparison in `mutual_report.py` |
+| Pizzato et al., *RECON: A Reciprocal Recommender for Online Dating* (2010) | Score both directions, then combine them with the harmonic mean | `mutual.mutual_score` |
+| Reciprocal photo preferences | Both people's photo preferences feed one mutual score: his looks score for her and hers for him both enter M | `mutual.looks_scores`, `mutual.directional_score` |
 
 ---
 
@@ -61,7 +60,7 @@ usually different.
 
 ## 4. Step 3: the mutual score (FR-LM-20)
 
-A date needs two yeses. Paper 10 (RECON) scores both directions and combines them with the
+A date needs two yeses. RECON (Pizzato et al. 2010) scores both directions and combines them with the
 **harmonic mean**:
 
 ```
@@ -235,7 +234,7 @@ All written up in `docs/SPEC.md`.
 | Harmonic, geometric and arithmetic means, and HM ≤ GM ≤ AM | Step 3 | Any text on means and inequalities; the AM-GM inequality |
 | Weighted harmonic mean | The chooser weight | Same; it's the reciprocal of a weighted average of reciprocals |
 | Independent events: P(A and B) = P(A) x P(B) | The mutual-yes measure | Any probability intro; *Mathematics for Machine Learning*, chapter 6 |
-| Reciprocal recommenders | The whole sprint | Paper 10, then paper 6 |
+| Reciprocal recommenders | The whole sprint | Pizzato et al. (2010) |
 
 ## 11. Try it yourself
 
@@ -253,13 +252,12 @@ Then in `config/lastfirstdate.toml` (change them back afterwards):
 
 ## 12. Read before Sprint 4 (fair daily lists)
 
-| Paper | What to look for |
+| Reading | What to look for |
 |---|---|
-| 12. Singh and Joachims, *Fairness of Exposure in Rankings* | Exposure: how much attention each position in a list gets, and how to share it fairly |
-| 11. Tomita and Yokoyama, *Fair Reciprocal Recommendation in Matching Markets* | Nash social welfare (sum of logs) as a way to spread chances while keeping matches high |
-| 13. Su, Bayoumi and Joachims, *Optimizing Rankings for Recommendation in Matching Markets* | Optimizing everyone's lists together, counting capacity on both sides |
-| 14. Rios, Saban and Zheng, *Assortment Optimization in Dating Markets* | Holding back likely matches from members who just matched a lot |
-| 16. Arnosti, Johari and Kanoria (again) | Why caps per profile reduce congestion |
+| Singh and Joachims, *Fairness of Exposure in Rankings* (2018) | Exposure: how much attention each position in a list gets, and how to share it fairly |
+| Nash social welfare | The sum of logs as a way to spread chances while keeping matches high |
+| Capacity in matching markets | Optimizing everyone's lists together, counting capacity on both sides; why caps per profile reduce congestion |
+| Holding back | Holding back likely matches from members who just matched a lot |
 
 Math: logarithms and why maximizing a sum of logs spreads value out; the Gini coefficient.
 

@@ -39,13 +39,12 @@ Builds each chooser's daily list of up to 30 profiles, sharing attention fairly.
 FR-LM-09, FR-LM-21 to FR-LM-24 (`tests/test_lists.py`, `tests/test_fairness.py`,
 `tests/test_month.py`), FR-LM-35 (Rust twin).
 
-## Papers
+## Research
 
-- 12, Singh and Joachims: fairness of exposure.
-- 11, Tomita and Yokoyama: Nash social welfare.
-- 13, Su et al.: rankings in matching markets.
-- 14, Rios et al.: holding back likely matches.
-- 15 and 16: short-side choosing and congestion.
+- Singh and Joachims, *Fairness of Exposure in Rankings* (2018): the exposure cap
+  (`docs/research.md`).
+- Other methods used: Nash social welfare, capacity-aware lists, holding back likely matches,
+  short-side choosing and caps against congestion.
 
 ## Decisions
 

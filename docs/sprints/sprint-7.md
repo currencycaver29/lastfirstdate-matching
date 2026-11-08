@@ -32,13 +32,12 @@ business picture: in three synthetic Phase 1 markets, about **68% of men get 3 d
 a cycle**, not the 87% to 96% the batch test runs suggested, and credits cost about **17% of
 subscription revenue**. The causes are clear, and so are the levers (section 8).
 
-**Papers used.** Sprint 7 is mostly your business rules turned into code, so it uses fewer
-papers than earlier sprints.
+**Research used.** Sprint 7 is mostly your business rules turned into code.
 
-| Paper | What it says | Where it shows up |
+| Source | What it says | Where it shows up |
 |---|---|---|
-| 16. Arnosti, Johari, Kanoria, *Managing Congestion in Matching Markets* | In matching markets, people seeing and passing on the same options again and again waste everyone's effort | Why the market wears out without new women (section 7) |
-| 12. Singh, Joachims, *Fairness of Exposure in Rankings* | Give each person a fair share of being seen, and boost those the system owes something | The refill bonus for men behind on their dates |
+| Congestion in matching markets | People seeing and passing on the same options again and again waste everyone's effort | Why the market wears out without new women (section 7) |
+| Singh and Joachims, *Fairness of Exposure in Rankings* (2018) | Give each person a fair share of being seen, and boost those the system owes something | The refill bonus for men behind on their dates |
 
 ---
 
@@ -215,8 +214,8 @@ One market in detail (seed 7, the real flow):
 3. **A closed market wears out.** Each woman's pool holds about 46 men. With up to 30 profiles
    a day and a 7-day rest after each showing, she sees every man in it about once a week. Each
    pass makes her less likely to pick him later (the test harness's model of people). By the third cycle the median man has been
-   passed over about 300 times. Without new women, fulfilment falls from 66% to 49%. Paper 16
-   describes exactly this kind of wasted repetition.
+   passed over about 300 times. Without new women, fulfilment falls from 66% to 49%. This is the
+   wasted repetition that research on congested matching markets describes.
 
 ### What helped, and what didn't
 

@@ -141,8 +141,7 @@ class HoldbackResult:
 
         return "\n".join(
             [
-                f"Hold-back experiment (paper 14): hide members after {self.threshold} "
-                "yeses in 7 days",
+                f"Hold-back experiment: hide members after {self.threshold} yeses in 7 days",
                 line("off", self.off),
                 line("on", self.on),
                 f"  difference in dates: {self.on.booked - self.off.booked:+d}",

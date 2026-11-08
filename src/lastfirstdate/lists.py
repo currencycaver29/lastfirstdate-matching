@@ -1,6 +1,6 @@
 """Stage 6, basic version: who chooses, and each chooser's daily list (FR-LM-09).
 
-Decision D1 (paper 15): in a man-woman pair the woman picks and the man accepts or
+Decision D1: in a man-woman pair the woman picks and the man accepts or
 declines. In any other pair (two men, two women, or a nonbinary member) both may pick.
 
 The basic list is the top `lists.daily_size` candidates by score that the chooser may pick

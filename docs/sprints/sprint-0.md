@@ -7,9 +7,8 @@ York members, and the checks ("gates") that every later sprint must pass. The fa
 also carry hidden ground truth, such as each person's true visual taste, so later sprints
 can measure whether the algorithm actually learns what is really there.
 
-**Papers used:** none of the 17 methods is built yet. One idea from paper 9 shaped the fake
-data: part of attraction is shared by most people and part is personal (explained in
-Concept 5).
+**Methods used:** none of the matching methods is built yet. One idea shaped the fake data:
+part of attraction is shared by most people and part is personal (explained in Concept 5).
 
 ---
 
@@ -25,7 +24,7 @@ Concept 5).
 | `scripts/check.sh` | The gates: lint, formatting, tests, traceability |
 | `scripts/trace.py` | Fails if any requirement due by now has no test |
 | `docs/SPEC.md` | The sprint plan: 8 stages, 7 rules, 11 decisions, 28 requirements |
-| `docs/research.md` | The 17 papers, mapped to stages, requirements and sprints |
+| `docs/research.md` | The research behind the engine |
 
 ## 2. Why start with fake members?
 
@@ -127,7 +126,7 @@ age median 30 (range 21-44), free weekly slots median 7
 
 The engine never looks at a photo directly. A pretrained image model such as CLIP turns each
 photo into an **embedding**: a list of numbers (512 for CLIP; 128 in our fake data) where
-similar-looking photos get similar lists. Papers 4 to 7 all work this way.
+similar-looking photos get similar lists.
 
 **Unit vectors.** Every embedding is scaled to length 1:
 
@@ -176,12 +175,11 @@ u_i = normalize( rho_i * s  +  (1 - rho_i) * personal_i ),   rho_i between 0.2 a
 Measured on seed 7: **39% of the variation in looks appeal is shared** (everyone agrees) and
 **60% is personal**.
 
-**Link to paper 9 (Joel, Eastwick and Finkel).** Their speed-dating study found that general
-desirability (who most people like) was predictable, but desire for one specific person was
-not, even with 100+ traits measured. Our fake world has both parts on purpose. It matters for
-Sprint 2: the starting taste w_0 will learn the shared part, and only a member's own swipes can
-learn the personal part. The 39 / 60 split is our assumption, not a number from the paper,
-and it can be changed.
+**Why both parts.** Speed-dating research has found that general desirability (who most
+people like) is predictable, but desire for one specific person is not, even with 100+ traits
+measured. Our fake world has both parts on purpose. It matters for Sprint 2: the starting taste
+w_0 will learn the shared part, and only a member's own swipes can learn the personal part. The
+39 / 60 split is our assumption and can be changed.
 
 Other hidden traits: `looks_weight` (how much each fake member truly cares about looks
 versus personality, around 0.5 on average), `pickiness`, `look_type` and `lifestyle`.
@@ -305,12 +303,12 @@ print(e[0] @ e[1])   # cosine similarity of member 0's and member 1's photos
 
 ## 14. Read before Sprint 1
 
-| Paper | What to look for |
+| Topic | What to look for |
 |---|---|
-| 15. Kanoria and Saban, *Facilitating the Search for Partners* | Why letting only one side initiate (she chooses) can make everyone better off. This justifies decision D1. |
-| 16. Arnosti, Johari and Kanoria, *Managing Congestion in Matching Markets* | Why capping how many people someone can contact cuts wasted effort. This justifies the 30-a-day and 3-a-month caps. |
-| 9. Joel, Eastwick and Finkel, *Is Romantic Desire Predictable?* | Why the personality weights (0.4 / 0.3 / 0.3) are only a starting guess. |
-| 8. Reimers and Gurevych, *Sentence-BERT* (abstract and section 3) | What will replace simple interest tags: turning text into vectors so "trail runs" and "hiking" count as similar. |
+| Who starts the contact | Why letting only one side initiate (she chooses) can make everyone better off. This justifies decision D1. |
+| Caps in matching markets | Why capping how many people someone can contact cuts wasted effort. This justifies the 30-a-day and 3-a-month caps. |
+| Predicting attraction | Why the personality weights (0.4 / 0.3 / 0.3) are only a starting guess. |
+| Sentence embeddings | What will replace simple interest tags: turning text into vectors so "trail runs" and "hiking" count as similar. |
 
 ## 15. Questions for you
 

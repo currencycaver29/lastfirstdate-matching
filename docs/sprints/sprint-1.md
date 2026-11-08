@@ -9,16 +9,14 @@ reach 3 dates** (78.7% to 81.6% across four random populations, 88% with 2,000 m
 short of the 95% target. The test run also exposed a flaw in the original plan, which is
 now fixed (section 9).
 
-**Papers used**
+**Ideas used**
 
-| Paper | What we took from it | Where in the code |
+| Idea | What we took from it | Where in the code |
 |---|---|---|
-| 15. Kanoria and Saban, *Facilitating the Search for Partners* | Women pick; men accept or decline (decision D1) | `lists.pick_rights` |
-| 16. Arnosti, Johari and Kanoria, *Managing Congestion in Matching Markets* | Caps: 30 a day, 3 picks a day, 4 dates a month, 1 a week | `lists.daily_list`, the test harness, the scheduler |
-| 9. Joel, Eastwick and Finkel, *Is Romantic Desire Predictable?* | Personality weights are only a guess; in the test harness, measured traits predict true fit only weakly | `personality.py` docstring, `test_runs.personality_signal` |
-| 8. Reimers and Gurevych, *Sentence-BERT* | Only the plug: a `TextEncoder` interface. The model itself comes later; interest tags stand in for now | `personality.TextEncoder` |
-
-Papers 1 to 7, 10 to 14 and 17 are not used yet.
+| Let the short side initiate | Women pick; men accept or decline (decision D1) | `lists.pick_rights` |
+| Caps cut congestion | Caps: 30 a day, 3 picks a day, 4 dates a month, 1 a week | `lists.daily_list`, the test harness, the scheduler |
+| Attraction is hard to predict from profiles | Personality weights are only a guess; in the test harness, measured traits predict true fit only weakly | `personality.py` docstring, `test_runs.personality_signal` |
+| Sentence embeddings | Only the plug: a `TextEncoder` interface. The model itself comes later; interest tags stand in for now | `personality.TextEncoder` |
 
 ---
 
@@ -122,7 +120,7 @@ Identical interests give 1 and no shared interests give 0. Sharing a rare intere
 more than sharing a common one, and a test checks exactly that. This is the classic TF-IDF
 method from information retrieval.
 
-**Paper 8 (Sentence-BERT)** will replace tags with a model that reads free text, so "trail
+**A sentence model** will replace tags with a model that reads free text, so "trail
 runs" and "hiking" count as similar even though the words differ. The code is ready for it:
 anything with an `encode(members)` method that returns unit vectors can be passed in. The
 model isn't added yet because tests must run offline (R4).
@@ -165,26 +163,26 @@ Check the first row: 0.4 x 0.31 + 0.3 x 0.83 + 0.3 x 0.87 = 0.124 + 0.249 + 0.26
 Man 354 shares the most interests but agrees on only 3 of the 6 values questions, so he ranks
 third. The median score in her pool is 0.460.
 
-### Why the weights are only a guess (paper 9)
+### Why the weights are only a guess
 
-Joel, Eastwick and Finkel measured 100+ traits before speed dates and couldn't predict who
+Speed-dating research has measured 100+ traits before dates and still couldn't predict who
 would desire whom. General desirability (who most people like) was predictable; desire for
 one specific person was not. So 0.4 / 0.3 / 0.3 is a starting guess, and Sprint 5 retunes it
 from real date outcomes. The test harness builds in the same idea (section 7).
 
 ## 5. Stage 6: who chooses, and the daily list
 
-### She chooses (paper 15)
+### She chooses
 
 In a man-woman pair, the woman picks and the man accepts or declines. In any other pair (two
 men, two women, or a nonbinary member) either may pick. `pick_rights` builds a grid that is
 True wherever i may pick j.
 
-**Why (paper 15, Kanoria and Saban).** On dating apps women are usually the short side:
+**Why.** On dating apps women are usually the short side:
 there are fewer of them, and they receive far more interest. When everyone can contact
 everyone, the short side is flooded and much of the long side's effort goes unanswered.
-Kanoria and Saban show that restricting who can start, so only the short side initiates,
-can raise overall welfare by cutting that wasted search effort.
+Research on matching platforms shows that restricting who can start, so only the short side
+initiates, can raise overall welfare by cutting that wasted search effort.
 
 ### The list
 
@@ -195,10 +193,10 @@ dated.
 **The 7-day re-show rule.** Someone shown but not picked can reappear 7 days later. This
 rule is new in Sprint 1; section 9 explains why.
 
-### Caps (paper 16)
+### Caps
 
-Arnosti, Johari and Kanoria study markets where applying is cheap, so people send far too
-many applications. They show that limiting applications cuts wasted effort on both sides.
+In markets where applying is cheap, people send far too many applications. Limiting
+applications cuts wasted effort on both sides.
 Our caps follow this idea: 30 profiles a day, 3 picks a day, 1 date a week, 4 dates a month.
 
 ## 6. Stage 7: the weekly scheduler
@@ -287,7 +285,7 @@ fit_ij = 0.5 * trait_fit_ij  +  sqrt(1 - 0.5^2) * chemistry_ij
   the "truth" and the tests couldn't catch it.
 - **chemistry** is random, shared by both people, and impossible to predict from any profile.
 - **0.5** is `test_runs.personality_signal`. Measured traits explain only part of true fit,
-  following paper 9. Because sqrt(1 - 0.5^2) = 0.87, unpredictable chemistry carries more
+  as speed-dating research found. Because sqrt(1 - 0.5^2) = 0.87, unpredictable chemistry carries more
   weight than the traits.
 
 Decisions use the logistic curve:
@@ -382,7 +380,7 @@ Both changes are written up at the end of `docs/SPEC.md`.
   guesses. The numbers compare designs; they don't predict real-world rates.
 - Distance is straight-line, not travel time, until the original SQL query is added.
 - No looks yet. Looks are 50% of the final score, and Sprints 2 and 3 add them.
-- Interest tags only. Sentence-BERT plugs in later.
+- Interest tags only. A sentence model plugs in later.
 
 ## 11. Math and computer science to study
 
@@ -411,21 +409,21 @@ Then edit `config/lastfirstdate.toml` and rerun:
 - `reshow_after_days = 30` brings back the "never show twice" rule, and you'll watch week 4
   lists empty out.
 - `picks_per_day = 5` makes women pick more. How much does the guarantee move?
-- `personality_signal = 0.9` makes traits predict fit well (the opposite of paper 9). Does
+- `personality_signal = 0.9` makes traits predict fit well (the opposite of what research finds). Does
   anything change while lists are still ranked by P?
 
 Change the values back afterwards, or the tests that check the defaults will fail.
 
 ## 13. Read before Sprint 2 (the looks model)
 
-| Paper | What to look for |
+| Topic | What to look for |
 |---|---|
-| 4. Ren et al., *Personalized Image Aesthetics* | The core idea for Sprint 2: a general model plus a small personal correction learned from a few ratings |
-| 5. Rothe, Timofte and Van Gool, *Some Like It Hot* | Predicting one person's attraction to a face from image features |
-| 3. Chu and Ghahramani, *Preference Learning with Gaussian Processes* | Learning a taste function from likes and passes, with a measure of uncertainty |
-| 1. Brochu, de Freitas and Ghosh, *Active Preference Learning* | Choosing which profile to show next so each swipe teaches the most |
-| 2. Kulesza and Taskar, *Determinantal Point Processes* (sections 1 and 2) | Choosing a varied first set of profiles |
-| 6 and 7. Neve and McConville | Photo preferences on both sides, made mutual (more for Sprint 3) |
+| Personalized taste models | The core idea for Sprint 2: a general model plus a small personal correction learned from a few ratings |
+| Attraction from images | Predicting one person's attraction to a face from image features |
+| Preference learning | Learning a taste function from likes and passes, with a measure of uncertainty |
+| Active learning | Choosing which profile to show next so each swipe teaches the most |
+| Determinantal point processes | Choosing a varied first set of profiles |
+| Reciprocal photo preferences | Photo preferences on both sides, made mutual (more for Sprint 3) |
 
 Math for Sprint 2: logistic regression and its loss with an L2 penalty (Jurafsky and Martin,
 chapter 5), and PCA (*Mathematics for Machine Learning*, chapter 10).

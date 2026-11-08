@@ -15,7 +15,7 @@ before a man's subscription stopped every woman's list that morning. The rest:
 None of this changes a test-run result: the test runs keep their own booking state and don't
 call the functions that changed.
 
-**Papers used.** None: these are engineering fixes. Two new decisions record the rules behind
+**Methods used.** None new: these are engineering fixes. Two new decisions record the rules behind
 them: D24 (forgetting refits the shared fits) and D25 (times are written with their zone).
 
 ---

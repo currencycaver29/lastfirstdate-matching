@@ -382,12 +382,25 @@ These rules are never broken, and tests enforce them:
 6. **Dealbreakers are hard filters,** never soft penalties.
 7. **Same seed, same result.** All randomness is seeded.
 
+## Research
+
+Two papers shaped the engine most:
+
+- **[RECON: A Reciprocal Recommender for Online Dating](https://dblp.org/rec/conf/recsys/PizzatoRCKK10)**,
+  Pizzato, Rej, Chung, Koprinska and Kay, ACM RecSys 2010. A dating match has to be scored in
+  both directions: the engine scores how much each person would like the other and combines the
+  two with the harmonic mean, so a pair ranks high only when the interest is mutual.
+- **[Fairness of Exposure in Rankings](https://arxiv.org/abs/1802.07281)**, Singh and Joachims,
+  KDD 2018. Being seen is shared fairly: no one appears on more than a fair share of each day's
+  lists. That spreads dates across members and keeps anyone from being ranked by overall
+  attractiveness.
+
 ## Documentation
 
 | Document | What's in it |
 |---|---|
 | [Specification](docs/SPEC.md) | Every requirement, rule and decision, and how the plan changed |
-| [Research map](docs/research.md) | The 17 papers and where each one is used |
+| [Research](docs/research.md) | The two papers that shaped the engine most |
 | [Sprint notes](docs/sprints/) | In-depth study notes for every sprint, with results and limits |
 | [Fit report](docs/fit-report.md) | The engine checked against lastfirstdate's website |
 | [Risk plan](docs/risk-plan.md) | What to do before launch, including a ready-to-send lawyer briefing |

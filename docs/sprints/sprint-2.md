@@ -10,19 +10,16 @@ swipes are). The starting taste alone scores 0.750, and a coin flip 0.5. Choosin
 cleverly beats choosing them at random, but only a little: +0.009 AUC, or about 10
 swipes saved.
 
-**Papers used**
+**Ideas used**
 
-| Paper | What we took from it | Where in the code |
+| Idea | What we took from it | Where in the code |
 |---|---|---|
-| 4. Ren et al., *Personalized Image Aesthetics* | The core design: a general model plus a small personal correction, so a few ratings are enough | `looks.StartingTaste`, `looks.PersonalTaste` |
-| 5. Rothe, Timofte and Van Gool, *Some Like It Hot* | Predicting one specific person's attraction from image features | `PersonalTaste.like_chance` |
-| 3. Chu and Ghahramani, *Preference Learning with Gaussian Processes* | A Bayesian taste model that reports how sure it is. Ours is the simplest version: a linear model with a Laplace approximation | `looks.fit_logistic`, `PersonalTaste.uncertainty` |
-| 1. Brochu, de Freitas and Ghosh, *Active Preference Learning* | The principle: show next whatever the model can learn most from. Their exact method (comparing two items at a time) is not used | `PersonalTaste.information` |
-| 2. Kulesza and Taskar, *Determinantal Point Processes* | Greedy DPP selection for the 20 varied profiles | `looks.select_varied` |
-| 6 and 7. Neve and McConville | Evidence that photo embeddings alone carry strong preference signal. Their mutual part is Sprint 3 | `looks.PhotoEncoder` |
-
-Not used from these papers: paper 5's collaborative-filtering component, paper 7's
-recurrent network, and paper 1's pairwise-comparison setup.
+| A general model plus a personal correction | The core design: a few ratings are enough on top of a shared starting point | `looks.StartingTaste`, `looks.PersonalTaste` |
+| Attraction from image features | Predicting one specific person's attraction from photo embeddings | `PersonalTaste.like_chance` |
+| A Bayesian taste model | It reports how sure it is. Ours is the simplest version: a linear model with a Laplace approximation | `looks.fit_logistic`, `PersonalTaste.uncertainty` |
+| Active learning | Show next whatever the model can learn most from | `PersonalTaste.information` |
+| Determinantal point processes | Greedy DPP selection for the 20 varied profiles | `looks.select_varied` |
+| Photos carry the signal | Photo embeddings alone carry strong preference signal; making it mutual is Sprint 3 | `looks.PhotoEncoder` |
 
 ---
 
@@ -41,9 +38,9 @@ recurrent network, and paper 1's pairwise-comparison setup.
 photo --image model--> 128 numbers --PCA--> 64 numbers + 1 = x_j
 
 new member signs up
-  1. show 20 profiles chosen for variety          (Stage 2, paper 2)
-  2. after each swipe, refit their taste          (Stage 3, papers 3, 4, 5)
-  3. show 30 more, each the most informative one  (Stage 2, paper 1)
+  1. show 20 profiles chosen for variety          (Stage 2)
+  2. after each swipe, refit their taste          (Stage 3)
+  3. show 30 more, each the most informative one  (Stage 2)
   4. now V_i(j) = sigmoid((w_0 + delta_i) . x_j) can score anyone
 ```
 
@@ -79,7 +76,7 @@ sigmoid(z) = 1 / (1 + e^(-z))        z = -2 -> 0.12,   z = 0 -> 0.50,   z = 2 ->
 
 So V_i(j) = sigmoid(w_i . x_j) is "the chance member i likes member j's looks."
 
-### Starting point plus personal correction (paper 4)
+### Starting point plus personal correction
 
 ```
 w_i = w_0[g] + delta_i
@@ -89,7 +86,7 @@ w_i = w_0[g] + delta_i
   like on average, learned from everyone's swipes.
 - **delta_i** is member i's personal correction, learned only from i's own swipes.
 
-This is paper 4's idea. A general model is cheap to learn because there's lots of data. A
+This is the key idea. A general model is cheap to learn because there's lots of data. A
 small personal correction needs only a few ratings, because it only has to describe how
 someone differs from the average.
 
@@ -110,12 +107,12 @@ It's solved with **Newton's method**: repeatedly step to where a quadratic appro
 the loss is lowest, using the gradient (slope) and the Hessian (curvature). For 65 numbers
 and 50 swipes this takes a few milliseconds, so the model is refitted after every swipe.
 
-### The Bayesian view, and uncertainty (paper 3)
+### The Bayesian view, and uncertainty
 
 The penalty is the same as saying "before seeing any swipes, I believe delta_i is near 0",
 a Gaussian prior. Minimizing loss plus penalty then finds the most probable delta_i given
 the swipes (the MAP estimate). This is Bayesian logistic regression, which is a Gaussian
-process with a linear kernel: the simplest member of paper 3's family.
+process with a linear kernel: the simplest member of that family.
 
 A **Laplace approximation** gives the uncertainty. The inverse of the Hessian at the optimum
 is a covariance matrix, Sigma, saying how unsure each weight is. For a candidate:
@@ -152,7 +149,7 @@ the further someone's true taste is from the shared taste, the more the personal
 
 ## 6. Choosing the 50 profiles (FR-LM-16)
 
-### Profiles 1 to 20: variety (paper 2)
+### Profiles 1 to 20: variety
 
 A determinantal point process (DPP) is a way of picking a subset that favors items that are
 different from each other. With photo directions as items, a set's "score" is the volume
@@ -170,7 +167,7 @@ The first pick is the profile closest to the average look. Result: the first 20 
 covered **all 8 look types for every member**, versus 7.33 on average for 20 random
 profiles.
 
-### Profiles 21 to 50: the most informative (papers 1 and 3)
+### Profiles 21 to 50: the most informative
 
 For each remaining candidate:
 
@@ -308,9 +305,8 @@ drops. The chosen values are 1.0 and 10.0.
 - **The fake world suits this model.** In the test harness, true taste is a straight-line
   function of the photo embedding, and the model is also a straight-line function. The model
   matches the truth's form exactly. Real taste in CLIP space is messier, so real accuracy
-  will be lower. Papers 5 and 7 report that photos carry strong signal in real data (paper 7:
-  F1 of 0.87 on mutual matches), but they use different measures, so the numbers aren't
-  comparable.
+  will be lower. Published work reports that photos carry strong signal in real data, but
+  with different measures, so the numbers aren't comparable.
 - **Calibration's edge is small** in test runs (+0.004 to +0.009 AUC). It might be bigger or
   smaller with real people. A launch A/B test (half random, half calibrated) would settle
   it.
@@ -339,8 +335,8 @@ All written up in `docs/SPEC.md`.
 | PCA, eigenvectors, SVD | Photo features | *Mathematics for Machine Learning*, chapter 10 (and chapter 4 for SVD) |
 | Newton's method, gradient, Hessian | Fitting the model | *Mathematics for Machine Learning*, chapters 5 and 7 |
 | Priors, MAP, Laplace approximation, Bayesian logistic regression | Uncertainty s^2 | Bishop, *Pattern Recognition and Machine Learning*, sections 4.4 and 4.5; Rasmussen and Williams, *Gaussian Processes for Machine Learning*, chapter 3 (free online) |
-| Determinantal point processes | Profiles 1 to 20 | Kulesza and Taskar (paper 2), sections 1 and 2 |
-| Active learning | Profiles 21 to 50 | Settles, *Active Learning Literature Survey* (free tech report), then paper 1 |
+| Determinantal point processes | Profiles 1 to 20 | Any introduction to DPPs (sections on greedy selection) |
+| Active learning | Profiles 21 to 50 | Any active-learning survey: uncertainty sampling and expected information |
 | AUC (Mann-Whitney) | Measuring | Any statistics text on ROC curves |
 
 ## 14. Try it yourself
@@ -361,11 +357,10 @@ Then change `config/lastfirstdate.toml`, rerun, and change it back:
 
 ## 15. Read before Sprint 3 (the 50/50 mutual score)
 
-| Paper | What to look for |
+| Reading | What to look for |
 |---|---|
-| 10. Pizzato et al., *Reciprocal Recommender System for Online Dating* | Why a dating match must be scored in both directions, and how they combine the two |
-| 6. Neve and McConville, *ImRec* | Merging two people's photo preferences into one mutual score |
-| 7. Neve and McConville, *Photos Are All You Need* | How far photos alone get you on mutual matches |
+| Pizzato et al., *RECON: A Reciprocal Recommender for Online Dating* (2010) | Why a dating match must be scored in both directions, and how they combine the two |
+| Reciprocal photo preferences | Merging two people's photo preferences into one mutual score, and how far photos alone get you |
 
 Math: percentiles (ranking within a group), and the harmonic mean versus the ordinary
 average.

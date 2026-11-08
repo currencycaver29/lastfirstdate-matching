@@ -5,23 +5,23 @@ popular members appear on everyone's list and fill up, and paying members who ar
 their 3 dates sit lower down. These rules share attention out more fairly. Each one is a
 switch in `config/lastfirstdate.toml`.
 
-1. Guarantee priority (papers 12 and 16). A paying member still short of 3 dates gets a bonus
+1. Guarantee priority (Singh and Joachims 2018). A paying member still short of 3 dates gets a bonus
    on every list they could appear on:
        bonus_j = guarantee_priority * missing dates_j / weeks left in the month
-2. No wasted picks (paper 13's point about capacity). A member whose booked dates plus
+2. No wasted picks (capacity matters). A member whose booked dates plus
    accepted-but-unscheduled pairs already fill their month is hidden: a pick on them could
    never become a date.
-3. Exposure cap (paper 12, decision D7). No one appears on more than
+3. Exposure cap (Singh and Joachims 2018, decision D7). No one appears on more than
        cap = ceil(exposure_multiple * list slots today / candidates today)
    lists in a day. Lists are filled round-robin (everyone's first slot, then everyone's
    second, ...) in a random order of choosers, so no chooser gets first claim every day.
-4. Nash social welfare (paper 11, FR-LM-22). An alternative fill that adds, one slot at a time,
+4. Nash social welfare (FR-LM-22). An alternative fill that adds, one slot at a time,
    the (chooser, candidate) pair that most raises
        sum over people of log(epsilon + their expected matches today)
    where "expected matches" is the sum of their mutual scores M on the lists so far. The log
    makes a person's first expected match worth far more than their tenth, so attention
    spreads out instead of piling onto a few.
-5. Hold-back (paper 14, FR-LM-24, off by default). A member who received at least
+5. Hold-back (FR-LM-24, off by default). A member who received at least
    `holdback_yeses` mutual yeses in the last 7 days is hidden until that count drops.
 """
 
@@ -138,7 +138,7 @@ def nsw_day_lists(
     size: int,
     epsilon: float,
 ) -> dict[int, np.ndarray]:
-    """Greedy Nash social welfare fill (paper 11).
+    """Greedy Nash social welfare fill.
 
     Each step adds the pair with the largest gain in sum(log(epsilon + E)) over both the
     chooser and the candidate, where E is a person's sum of scores on today's lists. The

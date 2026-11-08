@@ -10,8 +10,8 @@ the default city's scores came out byte-identical. Second, a **nightly cache** t
 day's work and refits only the members whose answers changed. For Phase 1 a quiet night now
 takes 0.07 seconds instead of 0.5.
 
-**Papers used.** None new. The questions asked are still papers 1 and 2 (the most
-informative photo or pair, and a varied set to start).
+**Methods used.** None new. The questions asked are still the most informative photo or pair,
+after a varied set to start.
 
 ---
 

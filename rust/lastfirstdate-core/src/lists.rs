@@ -3,7 +3,7 @@
 //! Each chooser ranks the candidates available to her by score + guarantee bonus (ties by
 //! id). Lists are then filled one slot at a time in chooser order: everyone's first slot,
 //! then everyone's second, and so on, skipping anyone already on `cap` lists today, so no
-//! one fills up every list (paper 12, decision D7):
+//! one fills up every list (Singh and Joachims 2018, decision D7):
 //!
 //! ```text
 //! cap = max(1, ceil(multiple * list slots today / candidates today))

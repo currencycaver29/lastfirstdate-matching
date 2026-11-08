@@ -11,15 +11,15 @@ whom too few people in their pool say yes to, and in a 1,000-member city no list
 create yeses. 95% is reachable with a business rule (offer the guarantee to members with at
 least 50 possible matches gives about 96%), so that decision is yours.
 
-**Papers used**
+**Research used**
 
-| Paper | What we took from it | Where in the code |
+| Source | What we took from it | Where in the code |
 |---|---|---|
-| 12. Singh and Joachims, *Fairness of Exposure in Rankings* | Exposure as the thing to share fairly; a cap so no one takes far more than a fair share | `fairness.fair_day_lists`, `fairness.exposure_cap` |
-| 16. Arnosti, Johari and Kanoria, *Managing Congestion in Matching Markets* | Limits per person reduce congestion around popular members | the exposure cap and the guarantee bonus |
-| 11. Tomita and Yokoyama, *Fair Reciprocal Recommendation in Matching Markets* | Nash social welfare: maximize the sum of logs of everyone's expected matches | `fairness.nsw_day_lists` |
-| 13. Su, Bayoumi and Joachims, *Optimizing Rankings in Matching Markets* | Capacity matters: showing someone whose month is full wastes a pick. Tested as `hide_booked`; it backfired here (section 6) | `fairness.effectively_booked` |
-| 14. Rios, Saban and Zheng, *Assortment Optimization in Dating Markets* | Hold back members who just got many matches. Tested as an experiment; off by default | `fairness.held_back`, `fairness_report.holdback_experiment` |
+| Singh and Joachims, *Fairness of Exposure in Rankings* (2018) | Exposure as the thing to share fairly; a cap so no one takes far more than a fair share | `fairness.fair_day_lists`, `fairness.exposure_cap` |
+| Caps cut congestion | Limits per person reduce congestion around popular members | the exposure cap and the guarantee bonus |
+| Nash social welfare | Maximize the sum of logs of everyone's expected matches | `fairness.nsw_day_lists` |
+| Capacity matters | Showing someone whose month is full wastes a pick. Tested as `hide_booked`; it backfired here (section 6) | `fairness.effectively_booked` |
+| Holding back | Hold back members who just got many matches. Tested as an experiment; off by default | `fairness.held_back`, `fairness_report.holdback_experiment` |
 
 ---
 
@@ -55,7 +55,7 @@ limited dates going to men who already had 3. Notice that the members who missed
 
 ## 3. The fair-list rules
 
-### Rule 1: a bonus for paying members who are behind (papers 12, 16)
+### Rule 1: a bonus for paying members who are behind
 
 ```
 bonus_j = guarantee_priority * missing dates_j / weeks left
@@ -65,7 +65,7 @@ With `guarantee_priority = 1.0`, a paying member with 0 dates gets +0.75 in week
 week 4, added to the mutual score M (which runs from 0 to 1). It moves them up every list they
 could appear on.
 
-### Rule 2: an exposure cap, filled round-robin (paper 12, decision D7)
+### Rule 2: an exposure cap, filled round-robin (Singh and Joachims 2018, decision D7)
 
 ```
 cap = ceil(exposure_multiple * list slots today / candidates today)
@@ -79,7 +79,7 @@ on, in a fresh random order of choosers each day. Each chooser gets her best ava
 candidate who hasn't hit the cap. Without round-robin, the first chooser in line would
 always get the popular people and the last would get leftovers.
 
-**Exposure** is simply how often a person appears on someone's list. Paper 12's idea is that
+**Exposure** is simply how often a person appears on someone's list. Singh and Joachims's idea is that
 exposure is a resource, like money, and a ranking hands it out. A top-k list gives almost all
 of it to the people everyone ranks highly.
 
@@ -89,7 +89,7 @@ The scheduler's urgency bonus (Sprint 1) rose from 0.2 to 1.0 per missing date p
 When a woman has yeses from several men, the one still short of his guarantee now wins more
 often.
 
-### Option: Nash social welfare lists (paper 11, FR-LM-22)
+### Option: Nash social welfare lists (FR-LM-22)
 
 Instead of round-robin, fill lists one slot at a time, each time adding the (chooser, candidate)
 pair that most increases
@@ -167,7 +167,7 @@ On the 600-member test city (not used for tuning), one month each:
 | fair (default) | **0.334** | **636** | **78.4%** |
 | Nash welfare | 0.372 | 629 | 76.1% |
 
-Nash welfare does spread attention at no cost in dates, as paper 11 suggests, but the simpler
+Nash welfare does spread attention at no cost in dates, as expected, but the simpler
 round-robin cap does it better here.
 
 ### Confirmed on the main city (5 months each)
@@ -194,7 +194,7 @@ but this is exactly the kind of outcome a real audit should surface for a human 
 ## 6. Two intuitive rules that backfired
 
 **Hiding members who are "effectively booked"** (their dates plus waiting yeses already fill
-the month). The idea, from paper 13, is that a pick on someone who can't take another date is
+the month). The idea is that a pick on someone who can't take another date is
 wasted. In practice the guarantee fell to **72.6%** and lists shrank to 3 profiles a day. A
 member can collect 4 waiting yeses within days, but at one date a week most of those are
 **options**, and the scheduler needs options to fit everyone. Off by default.
@@ -212,8 +212,8 @@ It backfires because **70% of women don't pay**, and they're the ones whose date
 need. Capping only free men (who compete with paying men) doesn't help either. So the setting
 exists (`cap_per_month_free`, `free_cap_genders`) but stays at no extra cap.
 
-**The hold-back rule (paper 14)** cost 40 dates on the main city (1,184 to 1,144). Its benefit in
-the paper comes from members getting pickier after many matches, and our test harness doesn't
+**The hold-back rule** cost 40 dates on the main city (1,184 to 1,144). Its benefit comes from
+members getting pickier after many matches, and our test harness doesn't
 model that. So this test can show the cost but not the benefit. Off by default.
 
 ## 7. Why 95% isn't reached, and what would reach it
@@ -251,9 +251,8 @@ the test suite turns red, so the marker can't be forgotten.
   the numbers move.
 - Single-month differences of a point or two are noise. Every comparison above that matters
   uses 5 months.
-- Paper 14's mechanism (members get pickier after matching) isn't in the test harness.
-- Paper 13's full method (optimizing everyone's rankings together with explicit capacities) is
-  not implemented. Its key idea was tested through `hide_booked`.
+- The hold-back's mechanism (members get pickier after matching) isn't in the test harness.
+- Optimizing everyone's rankings together with explicit capacities is not implemented. Its key idea was tested through `hide_booked`.
 
 ## 9. What changed in the plan
 
@@ -272,10 +271,10 @@ All written up in `docs/SPEC.md`.
 | Topic | Where it shows up | Where to learn it |
 |---|---|---|
 | Logarithms and concave functions | Nash social welfare | Any calculus text; *Mathematics for Machine Learning*, section 7.3 (convexity) |
-| Nash social welfare / proportional fairness | `nsw_day_lists` | Paper 11, introduction; "Nash bargaining solution" in any game theory intro |
+| Nash social welfare / proportional fairness | `nsw_day_lists` | "Nash bargaining solution" in any game theory intro |
 | Greedy algorithms for concave (diminishing-returns) objectives, lazy greedy | `nsw_day_lists` | Krause and Golovin, *Submodular Function Maximization* (free survey) |
 | Gini coefficient, Lorenz curve | Exposure report | Any intro economics text on inequality |
-| Exposure in rankings | The cap and the audit | Paper 12, sections 1 to 3 |
+| Exposure in rankings | The cap and the audit | Singh and Joachims (2018), sections 1 to 3 |
 | Disparate impact, four-fifths rule | The audit threshold | US EEOC Uniform Guidelines (search "four-fifths rule") |
 
 ## 11. Try it yourself
@@ -295,13 +294,13 @@ Then in `config/lastfirstdate.toml` (change them back afterwards):
 
 ## 12. Read before Sprint 5 (learning from dates)
 
-| Paper | What to look for |
+| Topic | What to look for |
 |---|---|
-| 17. Liu, Mania and Jordan, *Competing Bandits in Matching Markets* | Learning preferences from noisy outcomes while matching; why you must keep exploring a little |
-| 9. Joel, Eastwick and Finkel (again) | Why real date outcomes, not profiles, should retune the personality weights |
+| Bandits in matching markets | Learning preferences from noisy outcomes while matching; why you must keep exploring a little |
+| Predicting attraction | Why real date outcomes, not profiles, should retune the personality weights |
 
-Math: the explore-exploit trade-off and multi-armed bandits (Lattimore and Szepesvári,
-*Bandit Algorithms*, chapters 1 and 6, free online), and weighted logistic regression.
+Math: the explore-exploit trade-off and multi-armed bandits (any bandit-algorithms textbook,
+the opening chapters), and weighted logistic regression.
 
 ## 13. Questions for you
 

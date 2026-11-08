@@ -18,7 +18,7 @@ After each month the engine looks at what actually happened and updates two thin
    `lambda_prior_slope`, so with no data lambda_i = 0.5, and it moves only as evidence builds.
    lambda_i is kept between `lambda_min` and `lambda_max`.
 
-3. Exploration (FR-LM-27, paper 17). Part of each list (`lists.exploration_share`) is
+3. Exploration (FR-LM-27). Part of each list (`lists.exploration_share`) is
    reserved, before the rest is filled by score, for the candidates the looks model is least
    sure about, so the model keeps learning instead of only showing what it already believes.
 """

@@ -11,12 +11,12 @@ exploration gave no consistent gain. The biggest effect in the test run is somet
 entirely: second dates fall about 10 points from month 1 to month 3 in every version, because
 the best pairs get used up.
 
-**Papers used**
+**Ideas used**
 
-| Paper | What we took from it | Where in the code |
+| Idea | What we took from it | Where in the code |
 |---|---|---|
-| 17. Liu, Mania and Jordan, *Competing Bandits in Matching Markets* | Keep exploring a little while matching, because you only learn about options you try | `learning.explore_picks` |
-| 9. Joel, Eastwick and Finkel, *Is Romantic Desire Predictable?* | Profiles predict specific desire weakly, so learn the weights from real outcomes instead of fixing them | `learning.looks_weights` |
+| Keep exploring | Explore a little while matching, because you only learn about options you try | `learning.explore_picks` |
+| Attraction is hard to predict from profiles | Learn the weights from real outcomes instead of fixing them | `learning.looks_weights` |
 
 ---
 
@@ -120,9 +120,9 @@ with their answer.
 So the weight is set to 0.5, which is harmless. The claim "date outcomes improve looks
 accuracy" stays in the tests as a strict expected failure.
 
-## 6. Learning part 3: exploration (FR-LM-27, paper 17)
+## 6. Learning part 3: exploration (FR-LM-27)
 
-Paper 17's lesson: if you only ever show what you already believe is best, you never learn
+The lesson: if you only ever show what you already believe is best, you never learn
 whether you were wrong. So about 10% of the profiles actually shown are reserved for the
 candidates each member's looks model is **least sure about** (the largest s^2 from Sprint 2).
 These are picked round-robin under the same daily cap, and only then is the rest of the list
@@ -210,7 +210,7 @@ later, the same caution applies.
 
 | Topic | Where it shows up | Where to learn it |
 |---|---|---|
-| Explore-exploit trade-off, multi-armed bandits | Exploration slots | Lattimore and Szepesvári, *Bandit Algorithms*, chapters 1 and 6 (free online); then paper 17 |
+| Explore-exploit trade-off, multi-armed bandits | Exploration slots | Any bandit-algorithms textbook, the opening chapters |
 | Weighted logistic regression, priors | Looks weights and weighted labels | Jurafsky and Martin, chapter 5; Bishop, section 4.5 |
 | Selection bias | Why date outcomes mislead the looks model | Any causal-inference introduction (search "selection bias" or "missing not at random") |
 | Replicates and standard error | Judging noisy results | Any statistics introduction, "standard error of the mean" |
@@ -269,7 +269,7 @@ change in `docs/SPEC.md`.
 ### What it would take to go live
 
 1. **Real models behind the two interfaces:** an image model such as CLIP for photos, and
-   Sentence-BERT for interests. Both plug in without changing the engine.
+   a sentence model for interests. Both plug in without changing the engine.
 2. **Connect to your database:** read members, write daily lists and dates back, run the jobs
    (daily lists overnight, weekly scheduling, learning monthly). The hosting choice depends on
    what your website already uses.

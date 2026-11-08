@@ -32,9 +32,10 @@ Improves the engine from what actually happens: picks, dates, ratings.
 
 FR-LM-25 to FR-LM-28 (`tests/test_learning.py`).
 
-## Papers
+## Methods
 
-17, Liu et al. (competing bandits: explore a little); 9, Joel et al.
+Bandits in matching markets (explore a little); retune weights from outcomes, since profiles
+predict attraction weakly.
 
 ## What we know
 

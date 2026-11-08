@@ -36,11 +36,11 @@ twins (`native.py`).
 FR-LM-16, FR-LM-17 (`tests/test_looks.py`), FR-LM-32 (`tests/test_phase1.py`), FR-LM-35
 (`tests/test_native.py`).
 
-## Papers
+## Methods
 
-- 1, Brochu et al.: active learning from choices.
-- 2, Kulesza and Taskar: determinantal point processes.
-- 3, Chu and Ghahramani: preference learning.
+- Active learning: ask next what teaches the model most.
+- Determinantal point processes: a varied first set.
+- Preference learning from likes, passes and "A or B?" choices.
 
 ## Decisions
 

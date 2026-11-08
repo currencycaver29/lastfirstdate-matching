@@ -1,15 +1,19 @@
 # lastfirstdate-matching: instructions for Claude
 
 Matching engine for lastfirstdate. The plan, rules and requirements are in `docs/SPEC.md`;
-the papers behind each requirement are in `docs/research.md`; study notes for each finished
+the two research papers named publicly are in `docs/research.md`; study notes for each finished
 sprint are in `docs/sprints/`.
 
 ## Working rules
 
 - Build one sprint at a time, in the order in `docs/SPEC.md`. After a sprint passes the
   gates, stop and write `docs/sprints/sprint-N.md`: what was built, the math in plain words,
-  which papers it uses and how, what the test runs showed, and what to study. The owner
+  what the test runs showed, and what to study. The owner
   studies each sprint before approving the next.
+- Research papers are private. The repo names only the two papers in `docs/research.md`
+  (Pizzato et al. 2010, Singh and Joachims 2018). Never add any other paper's title, authors,
+  link or "paper N" number to the repo, its issues or its releases; explain methods in plain
+  words instead. The owner keeps the full research map privately.
 - Push to GitHub only when the owner says so.
 - Every test docstring names the requirement id it proves (for example `FR-LM-04`).
 - Gates: `./scripts/check.sh` (ruff lint, ruff format, pytest, traceability). Never commit

@@ -39,9 +39,9 @@ Weekly b-matching: min-cost flow when the graph splits into two sides, an intege
 FR-LM-10 (`tests/test_scheduler.py`), FR-LM-37, FR-LM-40, FR-LM-41 (`tests/test_sprint7.py`),
 FR-LM-54 and FR-LM-55 (`tests/test_sprint12.py`).
 
-## Papers
+## Methods
 
-13, Su et al. (capacity matters); 15 and 16 (congestion).
+Capacity matters (a pick on someone who can't take a date is wasted); caps against congestion.
 
 ## Decisions
 

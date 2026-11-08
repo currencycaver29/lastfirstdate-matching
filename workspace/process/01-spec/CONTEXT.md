@@ -35,7 +35,7 @@ Sprint 15 fixed the code review findings. Options now:
 - **(b) The gate every cycle,** with the zone's age and recruitment as inputs (and the silent
   rule's count, D22).
 - **(c) Readiness for the personality weights:** refit them on real "would meet again"
-  answers (paper 9).
+  answers.
 - **(d) Stop until the app and real data exist,** then run `refit.propose_refit` monthly.
 
 Numbering continues from FR-LM-80. New decisions from D26.

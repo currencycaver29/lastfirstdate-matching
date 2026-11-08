@@ -17,11 +17,11 @@ Stage 3, how much member i likes how member j looks:
 Stage 2, which ~50 profiles a new member swipes on (FR-LM-16):
 
 - Profiles 1 to 20 cover as many different looks as possible: greedy selection for a
-  determinantal point process (paper 2). Each next profile is the one least explained by
+  determinantal point process. Each next profile is the one least explained by
   those already chosen.
 - Profiles 21 to 50 are the ones the model can learn most from: the largest expected
   information, log(1 + p(1 - p) * s^2), where p is the predicted like chance and s^2 the
-  model's uncertainty about that profile (papers 1 and 3). Swipes that are near-certain
+  model's uncertainty about that profile. Swipes that are near-certain
   teach little; so do profiles in directions the model already knows.
 
 The engine never reads ground truth: swipes come in through a callback.
@@ -387,7 +387,7 @@ def calibration_pool(arr: MemberArrays, cfg: Config, viewer: int) -> np.ndarray:
 
 
 def select_varied(features: np.ndarray, k: int) -> list[int]:
-    """Row indices of k varied profiles: greedy determinantal point process (paper 2).
+    """Row indices of k varied profiles: greedy determinantal point process.
 
     With similarity = cosine between photo directions, a DPP favors sets whose photo
     vectors span the most volume. Greedily, each next pick is the profile whose photo is

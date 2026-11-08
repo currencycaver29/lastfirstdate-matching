@@ -11,8 +11,8 @@ Each fake member i has a true appeal for every other member j, in standard-devia
 - fit_ij: true personality fit = s * trait_fit_ij + sqrt(1 - s^2) * chemistry_ij.
   trait_fit is computed here from the profiles with equal weights (deliberately not the
   engine's 0.4 / 0.3 / 0.3), and chemistry is random noise shared by both people that
-  no profile can predict. s = test_runs.personality_signal (0.5): paper 9 found that
-  traits measured before meeting predict desire for a specific person only weakly.
+  no profile can predict. s = test_runs.personality_signal (0.5): traits measured before
+  meeting predict desire for a specific person only weakly.
 
 Choices use a logistic curve: P(yes) = 1 / (1 + exp(-(U - threshold - pickiness) / T)).
 """

@@ -31,10 +31,10 @@ mutual)`.
 
 FR-LM-18 to FR-LM-20 (`tests/test_mutual.py`).
 
-## Papers
+## Research
 
-- 10, Pizzato et al.: score both directions, then combine.
-- 6, Neve and McConville.
+- Pizzato et al., *RECON* (2010): score both directions, then combine them with the harmonic
+  mean (`docs/research.md`).
 
 ## Decisions
 
