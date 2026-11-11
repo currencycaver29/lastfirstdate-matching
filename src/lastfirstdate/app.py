@@ -872,8 +872,9 @@ def _rating_counts(r: dict, done: dict[int, Booking], market: Market) -> bool:
 def check_rows(con, market: Market, cfg: Config) -> list[str]:
     """Rows the engine refuses or ignores, in words, for the app to fix (FR-LM-68): malformed
     bookings, payments from someone not on the booking, ratings that don't belong to a
-    completed date between the two, and photo-exercise answers past one exercise. Empty when
-    the database is clean."""
+    completed date between the two, photo-exercise answers past one exercise, and, with
+    `filter.heterosexual_only` (D26), any member who isn't a man seeking women or a woman
+    seeking men (FR-LM-80). Empty when the database is clean."""
     out = []
     rows = sorted(read(con, "bookings"), key=lambda r: r["id"])
     out += [f"booking {r['id']} {why}" for r in rows if (why := booking_problem(r))]
@@ -895,7 +896,21 @@ def check_rows(con, market: Market, cfg: Config) -> list[str]:
         f"photo-exercise answer {pos} of member {mid} is ignored: it {why}"
         for mid, pos, why in _exercise_rows(con, market, cfg)[1]
     ]
+    if cfg.filter.heterosexual_only:  # D26: the app offers man-woman dating only (FR-LM-80)
+        out += [
+            f"member {r['id']} is a {r['gender']} seeking {sought or 'no one'}: the app is "
+            "heterosexual dating only (D26)"
+            for r in read(con, "members")
+            if r.get("forgotten_at") is None
+            and (sought := _sought(r)) != {"man": "woman", "woman": "man"}.get(r["gender"])
+        ]
     return out
+
+
+def _sought(member_row: dict) -> str:
+    """The genders a member row seeks, as text ("woman", "man, woman", ...)."""
+    flags = (("man", "seeks_men"), ("woman", "seeks_women"), ("nonbinary", "seeks_nonbinary"))
+    return ", ".join(g for g, col in flags if member_row[col])
 
 
 def missing_dates(

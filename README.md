@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.1" src="https://img.shields.io/badge/release-v0.15.1-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.2" src="https://img.shields.io/badge/release-v0.15.2-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -339,7 +339,7 @@ Every weight, cap and threshold lives in a settings file, never in code:
 | File | Use |
 |---|---|
 | [`config/lastfirstdate.toml`](config/lastfirstdate.toml) | Research defaults: a 1,000-member city, every orientation |
-| [`config/phase1.toml`](config/phase1.toml) | lastfirstdate's Phase 1: one NYC zone, 100 paying men and 300 women, a three-date cap, 30 calibration photos |
+| [`config/phase1.toml`](config/phase1.toml) | lastfirstdate's Phase 1: one NYC zone, man-woman dating, 100 paying men and 300 women, a three-date cap, 30 calibration photos |
 
 `LASTFIRSTDATE_BACKEND=python` runs everything in plain Python instead of Rust. The answers
 are the same, only slower.
@@ -435,7 +435,7 @@ Two papers shaped the engine most:
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.15.1** (Sprint 15's fixes, and the gate counting only women who seek men);
+release is **v0.15.2** (Sprint 15's fixes, and man-woman dating only, D26);
 v1.0.0 is planned for the Phase 1 launch.
 
 ## License

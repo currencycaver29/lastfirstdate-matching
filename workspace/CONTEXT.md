@@ -67,10 +67,10 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 - **Current sprint:** 16, not chosen yet. Options include a consented pilot to recheck the
   photo settings, the gate every cycle, or waiting for the app and real Phase 1 data. Ask the
   owner in process stage 01.
-- **Last finished:** Sprint 15 (v0.15.0), the code review findings: a crash from a date before
-  a subscription, sideways photos, the cache, times without a zone (D25), pending picks in the
-  lists, two-member pick checks, the model check and the text model's memory. Forgetting a
-  member refits the shared fits the next night (D24). Before that, Sprint 14's abuse testing.
+- **Last finished:** Sprint 15 (v0.15.0), the code review findings, then v0.15.1 (the gate
+  counts only women who seek men) and v0.15.2 (the founder's decision that the app is
+  heterosexual dating only, D26, with a nightly check for other profiles). The research papers
+  are private: the repo names only two (`docs/research.md`, CLAUDE.md).
 - **Where the engine stands:**
   - all ten stages are built and tested;
   - the real booking flow delivers about 77% to 82% at 3:1 in a 300-woman zone (NYC demo 77%);
@@ -91,7 +91,7 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
 
 ## Decisions already made (don't reopen without the owner)
 
-D1 to D25 in `docs/SPEC.md`. The most relevant now:
+D1 to D26 in `docs/SPEC.md`. The most relevant now:
 - women choose (D1);
 - 50/50 looks and personality (D2);
 - the Phase 1 settings profile (D14);
@@ -105,7 +105,8 @@ D1 to D25 in `docs/SPEC.md`. The most relevant now:
 - the gate counts verified, non-silent women (D22);
 - one account, one photo exercise; verified members teach the starting taste (D23);
 - forgetting a member refits the shared fits the next night (D24);
-- the row writers take only times with a time zone (D25).
+- the row writers take only times with a time zone (D25);
+- the app is heterosexual dating only: men seeking women, women seeking men (D26).
 
 ## Questions the owner hasn't answered yet (ask, don't assume)
 

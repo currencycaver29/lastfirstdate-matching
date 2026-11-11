@@ -70,6 +70,7 @@ The two papers named here are in `docs/research.md`.
 | D23 | Who teaches the starting taste | One account, one photo exercise: at most `calibration.n_profiles` photos per member, each photo once, never their own; only verified members' answers fit w_0 | Sprint 14: without it, one client writing twenty exercises' worth of answers lifted a target man from the 47th to the 52nd percentile of women's looks rankings; 30 verified fake accounts (10% of women) still lift him to the 54th, and a robust fit that halves that costs everyone 0.016 AUC |
 | D24 | Forgetting and the shared fits | When a member has been forgotten since the last refresh, the nightly refresh refits the photo compression and the starting taste, as the weekly refit does, so nothing fitted on their photo or answers survives the night | D18 deletes what describes a member; the shared fits were the one place their data lingered (until the weekly refit) |
 | D25 | Writing times | The engine's row writers (`booking_row`, `answer_row`, `forget_statements`) take only datetimes with a time zone, and store them in UTC with `+00:00`; a time without a zone is refused. Reading stays as D19 (no offset = UTC) | A New York server's `datetime.now()` has no zone; stored as is, it read 4 to 5 hours wrong (code review finding 5) |
+| D26 | Who the app is for | Heterosexual dating: men seeking women and women seeking men (`filter.heterosexual_only`, on in the Phase 1 profile). The engine keeps its general orientation lock (R1), so an unexpected profile is matched safely, and the nightly data check (`app.check_rows`) reports any member outside man-woman dating | The founder's decision (Nov 2026). Same-gender matching is no longer planned |
 
 ## Requirements by sprint
 
@@ -858,6 +859,16 @@ Test: in a zone with gay and bisexual members, no woman who seeks only women is 
 with lists on some days; the sale equals the gate on women who seek men and subscribers who seek
 women; applicants who seek only men are deferred.
 
+#### FR-LM-80 · The nightly check flags profiles outside man-woman dating
+Sprint: 15
+Added in v0.15.2 for D26. With `filter.heterosexual_only = true`, `app.check_rows` lists every
+member who isn't a man seeking women or a woman seeking men: same-gender, bisexual, nonbinary or
+seeking no one. Matching itself is unchanged: the orientation lock (R1) already pairs such a
+profile only with people it fits, so this is an early warning of an app bug, not a filter.
+Test: in a Phase 1 database, a man seeking men, a woman seeking both, a nonbinary member and a
+member seeking no one are each reported; a clean database reports nothing; with the setting off
+nothing is reported for them.
+
 ## Changes to this plan
 
 - **Sprint 1.** The test run showed two problems with the plan as first written. (1) "Never
@@ -1023,3 +1034,7 @@ women; applicants who seek only men are deferred.
   members), and a fake set to "woman seeking women" escaped the silent rule because she rarely
   got a list. The gate and the weekly alerts now count only women who seek men, and only
   subscribers who seek women as the men competing for them (FR-LM-79).
+- **v0.15.2.** The founder decided the app is heterosexual dating only (D26). The engine already
+  fit: the Phase 1 settings, the gate, the promise and the forecast were all built on man-woman
+  zones. A new setting, `filter.heterosexual_only`, makes the nightly data check report any
+  member outside man-woman dating (FR-LM-80). Same-gender matching is dropped from the plans.

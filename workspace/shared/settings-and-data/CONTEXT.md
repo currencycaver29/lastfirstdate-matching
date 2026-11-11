@@ -47,6 +47,8 @@ What every stage reads: the settings files, the member model and the app's datab
   ignores (malformed bookings, strangers' payments, ratings not from a completed date between
   the two, photo answers past one exercise). New settings: `personality.center_text`,
   `gate.silent_after_days`.
+- **v0.15.2:** `filter.heterosexual_only` (D26): `check_rows` reports any member who isn't a man
+  seeking women or a woman seeking men.
 - **Sprint 15:** the row writers take only times with a time zone and store UTC with `+00:00`
   (D25); `app.read` can filter on whole-number ids (`ids_in`), which `recheck_pick` uses to read
   only two members' rows; the model check reads `DISTINCT model`, never an embedding.

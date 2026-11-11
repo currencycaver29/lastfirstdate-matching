@@ -133,6 +133,16 @@ have no pool among these women, so the gate defers them. In three 400-member tes
 gate sold nothing either way (the forecast stops it below 90%), so the fix changes its inputs,
 19 to 25 fewer women counted, rather than that day's decision.
 
+## 8c. After the sprint: heterosexual dating only (v0.15.2)
+
+The founder decided the app is heterosexual dating: men seeking women and women seeking men
+(D26). Nothing in the matching had to change, because the Phase 1 settings, the gate, the 3-date
+promise and the forecast were all built on man-woman zones. A new setting,
+`filter.heterosexual_only` (on in Phase 1), makes the nightly data check (`app.check_rows`) report
+any member outside that: same-gender, bisexual, nonbinary or seeking no one (FR-LM-80). The
+general orientation lock (R1) stays, so such a profile is still matched only with people it fits;
+the report is an early warning of an app bug. Same-gender matching is dropped from the plans.
+
 ## 9. What changed in the plan
 
 - Two decisions: D24 and D25.

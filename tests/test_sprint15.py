@@ -455,3 +455,32 @@ def test_the_gate_counts_only_women_who_can_date_the_men(mixed):
         app.gate_model(cfg), z.scores.eligible, np.flatnonzero(counted), current, only_men, cfg
     )
     assert first.admit == [] and first.deferred_small_pool == only_men
+
+
+# ---------------------------------------------------------------- FR-LM-80
+
+
+def test_the_nightly_check_flags_profiles_outside_man_woman_dating(base):
+    """FR-LM-80: with filter.heterosexual_only, a man seeking men, a woman seeking both, a
+    nonbinary member and a member seeking no one are each reported; a clean database reports
+    nothing; with the setting off nothing is reported for them."""
+    z = zone(base)
+    assert z.cfg.filter.heterosexual_only and app.check_rows(z.con, z.market, z.cfg) == []
+    man = next(int(z.market.ids[k]) for k, m in enumerate(z.market.members) if m.gender == "man")
+    woman, other, third = women(z)[:3]
+    edits = [
+        (man, "UPDATE members SET seeks_men = 1, seeks_women = 0 WHERE id = ?"),
+        (woman, "UPDATE members SET seeks_women = 1 WHERE id = ?"),
+        (other, "UPDATE members SET gender = 'nonbinary' WHERE id = ?"),
+        (third, "UPDATE members SET seeks_men = 0, seeks_women = 0 WHERE id = ?"),
+    ]
+    for member, sql in edits:
+        z.con.execute(sql, (member,))
+    problems = app.check_rows(z.con, z.market, z.cfg)
+    for member, _ in edits:
+        assert any(p.startswith(f"member {member} ") and "D26" in p for p in problems)
+    assert len(problems) == len(edits)
+    off = dataclasses.replace(
+        z.cfg, filter=dataclasses.replace(z.cfg.filter, heterosexual_only=False)
+    )
+    assert app.check_rows(z.con, z.market, off) == []

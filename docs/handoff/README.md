@@ -158,6 +158,9 @@ app beyond keeping the data honest; these do:
   `gate.silent_after_days` days (14) and has never picked anyone, so set `list_shows.picked`
   on every pick. Identity checks are the only defence against fake women before the first
   lists go out.
+- **Man-woman dating only (D26).** Offer only "man seeking women" and "woman seeking men" at
+  sign-up. With `filter.heterosexual_only = true`, `check_rows` reports any other profile; the
+  engine still matches it safely (only with people it fits), so a report means an app bug.
 - **Not the engine's job:** sign-up checks, rate limits, API authorisation and storage
   security belong to the app and the outside pentest. A flag pauses a member for review in the
   current flow; whether it should wait for a person first is an owner decision.
@@ -208,7 +211,7 @@ What changing each setting in production requires (FR-LM-48). This table is gene
 <!-- settings:start -->
 **Business terms: change any time (with legal review where money is involved)**
 
-`calibration.group_share_tolerance`, `fairness.min_rate_ratio`, `gate.target`, `gate.min_women_per_man`, `gate.min_pool`, `gate.at_risk_threshold`, `booking.part_starts`, `billing.price_per_cycle`, `billing.trial_days`, `billing.date_fee`, `billing.full_refund_hours`, `billing.late_refund_share`, `billing.own_absence_counts`, `trust.flag_below`, `trust.flag_min_ratings`, `geo.neighbourhoods`, `geo.venues`
+`filter.heterosexual_only`, `calibration.group_share_tolerance`, `fairness.min_rate_ratio`, `gate.target`, `gate.min_women_per_man`, `gate.min_pool`, `gate.at_risk_threshold`, `booking.part_starts`, `billing.price_per_cycle`, `billing.trial_days`, `billing.date_fee`, `billing.full_refund_hours`, `billing.late_refund_share`, `billing.own_absence_counts`, `trust.flag_below`, `trust.flag_min_ratings`, `geo.neighbourhoods`, `geo.venues`
 
 **Test first: rerun the reports and check fulfilment before changing**
 

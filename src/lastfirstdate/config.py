@@ -25,6 +25,7 @@ class FilterConfig:
     require_verified: bool
     active_within_days: int
     min_shared_slots: int
+    heterosexual_only: bool  # the app offers man-woman dating only (D26); check_rows flags others
 
 
 @dataclass(frozen=True)
@@ -312,6 +313,8 @@ def _check_positive(name: str, value: float) -> None:
 
 def validate(cfg: Config) -> None:
     """Raise ConfigError if any value is out of range or inconsistent."""
+    if not isinstance(cfg.filter.heterosexual_only, bool):
+        raise ConfigError("filter.heterosexual_only must be true or false")
     p = cfg.personality
     for name, w in (("w_text", p.w_text), ("w_values", p.w_values), ("w_big5", p.w_big5)):
         _check_share(f"personality.{name}", w)
@@ -657,6 +660,7 @@ _KEY_IMPACT = {
     "booking.part_starts": BUSINESS,  # the times members see
     "trust.flag_below": BUSINESS,  # safety policy
     "trust.flag_min_ratings": BUSINESS,
+    "filter.heterosexual_only": BUSINESS,  # who the app is for (D26)
 }
 
 

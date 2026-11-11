@@ -12,6 +12,7 @@
 require_verified = true
 active_within_days = 14       # profile must have been active in the last N days
 min_shared_slots = 1          # free weekly time slots both people share
+heterosexual_only = true      # the app is man-woman dating only (D26)
 
 [personality]                 # Stage 4: P = w_text * t + w_values * A + w_big5 * p
 w_text = 0.55                 # free-text prompts
