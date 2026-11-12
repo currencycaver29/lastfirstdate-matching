@@ -6,6 +6,8 @@
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.2" src="https://img.shields.io/badge/release-v0.15.2-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
+  <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
+  <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
   <img alt="data: synthetic only" src="https://img.shields.io/badge/data-synthetic%20only-555555">
   <img alt="license: proprietary" src="https://img.shields.io/badge/license-proprietary-lightgrey">
 </p>
@@ -29,65 +31,103 @@ Matches are ranked half on looks, as each member sees them, and half on personal
 pairs who suit each other are suggested. The app itself is built separately and calls the
 engine through one module, [`lastfirstdate.app`](src/lastfirstdate/app.py).
 
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/stats-dark.svg">
-  <img src="docs/assets/stats-light.svg" width="600" alt="16 sprints done; 80 requirements, each with a test; 334 tests, 315 in Python and 19 in Rust; hot loops up to 81 times faster in Rust">
-</picture>
-</p>
-
 ## At a glance
 
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/assets/icons/taste.svg" width="26" height="26" alt=""><br>
-      <b>Learns each member's taste</b><br>
-      About 30 photos train a personal looks model. No global attractiveness score, ever.
+      <h4>Learns each member's own taste</h4>
+      About 30 photo questions train a personal looks model on top of Google SigLIP. There is
+      no global attractiveness score, ever.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/assets/icons/mutual.svg" width="26" height="26" alt=""><br>
-      <b>Mutual by design</b><br>
-      50% looks, 50% personality, scored both ways. Both people must want it.
+      <h4>Mutual by design</h4>
+      50% looks and 50% personality, scored in both directions. A pair ranks high only when
+      both people would say yes.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="docs/assets/icons/fair.svg" width="26" height="26" alt=""><br>
-      <b>Fair attention</b><br>
-      Nobody appears on more than a fair share of each day's lists.
+      <h4>Fair attention</h4>
+      Daily lists share exposure under a cap, so a few popular profiles can't take it all, with
+      a boost for members still owed dates.
     </td>
     <td valign="top">
-      <img src="docs/assets/icons/dates.svg" width="26" height="26" alt=""><br>
-      <b>Real dates, not just matches</b><br>
-      Every suggestion comes with a time both can make and a venue fair to both.
+      <h4>Real dates, not just matches</h4>
+      Every profile comes with a time both can make, a 15-minute payment hold, and a venue fair
+      to both.
     </td>
   </tr>
   <tr>
     <td valign="top">
-      <img src="docs/assets/icons/promise.svg" width="26" height="26" alt=""><br>
-      <b>Protects the promise</b><br>
-      Admits men from the waitlist only while the zone can give each one 3 dates a month.
+      <h4>Protects the promise</h4>
+      Forecasts each man's chance of three dates a month and pauses sales when the zone can't
+      serve more.
     </td>
     <td valign="top">
-      <img src="docs/assets/icons/fast.svg" width="26" height="26" alt=""><br>
-      <b>Fast and tested</b><br>
-      A Rust core for the hot loops, a test for every requirement, every model file pinned.
+      <h4>Fast, tested, reproducible</h4>
+      A Rust core for the hot loops (up to 81× faster), a test for every one of 62
+      requirements, and every model file pinned by fingerprint.
     </td>
   </tr>
 </table>
 
 ## How it works
 
-<p align="center">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/pipeline-dark.svg">
-  <img src="docs/assets/pipeline-light.svg" width="600" alt="How the engine works. Member profiles pass 1, the filter: orientation both ways, age, distance, dealbreakers, verification. Then 2, calibration: about 30 photos to rate, which train 3, the looks taste, a model for each member; beside them 4, personality: prompts, intent answers and interests. 5, the mutual score: 50% looks, 50% personality, scored both ways. 6, daily lists: up to 30 a day, attention shared fairly. She picks, he accepts. 7, booking: a time both can make, a 15-minute payment hold, a fair venue. After every date, 8, learning, sharpens each member's taste; trust comes from behaviour, never looks; the guarantee keeps the 3-date promise. All three shape the next day's lists.">
-</picture>
-</p>
+```mermaid
+flowchart TD
+    P(["Member profiles"]) --> F
 
-Blue: the matching stages every profile passes through each day. Green: what the engine learns
-after each date. Orange: the promise of three dates a month.
+    subgraph meet ["Who could meet"]
+        F["<b>1 · Filter</b><br/>orientation · age · distance<br/>dealbreakers · verification"]
+    end
+
+    subgraph like ["What each member likes"]
+        C["<b>2 · Calibration</b><br/>about 30 photos<br/>singles and pairs"] --> L["<b>3 · Looks taste</b><br/>a personal model<br/>for every member"]
+        T["<b>4 · Personality</b><br/>prompts · intent answers<br/>interests"]
+    end
+
+    subgraph see ["Who sees whom"]
+        M["<b>5 · Mutual score</b><br/>50% looks<br/>50% personality<br/>both must want it"] --> D["<b>6 · Daily lists</b><br/>up to 30 a day<br/>attention shared fairly"]
+    end
+
+    subgraph date ["The date"]
+        B["<b>7 · Booking</b><br/>a window both can make<br/>15-minute payment hold<br/>a venue fair to both"]
+    end
+
+    subgraph after ["After every date"]
+        LE["<b>8 · Learning</b><br/>sharpens each<br/>member's taste"]
+        TR["<b>Trust</b><br/>behaviour only, never looks<br/>lowers low-trust profiles"]
+        G["<b>Guarantee</b><br/>boosts men owed dates<br/>admits men only when<br/>they can be served"]
+    end
+
+    F --> C
+    F --> T
+    L --> M
+    T --> M
+    D -- "she picks, he accepts" --> B
+    B -- "how it went" --> LE
+    B -- "private ratings" --> TR
+    B -- "delivered dates" --> G
+
+    classDef input fill:#4a5568,stroke:#2d3748,color:#ffffff
+    classDef stage fill:#2b6cb0,stroke:#1a4971,color:#ffffff
+    classDef loop fill:#2f855a,stroke:#1c5a3c,color:#ffffff
+    classDef business fill:#c05621,stroke:#8a3c14,color:#ffffff
+    class P input
+    class F,C,L,T,M,D,B stage
+    class LE,TR loop
+    class G business
+    style meet fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style like fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style see fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style date fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+    style after fill:transparent,stroke:#8b949e,stroke-dasharray:5 3
+```
+
+Blue boxes are the matching stages a profile passes through every day. After each date, the
+green boxes learn from what happened and the orange box keeps the promise of three dates a
+month; all three shape the next day's lists.
 
 <details>
 <summary><b>What each stage does</b></summary>
@@ -111,11 +151,11 @@ after each date. Orange: the promise of three dates a month.
 
 ### The engine and the test harness
 
-- **The engine** is the product: filter, tastes, scores, lists, booking, billing, trust and
-  the forecast. The app calls it through [`lastfirstdate.app`](src/lastfirstdate/app.py). It
-  never reads the members' hidden "true" tastes, and a test enforces that.
-- **The test harness** is synthetic members who pick, accept, show up and rate. It reads those
-  hidden tastes to grade the engine, and it never runs in production.
+| | The engine | The test harness |
+|---|---|---|
+| **What it is** | The product: filter, tastes, scores, lists, booking, billing, trust, forecast | Synthetic members who pick, accept, show up and rate |
+| **In production** | Yes: the app calls [`lastfirstdate.app`](src/lastfirstdate/app.py) | Never |
+| **Hidden "true" tastes** | Never reads them (a test enforces it) | Reads them, to grade the engine |
 
 ## Results
 
@@ -124,24 +164,24 @@ Every member has hidden "true" tastes the engine never reads, so it can be grade
 These numbers compare designs; they are not predictions. Reproduce them with
 `python -m lastfirstdate.nyc_report`.
 
-<p align="center">
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/promise-dark.svg">
-  <img src="docs/assets/charts/promise-light.svg" width="600" alt="Men who got their 3 dates per billing cycle: 300-woman zones 89%, 77%, 66%; 500-woman zones 97%, 91%, 84%; target 90%">
+  <img src="docs/assets/charts/promise-light.svg" width="100%" alt="Men who got their 3 dates per billing cycle: 300-woman zones 89%, 77%, 66%; 500-woman zones 97%, 91%, 84%; target 90%">
 </picture>
 </p>
 
-<p align="center">
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/ordering-dark.svg">
-  <img src="docs/assets/charts/ordering-light.svg" width="600" alt="Chance both say yes in the top 10 of each list: random order 13%, personality only 17%, mutual 20%, looks only 21%, her taste only 21%">
+  <img src="docs/assets/charts/ordering-light.svg" width="100%" alt="Chance both say yes in the top 10 of each list: random order 13%, personality only 17%, mutual 20%, looks only 21%, her taste only 21%">
 </picture>
 </p>
 
-<p align="center">
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/outcomes-dark.svg">
-  <img src="docs/assets/charts/outcomes-light.svg" width="600" alt="What happened to booked dates: 66% went ahead, 13% someone didn't show, 13% the payment hold ran out, 8% cancelled">
+  <img src="docs/assets/charts/outcomes-light.svg" width="100%" alt="What happened to booked dates: 66% went ahead, 13% someone didn't show, 13% the payment hold ran out, 8% cancelled">
 </picture>
 </p>
 
@@ -275,32 +315,31 @@ To refit the guarantee forecast after changing the settings, run
 
 ### Under the hood
 
-<p align="center">
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/speed-dark.svg">
-  <img src="docs/assets/charts/speed-light.svg" width="600" alt="Rust core speed-up over Python: looks taste 3.6 times, fair daily lists 10 times, ratio gate 28 to 81 times, date windows 2 to 75 times per call">
+  <img src="docs/assets/charts/speed-light.svg" width="100%" alt="Rust core speed-up over Python: looks taste 3.6 times, fair daily lists 10 times, ratio gate 28 to 81 times, date windows 2 to 75 times per call">
 </picture>
 </p>
 
-<p align="center">
+<p>
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/charts/prompts-dark.svg">
-  <img src="docs/assets/charts/prompts-light.svg" width="600" alt="MiniLM similarity of made-up prompts: rock climbing and bouldering 0.67, Italian cooking and carbonara 0.52, settle down and long-term partner 0.45, Italian cooking and marathon 0.20, rock climbing and opera 0.13">
+  <img src="docs/assets/charts/prompts-light.svg" width="100%" alt="MiniLM similarity of made-up prompts: rock climbing and bouldering 0.67, Italian cooking and carbonara 0.52, settle down and long-term partner 0.45, Italian cooking and marathon 0.20, rock climbing and opera 0.13">
 </picture>
 </p>
 
-<sub>The banner, diagram, charts and icons are drawn by
-[`scripts/readme_art.py`](scripts/readme_art.py) in [Inter](https://rsms.me/inter/) (SIL Open
-Font License), from the numbers above.</sub>
+<sub>Banner and charts are drawn by [`scripts/readme_art.py`](scripts/readme_art.py) in
+[Inter](https://rsms.me/inter/) (SIL Open Font License), from the numbers above.</sub>
 
 ## Configuration
 
 Every weight, cap and threshold lives in a settings file, never in code:
 
-- [`config/phase1.toml`](config/phase1.toml): lastfirstdate's Phase 1. One NYC zone,
-  man-woman dating, 100 paying men and 300 women, a three-date cap, 30 calibration photos.
-- [`config/lastfirstdate.toml`](config/lastfirstdate.toml): research defaults, a
-  1,000-member city with every orientation.
+| File | Use |
+|---|---|
+| [`config/lastfirstdate.toml`](config/lastfirstdate.toml) | Research defaults: a 1,000-member city, every orientation |
+| [`config/phase1.toml`](config/phase1.toml) | lastfirstdate's Phase 1: one NYC zone, man-woman dating, 100 paying men and 300 women, a three-date cap, 30 calibration photos |
 
 `LASTFIRSTDATE_BACKEND=python` runs everything in plain Python instead of Rust. The answers
 are the same, only slower.
@@ -347,26 +386,14 @@ These rules are never broken, and tests enforce them:
 
 Two papers shaped the engine most:
 
-<table>
-  <tr>
-    <td>
-      <b><a href="https://dblp.org/rec/conf/recsys/PizzatoRCKK10">RECON: A Reciprocal Recommender for Online Dating</a></b><br>
-      <sub>Pizzato, Rej, Chung, Koprinska and Kay · ACM RecSys 2010 · stage 5, the mutual score</sub><br><br>
-      A dating match has to be scored in both directions. The engine scores how much each person
-      would like the other and combines the two with the harmonic mean, so a pair ranks high only
-      when the interest is mutual.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <b><a href="https://arxiv.org/abs/1802.07281">Fairness of Exposure in Rankings</a></b><br>
-      <sub>Singh and Joachims · KDD 2018 · stage 6, the daily lists</sub><br><br>
-      Being seen is shared fairly: no one appears on more than a fair share of each day's lists.
-      That spreads dates across members and keeps anyone from being ranked by overall
-      attractiveness.
-    </td>
-  </tr>
-</table>
+- **[RECON: A Reciprocal Recommender for Online Dating](https://dblp.org/rec/conf/recsys/PizzatoRCKK10)**,
+  Pizzato, Rej, Chung, Koprinska and Kay, ACM RecSys 2010. A dating match has to be scored in
+  both directions: the engine scores how much each person would like the other and combines the
+  two with the harmonic mean, so a pair ranks high only when the interest is mutual.
+- **[Fairness of Exposure in Rankings](https://arxiv.org/abs/1802.07281)**, Singh and Joachims,
+  KDD 2018. Being seen is shared fairly: no one appears on more than a fair share of each day's
+  lists. That spreads dates across members and keeps anyone from being ranked by overall
+  attractiveness.
 
 ## Documentation
 
@@ -378,7 +405,7 @@ Two papers shaped the engine most:
 | [Fit report](docs/fit-report.md) | The engine checked against lastfirstdate's website |
 | [Risk plan](docs/risk-plan.md) | What to do before launch, including a ready-to-send lawyer briefing |
 | [Handoff](docs/handoff/README.md) | For the app developer: which engine call happens when, what it reads and returns |
-| [Workspace](workspace/CONTEXT.md) | A one-page map of each algorithm stage (Interpretable Context Methodology), so an AI assistant reads only what it needs |
+| [Workspace](workspace/CONTEXT.md) | A one-page map of each algorithm stage and how sprints are run (Interpretable Context Methodology), so an AI assistant reads only the part it works on |
 
 ## Roadmap
 
