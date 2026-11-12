@@ -66,7 +66,7 @@ The two papers named here are in `docs/research.md`.
 | D16 | Languages | Python for the engine, the test harness and the tests; Rust (`rust/`, called through PyO3 as `lastfirstdate._core`) for the hot loops: the logistic fit, calibration's uncertainty and pair search, the fair daily lists and the ratio gate. Each Rust function has a Python twin with the same answers; `LASTFIRSTDATE_BACKEND=python` runs Python only. The scheduler stays on OR-Tools (already C++), the test harness in Python | Profiling: these loops were Python-overhead bound; NumPy and OR-Tools parts were already compiled. The owner asked for Rust where it fits |
 | D12 | Calibration pool | The ~50 calibration profiles come from matchable members of a gender the member seeks and inside their age range; distance and the other filters are ignored | The goal is to learn taste, and many members' own match pools are under 50 |
 | D21 | Prompt similarity | Prompts are compared after taking out the zone's average prompt (`personality.center_text`, on in the Phase 1 profile, off in the research profile so its results stay reproducible) | Sprint 14: a stuffed prompt climbed from the middle to the 67th percentile of women's personality rankings with word counts, and to the 59th with MiniLM; centred, it gains nothing with either, and honest matching is unchanged |
-| D22 | Who the gate counts | A woman counts toward the ratio gate only if she seeks men (FR-LM-79), is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and no pick ever. Men already sold places count only if they seek women | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch; after four weeks of lists the rule stops counting 83% of fakes and 0.6% of honest women |
+| D22 | Who the gate counts | A woman counts toward the ratio gate only if she seeks men (FR-LM-79), is verified (whatever `filter.require_verified` says), active, not paused, and not silent: lists on at least `gate.silent_after_days` days and never a paid date (FR-LM-81). Men already sold places count only if they seek women | Sprint 14: 50 fake women in a 300-woman zone made the gate sell 6.7 places instead of 3, and those men's 3-date share fell from 94% to 83%. Identity checks are the only defence at launch. Since v0.15.3 only a paid date counts, because a free pick kept a fake counted for ever: after four weeks of lists the rule stops counting 82% of fakes who never pick, 83% of fakes who pick once and never pay (none when a pick counted), and 6% of honest women, mostly women whose picks men declined |
 | D23 | Who teaches the starting taste | One account, one photo exercise: at most `calibration.n_profiles` photos per member, each photo once, never their own; only verified members' answers fit w_0 | Sprint 14: without it, one client writing twenty exercises' worth of answers lifted a target man from the 47th to the 52nd percentile of women's looks rankings; 30 verified fake accounts (10% of women) still lift him to the 54th, and a robust fit that halves that costs everyone 0.016 AUC |
 | D24 | Forgetting and the shared fits | When a member has been forgotten since the last refresh, the nightly refresh refits the photo compression and the starting taste, as the weekly refit does, so nothing fitted on their photo or answers survives the night | D18 deletes what describes a member; the shared fits were the one place their data lingered (until the weekly refit) |
 | D25 | Writing times | The engine's row writers (`booking_row`, `answer_row`, `forget_statements`) take only datetimes with a time zone, and store them in UTC with `+00:00`; a time without a zone is refused. Reading stays as D19 (no offset = UTC) | A New York server's `datetime.now()` has no zone; stored as is, it read 4 to 5 hours wrong (code review finding 5) |
@@ -735,11 +735,12 @@ member's answers don't change the starting taste; a normal exercise is read exac
 Sprint: 14
 `app.gate_for_sale` counts a woman only if she is verified (whatever `filter.require_verified`
 says), active and not paused, and she isn't silent. Silent means she has had lists on at least
-`gate.silent_after_days` days and has never picked anyone; she counts again once she picks.
-Fake women who never date stop inflating the gate about two weeks after the zone starts sending
-lists. At launch, before anyone has had a list, only identity checks stop them.
-Test: silent and unverified women aren't counted, so the gate admits fewer men; a woman who
-picked once, or who has had fewer list days, still counts.
+`gate.silent_after_days` days and has never paid for a date (a pick alone counted until v0.15.3,
+FR-LM-81); she counts again once she pays for one. Fake women who never date stop inflating the
+gate about two weeks after the zone starts sending lists. At launch, before anyone has had a
+list, only identity checks stop them.
+Test: silent and unverified women aren't counted, so the gate admits fewer men; a woman who has
+paid for a date, or who has had fewer list days, still counts.
 
 #### FR-LM-67 · Only real dates count toward trust
 Sprint: 14
@@ -868,6 +869,21 @@ profile only with people it fits, so this is an early warning of an app bug, not
 Test: in a Phase 1 database, a man seeking men, a woman seeking both, a nonbinary member and a
 member seeking no one are each reported; a clean database reports nothing; with the setting off
 nothing is reported for them.
+
+#### FR-LM-81 · A woman counts toward the gate once she has paid for a date
+Sprint: 15
+Added in v0.15.3. The silent rule (FR-LM-66, D22) took any pick as the sign of a real member,
+but picking is free: a fake account could pick once, never pay, and stay counted by the gate for
+ever. Now a woman stops being silent only once she has paid her $10 for a date, from her lists
+or an event, whatever became of it (he didn't pay, one of them cancelled, or it went ahead). Only
+a payment for her own booking counts. After four weeks of lists in the test runs, the rule stops
+counting 83% of 50 fakes who pick once and never pay (none before) and 6.2% of honest women
+(0.6% before), mostly women whose picks the men declined. With those fakes, the gate's forecast
+for the zone's men falls from 80.4% to 75.5%; the honest women alone give 74.9%.
+Test: after `gate.silent_after_days` list days, a woman who picked but never paid (the man
+declined, or she let the payment hold run out) isn't counted, like one who never picked; a woman
+who paid for a date counts, whatever became of it (he didn't pay, she cancelled, or an event
+date); paying for someone else's booking doesn't count.
 
 ## Changes to this plan
 
@@ -1038,3 +1054,8 @@ nothing is reported for them.
   fit: the Phase 1 settings, the gate, the promise and the forecast were all built on man-woman
   zones. A new setting, `filter.heterosexual_only`, makes the nightly data check report any
   member outside man-woman dating (FR-LM-80). Same-gender matching is dropped from the plans.
+- **v0.15.3.** A loophole in the silent rule (D22): picking is free, so a fake woman who picked
+  once and never paid stayed counted by the gate for ever. A woman now counts once she has paid
+  for a date (FR-LM-81). After four weeks of lists the rule stops counting 83% of such fakes
+  (none before) and 6.2% of honest women (0.6% before): the price of trusting only a payment,
+  and the safe direction for the gate, which then sells fewer places, not more.

@@ -90,3 +90,23 @@ from lastfirstdate.config import load
 fixes_report.load = lambda *a, **k: attacks.centered(load(*a, **k), False)
 fixes_report.main()
 ```
+
+## v0.15.3: a woman counts once she has paid for a date
+
+`python -m lastfirstdate.attacks`, section 4, and `attacks.silent_shares(cfg, seed, days=...,
+one_pick=...)` for longer runs: seeds 2026 to 2028, 300 women, 50 fake women and 100 men, the
+fakes opening the app every day. "A pick counts" is the rule before FR-LM-81; the gate's
+forecast is for the zone's men from the women each rule counts, and "honest alone" leaves the
+fakes out.
+
+| Lists for | Fakes no longer counted: pick counts / paid counts | Honest women no longer counted | Forecast: pick counts / paid counts / honest alone |
+|---|---:|---:|---:|
+| 4 weeks, fakes pick once, never pay | 0% / 83% | 0.6% / 6.2% | 80.4% / 75.5% / 74.9% |
+| 8 weeks, the same | 0% / 99% | 1.5% / 11.5% | 82.4% / 76.9% / 76.8% |
+| 12 weeks, the same | 0% / 100% | 1.6% / 10.4% | 84.2% / 79.8% / 79.8% |
+| 4 weeks, fakes never pick | 83% / 82% | 0.6% / 6.3% | 77.0% / 75.5% / 74.8% |
+
+One of the 150 never-picking fakes was booked for an event date and paid, so she counts under
+the new rule. The honest women left out had picked, but never paid for a date, mostly because
+the men declined. The test runs themselves don't move: `CycleRun.pays_on_time` makes the same
+random draws as the code it replaced (a three-cycle run compared field by field).

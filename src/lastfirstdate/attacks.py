@@ -16,10 +16,11 @@ engine's defence off and on, on seeds no setting was tuned on (2026 to 2028):
 3. Fake accounts steering the starting taste (D23). 15 or 30 fake women (5% or 10%) each
    answer one exercise the same way. Defence: identity checks, because only verified members'
    answers fit w_0. The "robust fit" row shows what a statistical defence would cost.
-4. Fake women on the gate (FR-LM-66, D22). 50 fake women who never date join a 300-woman zone
-   before launch. Harm: the places the gate sells, and the 3-date share of the men who buy
-   them. Then, after four weeks of lists, the share of fakes and of honest women the silent
-   rule stops counting.
+4. Fake women on the gate (FR-LM-66, FR-LM-81, D22). 50 fake women who never date join a
+   300-woman zone before launch. Harm: the places the gate sells, and the 3-date share of the
+   men who buy them. Then, after four weeks of lists, the share of fakes and of honest women
+   the silent rule stops counting: for fakes who never pick, and for fakes who pick once and
+   never pay, which a rule counting any pick would keep counting for ever.
 5. Rating attacks (FR-LM-69). Harsh raters: 15 women who rate every man 1. Rings: 3 or 6
    women eligible for the same man who pick him whenever he's on their list, whom he always
    accepts, and who rate him 1. Gain: honest men wrongly flagged; targets paused.
@@ -333,9 +334,10 @@ class AttackedRun(CycleRun):
     """A cycle run with attackers, through the run's hooks (test runs only).
 
     silent: members who open the app every day and never pick (spies, fake women); the first
-    day and position each profile appears on their lists is kept. ring and target: women who
-    pick the target whenever he is on their list, whom he always accepts, and who rate him 1.
-    trolls: members who rate everyone they meet 1.
+    day and position each profile appears on their lists is kept. one_pick: fake women who open
+    the app every day, pick the first man on their first list and never pay. ring and target:
+    women who pick the target whenever he is on their list, whom he always accepts, and who rate
+    him 1. trolls: members who rate everyone they meet 1.
     """
 
     def __init__(
@@ -347,6 +349,7 @@ class AttackedRun(CycleRun):
         join_day: np.ndarray | None = None,
         *,
         silent: Sequence[int] = (),
+        one_pick: Sequence[int] = (),
         ring: Sequence[int] = (),
         target: int | None = None,
         trolls: Sequence[int] = (),
@@ -355,6 +358,8 @@ class AttackedRun(CycleRun):
         super().__init__(pop, cfg, seed, scores, join_day)
         self.silent = np.zeros(self.n, dtype=bool)
         self.silent[np.asarray(silent, dtype=int)] = True
+        self.one_pick = np.zeros(self.n, dtype=bool)
+        self.one_pick[np.asarray(one_pick, dtype=int)] = True
         self.ring = {int(m) for m in ring}
         self.target = None if target is None else int(target)
         self.trolls = {int(m) for m in trolls}
@@ -368,7 +373,7 @@ class AttackedRun(CycleRun):
 
     def opens(self, today: int, opened: np.ndarray) -> np.ndarray:
         here = self.matchable & (self.join_day <= today) & ~self.paused
-        return opened | (self.silent & here)
+        return opened | ((self.silent | self.one_pick) & here)
 
     def choose(self, i: int, todays: np.ndarray, today: int) -> list[int]:
         self.list_days[i] += 1
@@ -377,6 +382,11 @@ class AttackedRun(CycleRun):
             for position, j in enumerate(todays):
                 self.first_seen[i].setdefault(int(j), (today, position))
             return []
+        if self.one_pick[i]:
+            chosen = [] if self.picked[i] else [int(todays[0])]
+            self.picked[i] = True
+            self.times_picked[chosen] += 1
+            return chosen
         if i in self.ring:
             chosen = [self.target] if np.any(todays == self.target) else []
             self.times_picked[chosen] += 1
@@ -391,6 +401,16 @@ class AttackedRun(CycleRun):
             return True
         return super().accepts(chosen, chooser)
 
+    def pays_on_time(self, m: int, rate: float) -> bool:
+        return super().pays_on_time(m, rate) and not self.one_pick[m]
+
+    def paid(self) -> np.ndarray:
+        """(n,) members who have paid for a date: the engine's test of engagement (FR-LM-81)."""
+        out = np.zeros(self.n, dtype=bool)
+        for bk in self.bookings:
+            out[list(bk.paid)] = True
+        return out
+
     def rate(self, rater: int, rated: int) -> Rating:
         r = super().rate(rater, rated)
         if rater in self.trolls or (rater in self.ring and rated == self.target):
@@ -398,9 +418,23 @@ class AttackedRun(CycleRun):
         return r
 
 
-def silent_shares(cfg: Config, seed: int, n_fake: int = 50, days: int = 28) -> tuple[float, float]:
-    """(fake women, honest women): shares the silent rule stops counting after `days` days of
-    the real flow, with the fakes opening the app every day and never picking (FR-LM-66)."""
+@dataclass(frozen=True)
+class SilentTrial:
+    fakes: float  # share of the fakes the silent rule stops counting
+    honest: float  # share of honest women it stops counting
+    fakes_if_any_pick: float  # the same if any pick counted, paid or not (before FR-LM-81)
+    honest_if_any_pick: float
+    forecast: float  # the gate's forecast for the zone's men, from the women counted
+    forecast_if_any_pick: float
+    forecast_honest: float  # from the honest women alone: what the forecast should be
+
+
+def silent_shares(
+    cfg: Config, seed: int, n_fake: int = 50, days: int = 28, one_pick: bool = False
+) -> SilentTrial:
+    """Shares of fake and honest women the silent rule stops counting after `days` days of the
+    real flow, with the fakes opening the app every day and never picking, or with `one_pick`
+    picking once and never paying (FR-LM-66, FR-LM-81)."""
     c = with_market(cfg, 300 + n_fake, 100)
     rate = c.cycle_runs.new_women_per_cycle
     pop = market(c, seed, rate)
@@ -408,10 +442,32 @@ def silent_shares(cfg: Config, seed: int, n_fake: int = 50, days: int = 28) -> t
     sc = build_scores(pop, c, seed)
     women = launch_women(pop, c, join)
     fakes = np.random.default_rng([seed, 77]).choice(women, n_fake, replace=False)
-    run = AttackedRun(pop, c, seed, sc.mutual, join, silent=fakes, days=days)
-    run.run("silent fakes")
-    silent = (run.list_days >= c.gate.silent_after_days) & ~run.picked
-    return float(silent[fakes].mean()), float(silent[np.setdiff1d(women, fakes)].mean())
+    kind = {"one_pick": fakes} if one_pick else {"silent": fakes}
+    run = AttackedRun(pop, c, seed, sc.mutual, join, days=days, **kind)
+    run.run("one-pick fakes" if one_pick else "silent fakes")
+    enough = run.list_days >= c.gate.silent_after_days
+    silent, any_pick = enough & ~run.paid(), enough & ~run.picked
+    honest = np.setdiff1d(women, fakes)
+    arr = MemberArrays.from_members(pop.members, c.values)
+    here = run.join_day < days
+    zone_women = (arr.gender == WOMAN) & here & run.matchable
+    men = np.flatnonzero((arr.gender == MAN) & here)
+    model = ForecastModel.load(DELIVERED_MODEL_PATH)
+
+    def forecast(counted: np.ndarray) -> float:
+        return gate_decision(model, sc.eligible, np.flatnonzero(counted), men, [], c).forecast
+
+    real = zone_women.copy()
+    real[fakes] = False
+    return SilentTrial(
+        float(silent[fakes].mean()),
+        float(silent[honest].mean()),
+        float(any_pick[fakes].mean()),
+        float(any_pick[honest].mean()),
+        forecast(zone_women & ~silent),
+        forecast(zone_women & ~any_pick),
+        forecast(real & ~silent),
+    )
 
 
 # ---------------------------------------------------------------- 5. rating attacks
@@ -602,12 +658,18 @@ def main() -> None:
             f"{np.mean([t.forecast for t in trials]):.1%}, actual "
             f"{np.nanmean([t.actual for t in trials]):.1%}"
         )
-    shares = [silent_shares(cfg, seed) for seed in seeds]
-    fake, honest = zip(*shares, strict=True)
-    print(
-        f"  after 4 weeks of lists the silent rule stops counting {np.mean(fake):.0%} of 50 "
-        f"fakes and {np.mean(honest):.1%} of honest women"
-    )
+    print("  after 4 weeks of lists, the share the silent rule stops counting, and the forecast:")
+    for one_pick, who in ((False, "never pick"), (True, "pick once, never pay")):
+        t = [silent_shares(cfg, seed, one_pick=one_pick) for seed in seeds]
+        print(
+            f"  50 fakes who {who}: {np.mean([x.fakes for x in t]):.0%} of them and "
+            f"{np.mean([x.honest for x in t]):.1%} of honest women, forecast "
+            f"{np.mean([x.forecast for x in t]):.1%}; if any pick counted, "
+            f"{np.mean([x.fakes_if_any_pick for x in t]):.0%} and "
+            f"{np.mean([x.honest_if_any_pick for x in t]):.1%}, forecast "
+            f"{np.mean([x.forecast_if_any_pick for x in t]):.1%}; honest women alone "
+            f"{np.mean([x.forecast_honest for x in t]):.1%}"
+        )
 
     print("\n5. Rating attacks (three cycles)")
     for seed in seeds:

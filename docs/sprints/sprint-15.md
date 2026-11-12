@@ -143,10 +143,43 @@ any member outside that: same-gender, bisexual, nonbinary or seeking no one (FR-
 general orientation lock (R1) stays, so such a profile is still matched only with people it fits;
 the report is an early warning of an app bug. Same-gender matching is dropped from the plans.
 
+## 8d. After the sprint: a woman counts once she has paid for a date (v0.15.3)
+
+The silent rule (D22, Sprint 14) stops counting a woman toward the gate once she has had lists
+on 14 days and never picked anyone. But picking is free. A fake account could pick once, never
+pay, and stay counted for ever. Now a woman counts once she has paid her $10 for a date
+(FR-LM-81): from her lists or an event, whatever became of it, but only for her own booking.
+Paying is the one step a fake can't take for free: it needs money, a card, and a man who
+accepts her pick.
+
+What the test runs showed (`python -m lastfirstdate.attacks`, section 4: three zones of 300
+women and 100 men with 50 fake women, four weeks of lists):
+
+| | A pick counts | A paid date counts |
+|---|---:|---:|
+| Fakes who pick once and never pay, no longer counted | 0% | 83% |
+| Fakes who never pick, no longer counted | 83% | 82% |
+| Honest women no longer counted | 0.6% | 6.2% |
+| The gate's forecast with the one-pick fakes (honest women alone: 74.9%) | 80.4% | 75.5% |
+
+The rest of the one-pick fakes have had lists on fewer than 14 days; by eight weeks 99% no
+longer count. (One of the 150 fakes who never pick was booked for an event date in the test
+runs and paid, so she counts now: hence 82%, not 83%.)
+
+The price is paid by honest women. After four weeks about one in sixteen has had lists on 14
+days and picked, but never paid for a date, mostly (two in three) because every man she picked
+declined; after eight and twelve weeks it is 11.5% and 10.4%. Not counting them makes the gate
+more careful: it sells fewer places, never more. With the fakes, the forecast from the new rule matches the
+honest women's alone (76.9% at eight weeks, 79.8% at twelve), where counting any pick left it
+5 points too high. In these zones it stays below the 90% target either way, so the gate sells
+nothing in both cases; the fix changes what it counts. Ordinary test runs don't move: the one
+change to them, a hook for whether someone pays on time, makes the same random draws.
+
 ## 9. What changed in the plan
 
 - Two decisions: D24 and D25.
 - All nine code review findings are closed.
+- After the sprint: FR-LM-79 (v0.15.1), FR-LM-80 (v0.15.2) and FR-LM-81 (v0.15.3).
 
 ## 10. Honest limits
 
@@ -158,6 +191,13 @@ the report is an early warning of an app bug. Same-gender matching is dropped fr
   less often while he decides; that's a product choice.
 - The cache refit after a forgetting changes every taste model a little that night, exactly as
   the weekly refit does.
+- One paid date keeps an account counted for good. A fake who pays once ($10, a card, a man
+  who accepts her pick, then a cancellation or a no-show that hurts her trust) counts like a
+  real member. Requiring a recent payment would also drop honest women who just haven't had a
+  date lately.
+- The silent rule now leaves out about 6% of honest women after four weeks and 10% to 12%
+  after eight to twelve, so the gate leans careful. `gate.silent_after_days` sets how long it
+  waits (question 3).
 
 ## 11. What to study
 
@@ -168,11 +208,15 @@ the report is an early warning of an app bug. Same-gender matching is dropped fr
    hash of it) instead.
 4. **Query cost:** why reading all rows grows with the zone, while reading by an indexed id
    stays flat; what an index on `(member_a, date_on)` does for `WHERE member_a IN (...)`.
+5. **Costly signals (v0.15.3):** why an action that costs the attacker something (a payment)
+   tells real members from fakes better than a free one (a pick), and what the honest members
+   who haven't taken it yet cost the rule.
 
 ## Try it yourself
 
 ```bash
 python -m pytest tests/test_sprint15.py -q
+python -m lastfirstdate.attacks   # section 4: the silent rule against both kinds of fake
 ```
 
 ## Questions for you
@@ -183,3 +227,8 @@ python -m pytest tests/test_sprint15.py -q
    showing him less while he decides.
 2. **How long may he take to accept?** This is question 14 in #8, and it matters more now
    that a pending pick hides his evening from everyone else.
+3. **Should the silent rule wait longer than 14 list days?** With 28 (`gate.silent_after_days`),
+   half as many honest women are left out at eight weeks (5.3% instead of 11.5%; 8.9% instead
+   of 10.4% at twelve), but fake accounts inflate the gate through the zone's whole first month
+   (its forecast after four weeks: 80.5% instead of 75.5%). I'd keep 14: a careful gate costs a
+   few sales, a generous one breaks the 3-date promise.

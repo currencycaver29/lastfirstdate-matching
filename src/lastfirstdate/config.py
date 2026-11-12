@@ -87,7 +87,7 @@ class GateConfig:
     at_risk_threshold: float
     forecast_l2: float
     forecast: str
-    silent_after_days: int  # list days with no pick ever before a woman stops counting (D22)
+    silent_after_days: int  # list days without a paid date before a woman stops counting (D22)
 
 
 @dataclass(frozen=True)

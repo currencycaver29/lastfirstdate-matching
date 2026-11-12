@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml"><img alt="checks" src="https://github.com/currencycaver29/lastfirstdate-matching/actions/workflows/checks.yml/badge.svg"></a>
-  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.2" src="https://img.shields.io/badge/release-v0.15.2-2b6cb0"></a>
+  <a href="https://github.com/currencycaver29/lastfirstdate-matching/releases"><img alt="release v0.15.3" src="https://img.shields.io/badge/release-v0.15.3-2b6cb0"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white">
   <img alt="Rust core" src="https://img.shields.io/badge/rust-core-B7410E?logo=rust&logoColor=white">
   <img alt="models on ONNX Runtime" src="https://img.shields.io/badge/models-ONNX%20Runtime-005CED?logo=onnx&logoColor=white">
@@ -220,7 +220,7 @@ Sprint 14 added attackers to the test runs (`python -m lastfirstdate.attacks`, t
 | Prompt stuffed with words everyone writes | 67th percentile of women's personality rankings (honest: 49th) | 45th: prompts are compared without the zone's average |
 | One account flooding the photo exercise | target man up from 0.47 to 0.52 in women's looks rankings | 0.47: one account, one exercise |
 | 30 fake women (10%) steering the starting taste | target up to 0.54 | 0.47 if they can't pass identity checks; verified fakes are the limit |
-| 50 fake women counted by the ratio gate | 6.7 places sold instead of 3; 3-date share 83% instead of 94% | after 4 weeks of lists, 83% of fakes no longer count (0.6% of real women) |
+| 50 fake women counted by the ratio gate | 6.7 places sold instead of 3; 3-date share 83% instead of 94% | after 4 weeks of lists, 82% of fakes no longer count, and 83% of fakes who pick once and never pay (6% of real women) |
 | Forged ratings, malformed booking rows | counted toward trust, or crashed the daily lists | ignored, or refused with the booking named |
 | 20 spy accounts reading their lists for a ranking | correlation with consensus looks 0.04 (0.14 with the exposure cap off) | already blocked by the exposure cap; a test keeps it so |
 
@@ -435,7 +435,8 @@ Two papers shaped the engine most:
 Each pushed sprint is tagged as a release, numbered major.minor.fix: the major number changes
 when the app must change how it calls the engine, the minor number with each sprint, and the
 fix number for bug fixes. Build the app against a release, not against `main`. The current
-release is **v0.15.2** (Sprint 15's fixes, and man-woman dating only, D26);
+release is **v0.15.3** (Sprint 15's fixes, man-woman dating only (D26), and a woman counting
+toward the gate once she has paid for a date);
 v1.0.0 is planned for the Phase 1 launch.
 
 ## License

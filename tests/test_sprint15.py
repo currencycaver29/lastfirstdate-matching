@@ -1,9 +1,9 @@
-"""FR-LM-71 to FR-LM-78: the code review findings, fixed."""
+"""FR-LM-71 to FR-LM-81: the code review findings, fixed, and the gate loopholes closed after."""
 
 import dataclasses
 import io
 import sqlite3
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
@@ -484,3 +484,56 @@ def test_the_nightly_check_flags_profiles_outside_man_woman_dating(base):
         z.cfg, filter=dataclasses.replace(z.cfg.filter, heterosexual_only=False)
     )
     assert app.check_rows(z.con, z.market, off) == []
+
+
+# ---------------------------------------------------------------- FR-LM-81
+
+
+def test_a_woman_counts_only_once_she_has_paid_for_a_date(base):
+    """FR-LM-81: after `gate.silent_after_days` list days, a woman who picked but never paid
+    (the man declined, or she let the payment hold run out) stops counting toward the gate, like
+    a woman who never picked; a woman who paid for a date counts, whatever became of it (he
+    didn't pay, she cancelled, or it was an event date); paying for someone else's booking
+    doesn't count."""
+    z = zone(base)
+    m, cfg = z.market, z.cfg
+    payers = {p for (p,) in z.con.execute("SELECT member_id FROM payments").fetchall()}
+    counted = app.counted_women(z.con, m, cfg)
+    fresh = [w for w in women(z) if counted[m.row[w]] and w not in payers]
+    men = [int(m.ids[k]) for k, x in enumerate(m.members) if x.gender == "man"]
+    never, declined, unpaid, he_didnt_pay, cancelled, at_event, stranger = fresh[:7]
+    held = {"held_at": "2026-11-03T23:01:00+00:00"}
+    for w in (never, declined, unpaid, he_didnt_pay, cancelled, at_event, stranger):
+        for k in range(cfg.gate.silent_after_days):
+            shown_on = (TODAY - timedelta(days=k + 1)).isoformat()
+            picked = int(w != never and k == 0)
+            insert(
+                z.con,
+                "list_shows",
+                {"chooser_id": w, "candidate_id": men[0], "shown_on": shown_on, "picked": picked},
+            )
+
+    def pay(booking_id: int, member: int) -> None:
+        paid_at = "2026-11-03T23:02:00+00:00"
+        row = {"booking_id": booking_id, "member_id": member, "amount_cents": 1000}
+        insert(z.con, "payments", {**row, "paid_at": paid_at})
+
+    booking(z.con, declined, men[1], "2026-11-06", "expired")  # never held: he said no
+    booking(z.con, unpaid, men[1], "2026-11-07", "expired", **held)  # she let the hold run out
+    pay(booking(z.con, he_didnt_pay, men[2], "2026-11-06", "expired", **held), he_didnt_pay)
+    when = {"cancelled_by": cancelled, "cancelled_at": "2026-11-05T15:00:00+00:00"}
+    both = booking(z.con, cancelled, men[3], "2026-11-07", "cancelled", **held, **when)
+    pay(both, cancelled)
+    pay(both, men[3])
+    event = insert(
+        z.con, "events", {"name": "Members' night", "venue_id": 1, "starts_at": "2026-11-08"}
+    )
+    from_event = {"source": "event", "event_id": event}
+    pay(booking(z.con, at_event, men[4], "2026-11-08", "confirmed", **held, **from_event), at_event)
+    pay(booking(z.con, unpaid, men[5], "2026-11-09", "expired", **held), stranger)  # not hers
+
+    after = app.counted_women(z.con, m, cfg)
+    for w in (never, declined, unpaid, stranger):
+        assert not after[m.row[w]], w
+    for w in (he_didnt_pay, cancelled, at_event):
+        assert after[m.row[w]], w

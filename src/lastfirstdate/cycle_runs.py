@@ -475,6 +475,10 @@ class CycleRun:
         """Does the chosen member accept the pick?"""
         return self.behavior.accepts(chosen, chooser, self.rng)
 
+    def pays_on_time(self, m: int, rate: float) -> bool:
+        """Does member m pay within the 15-minute hold?"""
+        return self.rng.random() < rate
+
     def events(self, today: int) -> None:
         cs = self.cfg.cycle_runs
         rate = cs.event_rate / self.cfg.billing.cycle_days
@@ -517,10 +521,10 @@ class CycleRun:
         hoods = cfg.geo.neighbourhoods
         v, trip_a, trip_b = geo.venue_for(hoods[self.hood[a]], hoods[self.hood[b]], venues)
         late = hold + 1.0
-        on_time = self.rng.random() < cs.pay_in_time_chooser
+        on_time = self.pays_on_time(a, cs.pay_in_time_chooser)
         ok = bk.pay(a, SHE_PAYS_AT if on_time else late, hold)
         if ok:
-            on_time = self.rng.random() < cs.pay_in_time_chosen
+            on_time = self.pays_on_time(b, cs.pay_in_time_chosen)
             ok = bk.pay(b, HE_PAYS_AT if on_time else late, hold, venue=venues[v].name)
         idx = len(self.bookings)
         self.bookings.append(bk)

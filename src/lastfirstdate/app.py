@@ -1239,20 +1239,20 @@ def gate_for_sale(con, market: Market, scores: NightlyScores, cfg: Config) -> Sa
 
 def silent_members(con, market: Market, cfg: Config) -> np.ndarray:
     """(n,) members who have had lists on at least `gate.silent_after_days` days and have never
-    picked anyone (FR-LM-66). A pick is a `list_shows` row marked picked, or a list booking
-    they chose."""
+    paid for a date (FR-LM-66, FR-LM-81). Picking is free, so a pick alone doesn't count: a fake
+    account could pick once, never pay, and be counted for ever. A payment does, for a date
+    from her lists or an event, whatever became of the date."""
     days: dict[int, set[str]] = defaultdict(set)
-    picked = np.zeros(len(market.members), dtype=bool)
     for r in read(con, "list_shows"):
-        i = market.row[r["chooser_id"]]
-        days[i].add(r["shown_on"])
-        picked[i] |= bool(r["picked"])
-    for r in read(con, "bookings"):
-        if r["source"] == "list":
-            picked[market.row[r["member_a"]]] = True
+        days[market.row[r["chooser_id"]]].add(r["shown_on"])
+    payers = con.execute(  # only a payment for her own booking (FR-LM-68 ignores the rest)
+        "SELECT DISTINCT p.member_id FROM payments p JOIN bookings b ON b.id = p.booking_id "
+        "WHERE p.member_id IN (b.member_a, b.member_b)"
+    ).fetchall()
+    paid = {market.row[m] for (m,) in payers if m in market.row}
     silent = np.zeros(len(market.members), dtype=bool)
     for i, d in days.items():
-        silent[i] = len(d) >= cfg.gate.silent_after_days and not picked[i]
+        silent[i] = len(d) >= cfg.gate.silent_after_days and i not in paid
     return silent
 
 
@@ -1265,8 +1265,8 @@ def counted_women(con, market: Market, cfg: Config) -> np.ndarray:
     """(n,) the women the ratio gate counts (D22): women who seek men (FR-LM-79: a woman who
     seeks only women can't date the men being sold places), verified whatever
     `filter.require_verified` says (a fake account must at least pass identity checks), active,
-    not paused and not silent. Fakes who never date drop out once they've had lists for a while;
-    a fake must claim to seek men to be counted, which puts her on men's lists."""
+    not paused and not silent. Fakes who never pay for a date drop out once they've had lists
+    for a while; a fake must claim to seek men to be counted, which puts her on men's lists."""
     ok = member_ok(market.arr, cfg) & market.arr.verified & ~market.paused
     women = ok & (market.arr.gender == WOMAN) & seeks(market, "man")
     return women & ~silent_members(con, market, cfg)

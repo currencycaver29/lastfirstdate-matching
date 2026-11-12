@@ -49,6 +49,8 @@ What every stage reads: the settings files, the member model and the app's datab
   `gate.silent_after_days`.
 - **v0.15.2:** `filter.heterosexual_only` (D26): `check_rows` reports any member who isn't a man
   seeking women or a woman seeking men.
+- **v0.15.3:** the gate's silent rule reads `payments`: a woman counts once she has paid for a
+  date (her own booking), not after a free pick (FR-LM-81).
 - **Sprint 15:** the row writers take only times with a time zone and store UTC with `+00:00`
   (D25); `app.read` can filter on whole-number ids (`ids_in`), which `recheck_pick` uses to read
   only two members' rows; the model check reads `DISTINCT model`, never an embedding.

@@ -68,8 +68,9 @@ After stage 04, stop: the owner studies the sprint. Push only when the owner say
   photo settings, the gate every cycle, or waiting for the app and real Phase 1 data. Ask the
   owner in process stage 01.
 - **Last finished:** Sprint 15 (v0.15.0), the code review findings, then v0.15.1 (the gate
-  counts only women who seek men) and v0.15.2 (the founder's decision that the app is
-  heterosexual dating only, D26, with a nightly check for other profiles). The research papers
+  counts only women who seek men), v0.15.2 (the founder's decision that the app is
+  heterosexual dating only, D26, with a nightly check for other profiles) and v0.15.3 (a woman
+  counts toward the gate once she has paid for a date, not after one free pick). The research papers
   are private: the repo names only two (`docs/research.md`, CLAUDE.md).
 - **Where the engine stands:**
   - all ten stages are built and tested;
@@ -102,7 +103,7 @@ D1 to D26 in `docs/SPEC.md`. The most relevant now:
 - timestamps in UTC, dates in the zone's own time (D19);
 - SigLIP and MiniLM as the production models (D20);
 - prompts compared without the zone's average (D21);
-- the gate counts verified, non-silent women (D22);
+- the gate counts verified women who are new or have paid for a date (D22, FR-LM-81);
 - one account, one photo exercise; verified members teach the starting taste (D23);
 - forgetting a member refits the shared fits the next night (D24);
 - the row writers take only times with a time zone (D25);

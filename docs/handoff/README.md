@@ -41,7 +41,7 @@ Everything below is tested on a database filled with fake members
 | **After a date** | `app.trust_from_db`, then `TrustBook.flagged` and `TrustBook.ranking_factor` | ratings, bookings | who to review (a rating counts only for a completed date between the two) | accepts a rating only from the two people on a completed booking; sets `paused_for_review`; adds a `trust_reviews` row |
 | **Every week** | `app.weekly_alerts` | bookings, subscriptions | men likely to miss their 3 dates, and every man's chance | gives them priority, an event invite or a message |
 | **Cycle end** | `app.close_cycle` | bookings, subscriptions | delivered dates and the credit in dollars | writes `cycles.delivered` and `credit_cents`; credits him |
-| **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions, list_shows, bookings | men to admit (in waitlist order), deferrals, the forecast and why it stopped. It counts only verified women who seek men and aren't silent (`app.counted_women`), and only subscribers who seek women | admits them; logs `gate_decisions` |
+| **Before a men's sale** | `app.gate_for_sale` | waitlist, subscriptions, list_shows, bookings, payments | men to admit (in waitlist order), deferrals, the forecast and why it stopped. It counts only verified women who seek men and aren't silent (`app.counted_women`), and only subscribers who seek women | admits them; logs `gate_decisions` |
 | **Every night, after the refresh** | `app.check_rows` | bookings, payments, ratings, calibration_answers | rows the engine refused or ignored, in words | fixes what wrote them; an empty list means the database is clean |
 | **An event connection** | `app.recheck_pick`, then `app.propose` with `source="event"` | bookings, blocks, venues | a `Booking` | saves it with the `event_id`; same hold and payments |
 | **A member blocks someone** | `app.upcoming_between` | bookings | bookings still ahead between them | inserts a `blocks` row; cancels those bookings. The block counts at once: lists, the photo exercise and `recheck_pick` read it immediately |
@@ -154,10 +154,11 @@ app beyond keeping the data honest; these do:
   `CalibrationSession` asks. The engine reads at most `calibration.n_profiles` photos per
   member, each once, never their own, and fits the starting taste on verified members only;
   rows beyond that are ignored and listed by `check_rows`.
-- **Picks in `list_shows`.** The gate stops counting a woman who has had lists on
-  `gate.silent_after_days` days (14) and has never picked anyone, so set `list_shows.picked`
-  on every pick. Identity checks are the only defence against fake women before the first
-  lists go out.
+- **Lists and payments.** The gate stops counting a woman who has had lists on
+  `gate.silent_after_days` days (14) and has never paid for a date, so save every list she is
+  shown in `list_shows` and every $10 payment in `payments`. A pick alone no longer counts
+  (v0.15.3): picking is free, so a fake could pick once and never pay. Identity checks are the
+  only defence against fake women before the first lists go out.
 - **Man-woman dating only (D26).** Offer only "man seeking women" and "woman seeking men" at
   sign-up. With `filter.heterosexual_only = true`, `check_rows` reports any other profile; the
   engine still matches it safely (only with people it fits), so a report means an app bug.

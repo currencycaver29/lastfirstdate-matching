@@ -235,11 +235,13 @@ def test_only_verified_members_teach_the_starting_taste(base):
 
 def test_the_gate_skips_silent_and_unverified_women(base):
     """FR-LM-66: silent and unverified women aren't counted, so the gate sees fewer women; a
-    woman who picked once, or who has had fewer list days, still counts."""
+    woman who has paid for a date (FR-LM-81), or who has had fewer list days, still counts."""
     z = zone(base)
     scores = scores_of(z, base)
     counted = app.counted_women(z.con, z.market, z.cfg)
+    payers = {m for (m,) in z.con.execute("SELECT member_id FROM payments").fetchall()}
     women = [int(z.market.ids[r]) for r in np.flatnonzero(counted)]
+    women = [w for w in women if w not in payers]  # no paid date yet in the test history
     man = ids_of(z, "man")[0]
     days = z.cfg.gate.silent_after_days
     before = app.gate_for_sale(z.con, z.market, scores, z.cfg)
@@ -257,15 +259,21 @@ def test_the_gate_skips_silent_and_unverified_women(base):
                 },
             )
 
-    silent, almost, picker = women[:60], women[60], women[61]
+    silent, almost, payer = women[:60], women[60], women[61]
     for w in silent:
         shown(w, days)
     shown(almost, days - 1)
-    shown(picker, days, pick_on_last=True)
+    shown(payer, days, pick_on_last=True)
+    paid = booking(z.con, payer, man, "expired", held_at="2026-10-28T23:01:00+00:00")
+    insert(
+        z.con,
+        "payments",
+        {"booking_id": paid, "member_id": payer, "amount_cents": 1000, "paid_at": "2026-10-28"},
+    )
     after = app.counted_women(z.con, z.market, z.cfg)
     row = z.market.row
     assert not any(after[row[w]] for w in silent)
-    assert after[row[almost]] and after[row[picker]]
+    assert after[row[almost]] and after[row[payer]]
     sale = app.gate_for_sale(z.con, z.market, scores, z.cfg)
     assert len(sale.admit) <= len(before.admit)
     assert sale.women_per_man < before.women_per_man
